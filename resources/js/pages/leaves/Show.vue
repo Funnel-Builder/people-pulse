@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Calendar, User, FileText, CheckCircle, XCircle, Clock } from 'lucide-vue-next';
+import type { BreadcrumbItem } from '@/types';
 
 interface LeaveDate {
     id: number;
@@ -53,6 +54,12 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'My Leaves', href: '/leaves' },
+    { title: `Request #${props.leave.id}`, href: `/leaves/${props.leave.id}` },
+];
 
 const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -130,7 +137,7 @@ const cancelLeave = () => {
 <template>
     <Head :title="`Leave Request #${leave.id}`" />
 
-    <AppLayout>
+    <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-4 md:p-6 max-w-4xl mx-auto">
             <!-- Header -->
             <div class="flex items-center gap-4">

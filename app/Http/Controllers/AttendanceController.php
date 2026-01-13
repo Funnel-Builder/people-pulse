@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Attendance\AttendanceFilterRequest;
 use App\Http\Requests\Attendance\OverrideAttendanceRequest;
+use App\Models\Announcement;
 use App\Models\Attendance;
 use App\Models\User;
 use App\Models\LeaveType;
@@ -64,11 +65,49 @@ class AttendanceController extends Controller
             ];
         });
 
+        // Get attendance history for heatmap (last 365 days)
+        $heatmapStartDate = $today->copy()->subDays(364);
+        $attendanceHistory = Attendance::where('user_id', $user->id)
+            ->whereBetween('date', [$heatmapStartDate->toDateString(), $today->toDateString()])
+            ->get()
+            ->keyBy(function ($attendance) {
+                return Carbon::parse($attendance->date)->format('Y-m-d');
+            })
+            ->map(function ($attendance) {
+                return [
+                    'date' => $attendance->date,
+                    'is_late' => $attendance->is_late,
+                    'clock_in' => $attendance->clock_in,
+                    'clock_out' => $attendance->clock_out,
+                ];
+            });
+
+        // Get active announcements for the current user
+        $announcements = Announcement::currentlyVisible()
+            ->forUser($user)
+            ->with('createdBy:id,name')
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function ($announcement) {
+                return [
+                    'id' => $announcement->id,
+                    'title' => $announcement->title,
+                    'content' => $announcement->content,
+                    'type' => $announcement->type,
+                    'created_at' => $announcement->created_at->format('M d, Y'),
+                    'created_by' => $announcement->createdBy?->name,
+                ];
+            });
+
         return Inertia::render('Dashboard', [
             'todayAttendance' => $todayAttendance,
             'stats' => $stats,
             'companyStats' => $companyStats,
             'leaveBalances' => $leaveBalances,
+            'attendanceHistory' => $attendanceHistory,
+            'announcements' => $announcements,
+            'userWeekendDays' => $user->weekend_days ?? ['saturday', 'sunday'],
             'isWeekend' => $user->isWeekend($today->format('l')),
             'officeStartTime' => config('attendance.office_start_time'),
             'currentTime' => Carbon::now()->format('H:i:s'),
@@ -224,7 +263,7 @@ class AttendanceController extends Controller
         // Get company-wide summary for today
         $companySummary = $this->attendanceService->getGlobalAttendanceSummary($today->toDateString());
 
-        return Inertia::render('attendance/AdminDashboard', [
+        return Inertia::render('attendance/Records', [
             'attendances' => $attendances,
             'departments' => $departments,
             'subDepartments' => $subDepartments,
@@ -718,7 +757,7 @@ class AttendanceController extends Controller
         $startYear = $firstAttendance ? Carbon::parse($firstAttendance->date)->year : $today->year;
         $availableYears = range($startYear, $today->year);
 
-        return Inertia::render('attendance/EmployeeReport', [
+        return Inertia::render('Reports/AttendanceEmployeeReport', [
             'employees' => $employees->map(fn($e) => ['id' => $e->id, 'name' => $e->name, 'employee_id' => $e->employee_id]),
             'employeeSummaries' => $employeeSummaries,
             'filters' => [
@@ -867,7 +906,7 @@ class AttendanceController extends Controller
                 ->get(['id', 'name', 'employee_id']);
         }
 
-        return Inertia::render('attendance/EmployeeAttendanceDetail', [
+        return Inertia::render('Reports/AttendanceEmployeeDetail', [
             'employee' => [
                 'id' => $employee->id,
                 'name' => $employee->name,

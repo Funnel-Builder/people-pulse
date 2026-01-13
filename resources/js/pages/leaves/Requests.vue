@@ -9,6 +9,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ClipboardList, Check, X, Eye } from 'lucide-vue-next';
 import { ref } from 'vue';
+import type { BreadcrumbItem } from '@/types';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Leave Requests', href: '/leaves/requests' },
+];
 
 interface LeaveDate {
     id: number;
@@ -127,12 +133,11 @@ const getApprovalButtonLabel = (leave: Leave) => {
 <template>
     <Head :title="pageTitle" />
 
-    <AppLayout>
+    <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
             <!-- Header -->
             <div>
                 <h1 class="text-2xl font-bold">{{ pageTitle }}</h1>
-                <p class="text-muted-foreground">{{ pageDescription }}</p>
             </div>
 
             <!-- Pending Requests -->

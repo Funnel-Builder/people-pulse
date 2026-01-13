@@ -3,9 +3,10 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Plus, Edit, Trash, UserCog } from 'lucide-vue-next';
+import { Plus, Edit, Trash, UserCog, Search } from 'lucide-vue-next';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -56,6 +57,21 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Employee Management', href: '/employees' },
 ];
+
+// Search functionality
+const searchQuery = ref('');
+
+const filteredEmployees = computed(() => {
+    if (!searchQuery.value) return props.employees.data;
+    const query = searchQuery.value.toLowerCase();
+    return props.employees.data.filter(emp => 
+        emp.name.toLowerCase().includes(query) ||
+        emp.email.toLowerCase().includes(query) ||
+        emp.employee_id?.toLowerCase().includes(query) ||
+        emp.department?.name?.toLowerCase().includes(query) ||
+        emp.designation?.toLowerCase().includes(query)
+    );
+});
 
 const getRoleBadgeVariant = (role: string) => {
     switch (role) {
@@ -113,7 +129,6 @@ const columns = [
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-bold">Employee Management</h1>
-                    <p class="text-muted-foreground">Manage users, roles, and departments</p>
                 </div>
                 <Button as-child>
                     <Link href="/employees/create">
@@ -132,7 +147,19 @@ const columns = [
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <DataTable :columns="columns" :data="employees.data">
+                    <!-- Search -->
+                    <div class="mb-4">
+                        <div class="relative">
+                            <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input 
+                                v-model="searchQuery"
+                                placeholder="Search by name, email, ID, department..."
+                                class="pl-10"
+                            />
+                        </div>
+                    </div>
+
+                    <DataTable :columns="columns" :data="filteredEmployees">
                         <!-- Custom Slots -->
                         <template #cell-name="{ row }">
                             <div class="font-medium">{{ row.name }}</div>

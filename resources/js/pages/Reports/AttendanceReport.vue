@@ -88,7 +88,8 @@ interface Props {
 const props = defineProps<Props>();
 
 const breadcrumbs = [
-    { title: 'Reports', href: '/attendance/reports' },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Attendance Report', href: '/reports/attendance' },
 ];
 
 // Month/Year filter state
@@ -117,7 +118,7 @@ const years = Array.from({ length: 5 }, (_, i) => ({
 }));
 
 const applyFilters = () => {
-    router.get('/attendance/reports', {
+    router.get('/reports/attendance', {
         month: selectedMonth.value,
         year: selectedYear.value,
     }, {
@@ -131,7 +132,7 @@ watch([selectedMonth, selectedYear], () => {
 });
 
 const exportData = (type: 'csv' | 'xlsx') => {
-    window.location.href = `/attendance/reports/export?type=${type}&month=${selectedMonth.value}&year=${selectedYear.value}`;
+    window.location.href = `/reports/attendance/export?type=${type}&month=${selectedMonth.value}&year=${selectedYear.value}`;
 };
 
 const selectedMonthLabel = computed(() => {
@@ -192,7 +193,7 @@ const latePercentage = computed(() => {
                             </SelectItem>
                         </SelectContent>
                     </Select>
-                    <Link href="/attendance/employee-report">
+                    <Link href="/reports/attendance/employees">
                         <Button variant="outline">
                             <FileText class="mr-2 h-4 w-4" />
                             Employee Reports

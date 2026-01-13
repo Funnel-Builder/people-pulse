@@ -66,7 +66,7 @@ interface Props {
 const props = defineProps<Props>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Attendance', href: '/attendance' },
+    { title: 'Dashboard', href: '/dashboard' },
     { title: 'Admin Analytics', href: '/attendance/admin/analytics' },
 ];
 
@@ -104,7 +104,6 @@ const totalDeptEmployees = computed(() => {
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-bold">Admin Analytics Dashboard</h1>
-                    <p class="text-muted-foreground">Company-wide attendance insights and metrics</p>
                 </div>
                 <div class="flex gap-2">
                     <Link href="/attendance/admin">

@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Clock, LayoutGrid, Users, Shield, UserCog, FileBarChart, Settings as SettingsIcon, UsersRound, CalendarDays, CalendarPlus, ClipboardList, CalendarCog } from 'lucide-vue-next';
+import { Clock, LayoutGrid, Users, Shield, UserCog, FileBarChart, Settings as SettingsIcon, UsersRound, CalendarDays, ClipboardList, CalendarCog, FolderOpen, BarChart3, Bell } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
 
@@ -66,49 +66,78 @@ const mainNavItems = computed<NavItem[]>(() => {
         children: leaveChildren,
     });
 
-    // Workforce Group (Manager/Admin only)
-    if (user.value?.role === 'manager' || user.value?.role === 'admin') {
-        const workforceChildren: NavItem[] = [];
-
-        if (user.value?.role === 'manager') {
-            workforceChildren.push({
-                title: 'Team Attendance',
-                href: '/attendance/manager',
-                icon: UsersRound,
-            });
-        }
-
-        if (user.value?.role === 'admin') {
-            workforceChildren.push({
-                title: 'Attendance Records',
-                href: '/attendance/admin',
-                icon: Shield,
-            });
-        }
-
-        if (user.value?.role === 'admin' || user.value?.role === 'manager') {
-            workforceChildren.push({
-                title: 'Employee Analytics',
-                href: '/attendance/employee-report',
-                icon: FileBarChart,
-            });
-        }
-
+    // Workforce Group (Manager only - Team Attendance)
+    if (user.value?.role === 'manager') {
         items.push({
             title: 'Workforce',
             href: '#',
             icon: Users,
             isGroup: true,
-            children: workforceChildren,
+            children: [
+                {
+                    title: 'Team Attendance',
+                    href: '/attendance/manager',
+                    icon: UsersRound,
+                },
+            ],
         });
     }
 
-    // Reports (Admin/Manager only)
+    // Records Group (Admin/Manager only)
+    if (user.value?.role === 'manager' || user.value?.role === 'admin') {
+        const recordsChildren: NavItem[] = [];
+
+        if (user.value?.role === 'admin') {
+            recordsChildren.push({
+                title: 'Attendance Records',
+                href: '/records/attendance',
+                icon: Clock,
+            });
+        }
+
+        recordsChildren.push({
+            title: 'Leave Records',
+            href: '/records/leave',
+            icon: CalendarDays,
+        });
+
+        items.push({
+            title: 'Records',
+            href: '#',
+            icon: FolderOpen,
+            isGroup: true,
+            children: recordsChildren,
+        });
+    }
+
+    // Reports Group (Admin/Manager only)
     if (user.value?.role === 'manager' || user.value?.role === 'admin') {
         items.push({
             title: 'Reports',
-            href: '/attendance/reports',
-            icon: FileBarChart,
+            href: '#',
+            icon: BarChart3,
+            isGroup: true,
+            children: [
+                {
+                    title: 'Attendance Report',
+                    href: '/reports/attendance',
+                    icon: FileBarChart,
+                },
+                {
+                    title: 'Leave Report',
+                    href: '/reports/leave',
+                    icon: FileBarChart,
+                },
+            ],
+        });
+    }
+
+    // Announcements (Admin/Manager only)
+    if (user.value?.role === 'manager' || user.value?.role === 'admin') {
+        items.push({
+            title: 'Announcements',
+            href: '/announcements',
+            icon: Bell,
         });
     }
 

@@ -69,8 +69,9 @@ interface Props {
 const props = defineProps<Props>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Attendance', href: '/attendance' },
-    { title: 'Employee Report', href: '/attendance/employee-report' },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Attendance Report', href: '/reports/attendance' },
+    { title: 'Employee Report', href: '/reports/attendance/employees' },
     { title: props.employee.name, href: '#' },
 ];
 
@@ -93,7 +94,7 @@ const selectedMonth = ref(String(props.filters.month));
 const selectedYear = ref(String(props.filters.year));
 
 const applyFilters = () => {
-    router.get(`/attendance/employee-report/${props.employee.id}`, {
+    router.get(`/reports/attendance/employees/${props.employee.id}`, {
         month: selectedMonth.value,
         year: selectedYear.value,
     }, {
@@ -108,7 +109,7 @@ const selectedEmployeeId = ref(String(props.employee.id));
 
 const changeEmployee = (employeeId: string | number | boolean | Record<string, any> | null) => {
     if (employeeId) {
-        router.visit(`/attendance/employee-report/${employeeId}?month=${selectedMonth.value}&year=${selectedYear.value}`);
+        router.visit(`/reports/attendance/employees/${employeeId}?month=${selectedMonth.value}&year=${selectedYear.value}`);
     }
 };
 
@@ -118,7 +119,7 @@ const exportReport = (type: 'csv' | 'xlsx') => {
     params.append('year', selectedYear.value);
     params.append('type', type);
     
-    window.location.href = `/attendance/employee-report/${props.employee.id}/export?${params.toString()}`;
+    window.location.href = `/reports/attendance/employees/${props.employee.id}/export?${params.toString()}`;
 };
 
 const selectedMonthName = computed(() => {
@@ -158,12 +159,12 @@ const formatMinutesToHours = (minutes: number | null) => {
             <!-- Header -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
-                    <Link href="/attendance/employee-report">
+                    <Link href="/reports/attendance/employees">
                         <Button variant="ghost" size="icon">
                             <ArrowLeft class="h-4 w-4" />
                         </Button>
                     </Link>
-                    <h1 class="text-2xl font-bold">Employee Attendance Detail</h1>
+                    <h1 class="text-2xl font-bold">Attendance Details</h1>
                 </div>
                 <div class="flex flex-wrap gap-2 items-center">
                     <Select v-model="selectedEmployeeId" @update:model-value="changeEmployee">
@@ -229,49 +230,43 @@ const formatMinutesToHours = (minutes: number | null) => {
                 </div>
             </div>
 
-            <!-- Employee Info Card -->
-            <Card>
-                <CardHeader>
-                    <div class="flex items-center gap-4">
-                        <div>
-                            <CardTitle class="flex items-center gap-2">
-                                <UserIcon class="h-5 w-5" />
-                                {{ employee.name }}
-                            </CardTitle>
-                            <CardDescription>
-                                {{ employee.employee_id }}
-                                <span v-if="employee.designation"> · {{ employee.designation }}</span>
-                                <span v-if="employee.department_name"> · {{ employee.department_name }}</span>
-                                <span v-if="employee.sub_department_name"> ({{ employee.sub_department_name }})</span>
-                            </CardDescription>
-                        </div>
+            <!-- Employee Info with Stats Bar -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-card border rounded-lg">
+                <div class="flex items-center gap-3">
+                    <UserIcon class="h-8 w-8 text-muted-foreground" />
+                    <div>
+                        <h2 class="text-lg font-semibold">{{ employee.name }}</h2>
+                        <p class="text-sm text-muted-foreground">
+                            {{ employee.employee_id }}
+                            <span v-if="employee.designation"> · {{ employee.designation }}</span>
+                            <span v-if="employee.department_name"> · {{ employee.department_name }}</span>
+                        </p>
                     </div>
-                </CardHeader>
-                <CardContent>
-                    <div class="grid gap-4 md:grid-cols-5">
-                        <div class="text-center p-3 bg-muted rounded-lg">
-                            <div class="text-2xl font-bold">{{ summary.totalAttendance }}</div>
-                            <div class="text-xs text-muted-foreground">Total Days</div>
-                        </div>
-                        <div class="text-center p-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
-                            <div class="text-2xl font-bold text-green-600">{{ summary.onTimeCount }}</div>
-                            <div class="text-xs text-muted-foreground">On Time</div>
-                        </div>
-                        <div class="text-center p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg">
-                            <div class="text-2xl font-bold text-yellow-600">{{ summary.lateCount }}</div>
-                            <div class="text-xs text-muted-foreground">Late</div>
-                        </div>
-                        <div class="text-center p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-                            <div class="text-2xl font-bold text-blue-600">{{ summary.totalHours.toFixed(1) }}h</div>
-                            <div class="text-xs text-muted-foreground">Total Hours</div>
-                        </div>
-                        <div class="text-center p-3 bg-muted rounded-lg">
-                            <div class="text-2xl font-bold">{{ summary.avgHoursPerDay.toFixed(1) }}h</div>
-                            <div class="text-xs text-muted-foreground">Avg/Day</div>
-                        </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-4 text-sm">
+                    <div class="flex items-center gap-2">
+                        <span class="text-muted-foreground">Attendance:</span>
+                        <span class="font-semibold">{{ summary.totalAttendance }} days</span>
                     </div>
-                </CardContent>
-            </Card>
+                    <div class="h-4 w-px bg-border hidden sm:block"></div>
+                    <div class="flex items-center gap-1">
+                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span class="text-green-600 font-medium">{{ summary.onTimeCount }}</span>
+                        <span class="text-muted-foreground">on time</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <span class="text-yellow-600 font-medium">{{ summary.lateCount }}</span>
+                        <span class="text-muted-foreground">late</span>
+                    </div>
+                    <div class="h-4 w-px bg-border hidden sm:block"></div>
+                    <div class="flex items-center gap-1">
+                        <Clock class="h-4 w-4 text-blue-500" />
+                        <span class="text-blue-600 font-medium">{{ summary.totalHours.toFixed(1) }}h</span>
+                        <span class="text-muted-foreground">({{ summary.avgHoursPerDay.toFixed(1) }}h/day)</span>
+                    </div>
+                </div>
+            </div>
 
             <!-- Attendance Records Table -->
             <Card>

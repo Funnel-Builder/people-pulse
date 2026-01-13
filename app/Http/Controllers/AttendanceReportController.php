@@ -11,7 +11,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Carbon\Carbon;
 
-class ReportController extends Controller
+class AttendanceReportController extends Controller
 {
     public function index(Request $request): Response
     {
@@ -180,7 +180,7 @@ class ReportController extends Controller
             ];
         }
 
-        return Inertia::render('Reports/Index', [
+        return Inertia::render('Reports/AttendanceReport', [
             'stats' => [
                 'total_employees' => $totalEmployees,
                 'monthly_present' => $monthlyPresent,

@@ -51,8 +51,9 @@ interface Props {
 const props = defineProps<Props>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Attendance', href: '/attendance' },
-    { title: 'Employee Report', href: '/attendance/employee-report' },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Attendance Report', href: '/reports/attendance' },
+    { title: 'Employee Report', href: '/reports/attendance/employees' },
 ];
 
 const months = [
@@ -78,7 +79,7 @@ const applyFilters = () => {
         month: selectedMonth.value,
         year: selectedYear.value,
     };
-    router.get('/attendance/employee-report', params, {
+    router.get('/reports/attendance/employees', params, {
         preserveState: true,
         preserveScroll: true,
     });
@@ -87,7 +88,7 @@ const applyFilters = () => {
 watch([selectedMonth, selectedYear], () => applyFilters());
 
 const selectEmployee = (employeeId: number) => {
-    router.visit(`/attendance/employee-report/${employeeId}?month=${selectedMonth.value}&year=${selectedYear.value}`);
+    router.visit(`/reports/attendance/employees/${employeeId}?month=${selectedMonth.value}&year=${selectedYear.value}`);
 };
 
 const exportReport = (type: 'csv' | 'xlsx') => {
@@ -96,7 +97,7 @@ const exportReport = (type: 'csv' | 'xlsx') => {
     params.append('year', selectedYear.value);
     params.append('type', type);
 
-    window.location.href = `/attendance/employee-report/export?${params.toString()}`;
+    window.location.href = `/reports/attendance/employees/export?${params.toString()}`;
 };
 
 const selectedMonthName = computed(() => {

@@ -92,8 +92,8 @@ interface Props {
 const props = defineProps<Props>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Attendance', href: '/attendance' },
-    { title: 'Admin Dashboard', href: '/attendance/admin' },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Attendance Records', href: '/records/attendance' },
 ];
 
 const localFilters = ref({
@@ -126,7 +126,7 @@ const applyFilters = () => {
     if (filters.sub_department === 'all_sub_departments') filters.sub_department = '';
     if (filters.employee === 'all_employees') filters.employee = '';
 
-    router.get('/attendance/admin', filters, {
+    router.get('/records/attendance', filters, {
         preserveState: true,
         preserveScroll: true,
     });
@@ -159,7 +159,7 @@ const exportData = (type: 'csv' | 'xlsx' = 'csv') => {
     if (localFilters.value.employee && localFilters.value.employee !== 'all_employees') params.append('employee', localFilters.value.employee);
     params.append('type', type);
 
-    window.location.href = `/attendance/export?${params.toString()}`;
+    window.location.href = `/records/attendance/export?${params.toString()}`;
 };
 
 // Immediate filter application for selects
@@ -256,13 +256,13 @@ const hasActiveFilters = computed(() => {
 </script>
 
 <template>
-    <Head title="Admin Dashboard" />
+    <Head title="Attendance Records" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex flex-col gap-6 p-4 md:p-6">
             <!-- Header with Filters -->
             <div class="flex flex-col gap-4">
-                <h1 class="text-2xl font-bold">Admin Dashboard</h1>
+                <h1 class="text-2xl font-bold">Attendance Records</h1>
                 <div class="flex flex-wrap gap-2 items-center">
                     <DateRangePicker 
                         :start-date="localFilters.start_date"
@@ -314,51 +314,51 @@ const hasActiveFilters = computed(() => {
             <!-- Today's Summary Cards -->
             <div v-if="companySummary" class="grid gap-4 md:grid-cols-4">
                 <Card 
-                    class="cursor-pointer hover:bg-muted/50 transition-colors"
+                    class="cursor-pointer hover:bg-muted/50 transition-colors py-2"
                     @click="openTeamModal('all')"
                 >
-                    <CardHeader class="flex flex-row items-center justify-between pb-2">
-                        <CardDescription>Total Employees</CardDescription>
+                    <CardHeader class="flex flex-row items-center justify-between py-2 px-4">
+                        <CardDescription class="text-xs">Total Employees</CardDescription>
                         <Users class="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent>
-                        <div class="text-3xl font-bold">{{ companySummary.total_employees }}</div>
+                    <CardContent class="py-1 px-4">
+                        <div class="text-2xl font-bold">{{ companySummary.total_employees }}</div>
                     </CardContent>
                 </Card>
                 <Card 
-                    class="cursor-pointer hover:bg-muted/50 transition-colors"
+                    class="cursor-pointer hover:bg-muted/50 transition-colors py-2"
                     @click="openTeamModal('present')"
                 >
-                    <CardHeader class="flex flex-row items-center justify-between pb-2">
-                        <CardDescription>Present Today</CardDescription>
+                    <CardHeader class="flex flex-row items-center justify-between py-2 px-4">
+                        <CardDescription class="text-xs">Present Today</CardDescription>
                         <UserCheck class="h-4 w-4 text-green-500" />
                     </CardHeader>
-                    <CardContent>
-                        <div class="text-3xl font-bold text-green-600">{{ companySummary.present }}</div>
+                    <CardContent class="py-1 px-4">
+                        <div class="text-2xl font-bold text-green-600">{{ companySummary.present }}</div>
                     </CardContent>
                 </Card>
                 <Card 
-                    class="cursor-pointer hover:bg-muted/50 transition-colors"
+                    class="cursor-pointer hover:bg-muted/50 transition-colors py-2"
                     @click="openTeamModal('absent')"
                 >
-                    <CardHeader class="flex flex-row items-center justify-between pb-2">
-                        <CardDescription>Absent Today</CardDescription>
+                    <CardHeader class="flex flex-row items-center justify-between py-2 px-4">
+                        <CardDescription class="text-xs">Absent Today</CardDescription>
                         <UserX class="h-4 w-4 text-red-500" />
                     </CardHeader>
-                    <CardContent>
-                        <div class="text-3xl font-bold text-red-600">{{ companySummary.absent }}</div>
+                    <CardContent class="py-1 px-4">
+                        <div class="text-2xl font-bold text-red-600">{{ companySummary.absent }}</div>
                     </CardContent>
                 </Card>
                 <Card 
-                    class="cursor-pointer hover:bg-muted/50 transition-colors"
+                    class="cursor-pointer hover:bg-muted/50 transition-colors py-2"
                     @click="openTeamModal('late')"
                 >
-                    <CardHeader class="flex flex-row items-center justify-between pb-2">
-                        <CardDescription>Late Today</CardDescription>
+                    <CardHeader class="flex flex-row items-center justify-between py-2 px-4">
+                        <CardDescription class="text-xs">Late Today</CardDescription>
                         <AlertTriangle class="h-4 w-4 text-yellow-500" />
                     </CardHeader>
-                    <CardContent>
-                        <div class="text-3xl font-bold text-yellow-600">{{ companySummary.late }}</div>
+                    <CardContent class="py-1 px-4">
+                        <div class="text-2xl font-bold text-yellow-600">{{ companySummary.late }}</div>
                     </CardContent>
                 </Card>
             </div>

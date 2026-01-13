@@ -71,7 +71,6 @@ const closeModal = () => {
             <!-- Header -->
             <div>
                 <h1 class="text-2xl font-bold">Leave Settings</h1>
-                <p class="text-muted-foreground">Configure and adjust employee leave balances</p>
             </div>
 
             <!-- Flash Messages -->
@@ -91,9 +90,6 @@ const closeModal = () => {
                         <CalendarCog class="h-5 w-5" />
                         Employee Leave Balances
                     </CardTitle>
-                    <CardDescription>
-                        Select an employee to view and adjust their leave allocations
-                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <!-- Search -->

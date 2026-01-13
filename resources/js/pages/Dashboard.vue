@@ -5,8 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import ClockInButton from '@/components/ClockInButton.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { type BreadcrumbItem, type Attendance, type AttendanceStats, type User } from '@/types';
-import { Head, router, usePage } from '@inertiajs/vue3';
-import { Clock, LogIn, LogOut, AlertTriangle, CheckCircle, CalendarDays, Timer, TrendingUp, Calendar } from 'lucide-vue-next';
+import { Head, router, usePage, Link } from '@inertiajs/vue3';
+import { Clock, LogIn, LogOut, AlertTriangle, CheckCircle, CalendarDays, Timer, TrendingUp, Calendar, Info, Bell } from 'lucide-vue-next';
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import {
     Tooltip,
@@ -32,6 +32,8 @@ interface Props {
     isWeekend: boolean;
     officeStartTime: string;
     currentTime: string;
+    attendanceHistory: Record<string, { date: string; is_late: boolean; clock_in: string | null; clock_out: string | null }>;
+    userWeekendDays: string[];
     leaveBalances: Array<{
         leave_type_id: number;
         leave_type_name: string;
@@ -39,6 +41,14 @@ interface Props {
         balance: number;
         used: number;
         available: number;
+    }>;
+    announcements: Array<{
+        id: number;
+        title: string;
+        content: string;
+        type: 'info' | 'warning' | 'success' | 'event';
+        created_at: string;
+        created_by: string | null;
     }>;
 }
 
@@ -139,13 +149,47 @@ const handleClockAction = () => {
     }
 };
 
-// Mock upcoming event - only show 1
-const upcomingEvent = { id: 1, title: 'Team Meeting', date: 'Today, 3:00 PM', type: 'meeting' };
+// Map day index to day name for weekend checking
+const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-// Generate heatmap data (365 days)
+// Announcement type helpers
+const getAnnouncementIcon = (type: string) => {
+    switch (type) {
+        case 'info': return Info;
+        case 'warning': return AlertTriangle;
+        case 'success': return CheckCircle;
+        case 'event': return Calendar;
+        default: return Bell;
+    }
+};
+
+const getAnnouncementClass = (type: string) => {
+    switch (type) {
+        case 'info': return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
+        case 'warning': return 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800';
+        case 'success': return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
+        case 'event': return 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800';
+        default: return 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800';
+    }
+};
+
+const getAnnouncementIconClass = (type: string) => {
+    switch (type) {
+        case 'info': return 'text-blue-600 dark:text-blue-400';
+        case 'warning': return 'text-amber-600 dark:text-amber-400';
+        case 'success': return 'text-green-600 dark:text-green-400';
+        case 'event': return 'text-purple-600 dark:text-purple-400';
+        default: return 'text-gray-600 dark:text-gray-400';
+    }
+};
+
+// Generate heatmap data (365 days) using real attendance records
 const heatmapData = computed(() => {
     const today = new Date();
-    const data: { date: Date; status: 'present' | 'late' | 'absent' | 'weekend' | 'future'; dateStr: string }[] = [];
+    const data: { date: Date; status: 'present' | 'late' | 'no_record' | 'weekend' | 'future'; dateStr: string }[] = [];
+    
+    // Get user's weekend days (lowercase for comparison)
+    const weekendDays = (props.userWeekendDays || ['saturday', 'sunday']).map(d => d.toLowerCase());
 
     // Generate last 365 days
     for (let i = 364; i >= 0; i--) {
@@ -153,21 +197,29 @@ const heatmapData = computed(() => {
         date.setDate(date.getDate() - i);
 
         const dayOfWeek = date.getDay();
+        const dayName = dayNames[dayOfWeek];
         const isFuture = date > today;
-        const isWeekendDay = dayOfWeek === 5 || dayOfWeek === 6; // Fri-Sat weekend for BD
+        const isWeekendDay = weekendDays.includes(dayName);
 
-        let status: 'present' | 'late' | 'absent' | 'weekend' | 'future';
+        // Get date key for attendance lookup
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateKey = `${year}-${month}-${day}`;
+        const attendanceRecord = props.attendanceHistory[dateKey];
+
+        let status: 'present' | 'late' | 'no_record' | 'weekend' | 'future';
 
         if (isFuture) {
             status = 'future';
+        } else if (attendanceRecord && attendanceRecord.clock_in) {
+            // If user clocked in (even on weekend), show as present or late
+            status = attendanceRecord.is_late ? 'late' : 'present';
         } else if (isWeekendDay) {
+            // Only show as weekend if no attendance record
             status = 'weekend';
         } else {
-            // Random status for demo
-            const rand = Math.random();
-            if (rand > 0.9) status = 'absent';
-            else if (rand > 0.8) status = 'late';
-            else status = 'present';
+            status = 'no_record';
         }
 
         const dateStr = date.toLocaleDateString('en-US', {
@@ -239,7 +291,7 @@ const getHeatmapColor = (status: string) => {
     switch (status) {
         case 'present': return 'bg-sky-500 dark:bg-sky-600';
         case 'late': return 'bg-amber-500 dark:bg-amber-600';
-        case 'absent': return 'bg-red-500 dark:bg-red-600';
+        case 'no_record': return 'bg-transparent border border-gray-300 dark:border-gray-600';
         case 'weekend': return 'bg-gray-300 dark:bg-gray-700';
         case 'future': return 'bg-transparent';
         default: return 'bg-gray-100 dark:bg-gray-800';
@@ -250,7 +302,7 @@ const getStatusLabel = (status: string) => {
     switch (status) {
         case 'present': return 'Present';
         case 'late': return 'Late';
-        case 'absent': return 'Absent';
+        case 'no_record': return 'No Record';
         case 'weekend': return 'Weekend';
         case 'future': return '';
         default: return 'No Data';
@@ -351,20 +403,44 @@ const getStatusLabel = (status: string) => {
                     </CardContent>
                 </Card>
 
-                <!-- Upcoming Event Card - Single event -->
+                <!-- Announcements Section -->
                 <Card class="lg:col-span-4">
-                    <CardContent class="p-4 h-full flex items-center">
-                        <div class="flex items-center gap-4 w-full">
-                            <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 flex-shrink-0">
-                                <Calendar class="h-5 w-5 text-primary" />
+                    <CardHeader class="pb-3">
+                        <div class="flex items-center justify-between">
+                            <CardTitle class="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                <Bell class="h-4 w-4" />
+                                Announcements
+                            </CardTitle>
+                            <Link v-if="user.role === 'admin' || user.role === 'manager'" href="/announcements" class="text-xs text-primary hover:underline">
+                                Manage
+                            </Link>
+                        </div>
+                    </CardHeader>
+                    <CardContent class="space-y-3">
+                        <template v-if="announcements && announcements.length > 0">
+                            <div
+                                v-for="announcement in announcements.slice(0, 3)"
+                                :key="announcement.id"
+                                class="p-3 rounded-lg border transition-colors"
+                                :class="getAnnouncementClass(announcement.type)"
+                            >
+                                <div class="flex items-start gap-3">
+                                    <component
+                                        :is="getAnnouncementIcon(announcement.type)"
+                                        class="h-4 w-4 mt-0.5 flex-shrink-0"
+                                        :class="getAnnouncementIconClass(announcement.type)"
+                                    />
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium truncate">{{ announcement.title }}</p>
+                                        <p class="text-xs text-muted-foreground line-clamp-2 mt-1">{{ announcement.content }}</p>
+                                        <p class="text-xs text-muted-foreground mt-2">{{ announcement.created_at }}</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-xs text-muted-foreground">Next Event</p>
-                                <p class="font-medium truncate">{{ upcomingEvent.title }}</p>
-                            </div>
-                            <div class="text-right flex-shrink-0">
-                                <p class="text-sm text-muted-foreground">{{ upcomingEvent.date }}</p>
-                            </div>
+                        </template>
+                        <div v-else class="text-center py-6 text-sm text-muted-foreground">
+                            <Bell class="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p>No announcements</p>
                         </div>
                     </CardContent>
                 </Card>

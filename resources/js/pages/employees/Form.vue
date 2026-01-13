@@ -131,7 +131,6 @@ watch(() => form.department_id, (newDeptId, oldDeptId) => {
             <!-- Header -->
             <div>
                 <h1 class="text-2xl font-bold">{{ isEditMode ? 'Edit Employee' : 'Create Employee' }}</h1>
-                <p class="text-muted-foreground">{{ isEditMode ? 'Update employee information' : 'Add a new employee to the system' }}</p>
             </div>
 
             <!-- Form -->

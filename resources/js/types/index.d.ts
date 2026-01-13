@@ -124,4 +124,23 @@ export interface PaginatedData<T> {
     total: number;
 }
 
+export interface Announcement {
+    id: number;
+    title: string;
+    content: string;
+    type: 'info' | 'warning' | 'success' | 'event';
+    target_audience: {
+        roles?: string[];
+        department_ids?: number[];
+        sub_department_ids?: number[];
+    } | null;
+    starts_at: string | null;
+    expires_at: string | null;
+    is_active: boolean;
+    created_by: number;
+    created_by_user?: User;
+    created_at: string;
+    updated_at: string;
+}
+
 export type BreadcrumbItemType = BreadcrumbItem;

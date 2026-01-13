@@ -45,7 +45,6 @@ const submit = () => {
             <!-- Header -->
             <div>
                 <h1 class="text-2xl font-bold">Attendance Settings</h1>
-                <p class="text-muted-foreground">Configure office hours and attendance rules</p>
             </div>
 
             <!-- Flash Messages -->

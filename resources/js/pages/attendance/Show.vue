@@ -17,7 +17,8 @@ interface Props {
 const props = defineProps<Props>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Attendance', href: '/attendance' },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'My Attendance', href: '/attendance' },
     { title: 'Details', href: `/attendance/${props.attendance.id}` },
 ];
 

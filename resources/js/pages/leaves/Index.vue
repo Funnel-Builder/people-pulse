@@ -7,6 +7,12 @@ import { Button } from '@/components/ui/button';
 import { CalendarDays, CalendarPlus, Eye, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import type { BreadcrumbItem } from '@/types';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'My Leaves', href: '/leaves' },
+];
 
 interface LeaveDate {
     id: number;
@@ -186,13 +192,12 @@ const capitalizeStatus = (status: string) => {
 <template>
     <Head title="My Leaves" />
 
-    <AppLayout>
+    <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-bold">My Leaves</h1>
-                    <p class="text-muted-foreground">View your leave history and calendar</p>
                 </div>
                 <Button @click="router.visit('/leaves/apply')">
                     <CalendarPlus class="mr-2 h-4 w-4" />
