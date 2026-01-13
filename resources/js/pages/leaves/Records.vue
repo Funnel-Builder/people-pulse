@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { CalendarDays, X, Clock, CheckCircle, XCircle, AlertCircle, Download } from 'lucide-vue-next';
+import { CalendarDays, X, Clock, CheckCircle, XCircle, AlertCircle, Download, ArrowRight } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -144,13 +144,21 @@ const hasActiveFilters = computed(() => {
            (localFilters.value.employee && localFilters.value.employee !== 'all_employees');
 });
 
-const formatDate = (dateString: string) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-    });
+const formatDatePeriod = (start: string, end: string) => {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    
+    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+    const startStr = startDate.toLocaleDateString('en-US', options);
+    
+    if (start === end) return startStr;
+    
+    // Check if same year and month to condense (e.g., Jan 12 - 15)
+    if (startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear()) {
+        return `${startStr} - ${endDate.getDate()}`;
+    }
+    
+    return `${startStr} - ${endDate.toLocaleDateString('en-US', options)}`;
 };
 
 const getStatusBadge = (status: string) => {
@@ -166,12 +174,6 @@ const getStatusBadge = (status: string) => {
         default:
             return { class: '', label: status };
     }
-};
-
-const getTypeBadge = (type: string) => {
-    return type === 'advance' 
-        ? { class: 'bg-blue-50 text-blue-700 border-blue-200', label: 'Advance' }
-        : { class: 'bg-purple-50 text-purple-700 border-purple-200', label: 'Post' };
 };
 
 const exportRecords = (type: 'csv' | 'xlsx') => {
@@ -327,24 +329,19 @@ const exportRecords = (type: 'csv' | 'xlsx') => {
                                     <th class="px-4 pb-3 text-left font-medium">Employee</th>
                                     <th class="px-4 pb-3 text-left font-medium">Department</th>
                                     <th class="px-4 pb-3 text-left font-medium">Leave Type</th>
-                                    <th class="px-4 pb-3 text-left font-medium">Type</th>
                                     <th class="px-4 pb-3 text-left font-medium">Period</th>
-                                    <th class="px-4 pb-3 text-center font-medium">Days</th>
                                     <th class="px-4 pb-3 text-left font-medium">Status</th>
-                                    <th class="px-4 pb-3 text-left font-medium">Actions</th>
+                                    <th class="px-4 pb-3 text-center font-medium">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr
                                     v-for="leave in leaves.data"
                                     :key="leave.id"
-                                    class="border-b last:border-0"
+                                    class="border-b last:border-0 hover:bg-muted/30 transition-colors"
                                 >
                                     <td class="px-4 py-3">
-                                        <div>
-                                            <div class="font-medium">{{ leave.user?.name }}</div>
-                                            <div class="text-sm text-muted-foreground">{{ leave.user?.employee_id }}</div>
-                                        </div>
+                                        <div class="font-medium">{{ leave.user?.name }}</div>
                                     </td>
                                     <td class="px-4 py-3">
                                         <div v-if="leave.user?.department" class="text-sm">{{ leave.user.department.name }}</div>
@@ -353,38 +350,31 @@ const exportRecords = (type: 'csv' | 'xlsx') => {
                                         </div>
                                     </td>
                                     <td class="px-4 py-3">
-                                        <div class="flex items-center gap-2">
-                                            <span class="font-medium">{{ leave.leave_type?.name }}</span>
-                                            <span class="text-xs text-muted-foreground">({{ leave.leave_type?.code }})</span>
-                                        </div>
+                                        <span class="font-medium">{{ leave.leave_type?.name }}</span>
                                     </td>
                                     <td class="px-4 py-3">
-                                        <Badge variant="outline" :class="getTypeBadge(leave.type).class">
-                                            {{ getTypeBadge(leave.type).label }}
-                                        </Badge>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <div class="text-sm">{{ formatDate(leave.start_date) }}</div>
-                                        <div v-if="leave.start_date !== leave.end_date" class="text-xs text-muted-foreground">
-                                            → {{ formatDate(leave.end_date) }}
+                                        <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-muted/50 border text-sm">
+                                            <CalendarDays class="h-3.5 w-3.5 text-muted-foreground" />
+                                            <span class="font-medium">{{ formatDatePeriod(leave.start_date, leave.end_date) }}</span>
+                                            <span class="h-3 w-[1px] bg-border mx-1"></span>
+                                            <span class="text-xs text-muted-foreground">{{ leave.days }} Day{{ leave.days > 1 ? 's' : '' }}</span>
                                         </div>
-                                    </td>
-                                    <td class="px-4 py-3 text-center">
-                                        <Badge variant="outline">{{ leave.days }}</Badge>
                                     </td>
                                     <td class="px-4 py-3">
                                         <Badge variant="outline" :class="getStatusBadge(leave.status).class">
                                             {{ getStatusBadge(leave.status).label }}
                                         </Badge>
                                     </td>
-                                    <td class="px-4 py-3">
-                                        <Link :href="`/leaves/${leave.id}`">
-                                            <Button variant="outline" size="sm">View</Button>
+                                    <td class="px-4 py-3 text-center">
+                                        <Link :href="`/records/leave/${leave.id}/manage`">
+                                            <Button variant="ghost" size="sm" class="h-8 w-8 p-0">
+                                                <ArrowRight class="h-4 w-4 text-muted-foreground" />
+                                            </Button>
                                         </Link>
                                     </td>
                                 </tr>
                                 <tr v-if="leaves.data.length === 0">
-                                    <td colspan="8" class="py-8 text-center text-muted-foreground">
+                                    <td colspan="6" class="py-8 text-center text-muted-foreground">
                                         No leave records found.
                                     </td>
                                 </tr>

@@ -33,10 +33,14 @@ class LeaveApprovalController extends Controller
         // Check if user is authorized to approve
         $canApprove = false;
 
-        if ($currentApproval->approver_type === 'cover_person' && $leave->cover_person_id === $user->id) {
-            $canApprove = true;
-        } elseif ($currentApproval->approver_type === 'manager' && $user->isManager()) {
-            $canApprove = true;
+        if ($currentApproval->approver_type === 'cover_person') {
+            if ($leave->cover_person_id === $user->id || $user->isAdmin()) {
+                $canApprove = true;
+            }
+        } elseif ($currentApproval->approver_type === 'manager') {
+            if ($user->isManager() || $user->isAdmin()) {
+                $canApprove = true;
+            }
         } elseif ($currentApproval->approver_type === 'admin' && $user->isAdmin()) {
             $canApprove = true;
         }

@@ -58,6 +58,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Leave Records
         Route::get('/leave', [LeaveRecordsController::class, 'index'])->name('leave');
         Route::get('/leave/export', [LeaveRecordsController::class, 'export'])->name('leave.export');
+        Route::get('/leave/{leave}/manage', [LeaveRecordsController::class, 'manage'])->name('leave.manage');
     });
 
     // =====================================================

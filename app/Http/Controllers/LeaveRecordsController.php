@@ -148,6 +148,48 @@ class LeaveRecordsController extends Controller
     }
 
     /**
+     * Get detailed leave record for modal.
+     */
+    /**
+     * Show the manage leave application page.
+     */
+    public function manage(Request $request, Leave $leave)
+    {
+        $user = $request->user();
+
+        if (!$user->isAdmin() && !$user->isManager()) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        // Manager check: can only view leaves for their sub-department scope
+        if ($user->isManager() && !$user->isAdmin()) {
+            $managedSubDepartmentIds = $user->getManagedSubDepartmentIds();
+            $leaveUser = $leave->user;
+            
+            if (!in_array($leaveUser->sub_department_id, $managedSubDepartmentIds)) {
+                abort(403, 'Unauthorized: This leave is outside your managed departments.');
+            }
+        }
+
+        $leave->load([
+            'user:id,name,employee_id,department_id,sub_department_id,designation',
+            'user.department:id,name',
+            'user.subDepartment:id,name',
+            'leaveType:id,name,code',
+            'dates',
+            'coverPerson:id,name',
+            'approvals' => function($q) {
+                $q->orderBy('step');
+            },
+            'approvals.approver:id,name'
+        ]);
+
+        return Inertia::render('leaves/Manage', [
+            'leave' => $leave,
+        ]);
+    }
+
+    /**
      * Export leave records to CSV/XLSX.
      */
     public function export(Request $request)
