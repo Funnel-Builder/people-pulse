@@ -160,11 +160,25 @@ const getApprovalButtonLabel = (leave: Leave) => {
                                     <div class="flex items-center gap-2">
                                         <span class="font-medium">{{ leave.user.name }}</span>
                                         <Badge variant="outline" class="text-xs">{{ leave.user.employee_id }}</Badge>
+                                        <!-- Show approval step badge -->
+                                        <Badge 
+                                            v-if="getCurrentApproverType(leave) === 'cover_person'"
+                                            class="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+                                        >
+                                            Cover Person Step
+                                        </Badge>
                                     </div>
                                     <div class="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                                         <span>{{ leave.leave_type.name }}</span>
                                         <span>•</span>
                                         <span>{{ formatDates(leave.dates) }}</span>
+                                        <!-- Show cover person info for advance leave at step 1 -->
+                                        <template v-if="leave.cover_person && getCurrentApproverType(leave) === 'cover_person'">
+                                            <span>•</span>
+                                            <span class="text-amber-600 dark:text-amber-400">
+                                                Cover: {{ leave.cover_person.name }}
+                                            </span>
+                                        </template>
                                     </div>
                                 </div>
                             </div>

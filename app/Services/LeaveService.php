@@ -151,10 +151,18 @@ class LeaveService
 
     /**
      * Get cover person options for a user.
-     * Returns users from the same sub-department.
+     * Admins can see all users, regular users see only their sub-department members.
      */
     public function getCoverPersonOptions(User $user): Collection
     {
+        // Admins can select any user as cover person
+        if ($user->isAdmin()) {
+            return User::where('id', '!=', $user->id)
+                ->orderBy('name')
+                ->get(['id', 'name', 'employee_id', 'designation']);
+        }
+
+        // Regular users can only select from their sub-department
         if (!$user->sub_department_id) {
             return collect([]);
         }
@@ -208,13 +216,18 @@ class LeaveService
             });
         }
 
-        // Cover person requests (for any user)
-        $coverPersonLeaves = Leave::with(['dates', 'leaveType', 'user', 'coverPerson', 'approvals'])
+        // Cover person requests
+        // Admins can see all advance leave requests at cover person step
+        $coverPersonQuery = Leave::with(['dates', 'leaveType', 'user', 'coverPerson', 'approvals'])
             ->where('status', Leave::STATUS_PENDING)
-            ->where('cover_person_id', $user->id)
             ->where('current_approval_step', 1)
-            ->where('type', Leave::TYPE_ADVANCE)
-            ->get();
+            ->where('type', Leave::TYPE_ADVANCE);
+
+        if (!$user->isAdmin()) {
+            $coverPersonQuery->where('cover_person_id', $user->id);
+        }
+
+        $coverPersonLeaves = $coverPersonQuery->get();
 
         // Merge and return unique leaves
         if ($user->isAdmin() || $user->isManager()) {
@@ -226,16 +239,21 @@ class LeaveService
 
     /**
      * Get cover requests for a user (where they are the cover person).
+     * Admins can see all advance leave requests pending cover person approval.
      */
     public function getCoverRequestsForUser(User $user): Collection
     {
-        return Leave::with(['dates', 'leaveType', 'user', 'coverPerson', 'approvals'])
+        $query = Leave::with(['dates', 'leaveType', 'user', 'coverPerson', 'approvals'])
             ->where('status', Leave::STATUS_PENDING)
-            ->where('cover_person_id', $user->id)
             ->where('current_approval_step', 1)
-            ->where('type', Leave::TYPE_ADVANCE)
-            ->orderByDesc('created_at')
-            ->get();
+            ->where('type', Leave::TYPE_ADVANCE);
+
+        // Admins can see and approve all cover person requests
+        if (!$user->isAdmin()) {
+            $query->where('cover_person_id', $user->id);
+        }
+
+        return $query->orderByDesc('created_at')->get();
     }
 
     /**

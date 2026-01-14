@@ -179,7 +179,7 @@ const formatTargetAudience = (announcement: Announcement) => {
                                     <TableHead>Status</TableHead>
                                     <TableHead>Created By</TableHead>
                                     <TableHead>Date</TableHead>
-                                    <TableHead class="w-[80px]"></TableHead>
+                                    <TableHead class="w-[80px]">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>

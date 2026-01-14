@@ -84,7 +84,11 @@ const calendarDays = computed(() => {
     const days: { date: string; day: number; attendance: Attendance | undefined }[] = [];
     for (let i = 1; i <= daysInMonth.value; i++) {
         const dateStr = `${selectedYear.value}-${String(selectedMonth.value).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-        const attendance = props.attendances.find(a => a.date === dateStr);
+        // Normalize attendance date comparison - backend sends ISO datetime, we need just the date part
+        const attendance = props.attendances.find(a => {
+            const attendanceDate = a.date ? a.date.split('T')[0] : '';
+            return attendanceDate === dateStr;
+        });
         days.push({ date: dateStr, day: i, attendance });
     }
     return days;
@@ -92,7 +96,11 @@ const calendarDays = computed(() => {
 
 const selectedAttendance = computed(() => {
     if (!selectedDate.value) return null;
-    return props.attendances.find(a => a.date === selectedDate.value) || null;
+    // Normalize attendance date comparison - backend sends ISO datetime, we need just the date part
+    return props.attendances.find(a => {
+        const attendanceDate = a.date ? a.date.split('T')[0] : '';
+        return attendanceDate === selectedDate.value;
+    }) || null;
 });
 
 const selectDay = (date: string) => {

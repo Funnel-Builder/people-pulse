@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { MultiSelectCalendar } from '@/components/ui/calendar';
@@ -118,6 +120,8 @@ const submit = () => {
         preserveScroll: true,
     });
 };
+
+
 </script>
 
 <template>
@@ -205,9 +209,9 @@ const submit = () => {
                     <Label for="cover_person">
                         Cover Person <span class="text-destructive">*</span>
                     </Label>
-                    <Select v-model="form.cover_person_id" required>
+                    <Select v-model="form.cover_person_id">
                         <SelectTrigger>
-                            <SelectValue placeholder="Select a cover person" />
+                            <SelectValue placeholder="Select cover person" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem 

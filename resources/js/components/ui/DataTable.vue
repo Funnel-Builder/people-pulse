@@ -38,7 +38,7 @@ const props = withDefaults(defineProps<Props>(), {
             <TableHead v-for="col in columns" :key="col.key" :class="col.class" class="h-12 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
               {{ col.label }}
             </TableHead>
-            <TableHead v-if="$slots.actions" class="w-[50px]"></TableHead>
+            <TableHead v-if="$slots.actions" class="w-[50px]">Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
