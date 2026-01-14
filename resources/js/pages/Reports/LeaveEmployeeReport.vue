@@ -8,6 +8,7 @@ import type { BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
 import { CalendarDays } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
+import { useTenant } from '@/composables/useTenant';
 
 interface Employee {
     id: number;
@@ -40,6 +41,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const { url: tenantUrl } = useTenant();
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -70,7 +72,7 @@ const applyFilters = () => {
         month: selectedMonth.value,
         year: selectedYear.value,
     };
-    router.get('/reports/leave/employees', params, {
+    router.get(tenantUrl('/reports/leave/employees'), params, {
         preserveState: true,
         preserveScroll: true,
     });

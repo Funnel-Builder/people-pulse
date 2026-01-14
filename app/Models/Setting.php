@@ -20,15 +20,30 @@ class Setting extends Model
      */
     public static function get(string $key, $default = null)
     {
-        return Cache::remember("setting_{$key}", 3600, function () use ($key, $default) {
-            $setting = static::where('key', $key)->first();
+        // In tenant context with database cache, tagging isn't supported
+        // So we query directly without caching in that case
+        try {
+            return Cache::remember("setting_{$key}", 3600, function () use ($key, $default) {
+                return static::getFromDatabase($key, $default);
+            });
+        } catch (\BadMethodCallException $e) {
+            // Cache doesn't support tagging, query directly
+            return static::getFromDatabase($key, $default);
+        }
+    }
 
-            if (!$setting) {
-                return $default;
-            }
+    /**
+     * Get setting value directly from database
+     */
+    protected static function getFromDatabase(string $key, $default = null)
+    {
+        $setting = static::where('key', $key)->first();
 
-            return static::castValue($setting->value, $setting->type);
-        });
+        if (!$setting) {
+            return $default;
+        }
+
+        return static::castValue($setting->value, $setting->type);
     }
 
     /**
@@ -36,7 +51,7 @@ class Setting extends Model
      */
     public static function set(string $key, $value, ?int $updatedBy = null): void
     {
-        $setting = static::updateOrCreate(
+        static::updateOrCreate(
             ['key' => $key],
             [
                 'value' => $value,
@@ -44,13 +59,17 @@ class Setting extends Model
             ]
         );
 
-        Cache::forget("setting_{$key}");
+        try {
+            Cache::forget("setting_{$key}");
+        } catch (\BadMethodCallException $e) {
+            // Cache doesn't support tagging, ignore
+        }
     }
 
     /**
      * Cast value based on type
      */
-    protected static function castValue($value, string $type)
+    protected static function castValue($value, ?string $type)
     {
         return match ($type) {
             'integer' => (int) $value,
@@ -65,9 +84,13 @@ class Setting extends Model
      */
     public static function clearCache(): void
     {
-        $settings = static::all();
-        foreach ($settings as $setting) {
-            Cache::forget("setting_{$setting->key}");
+        try {
+            $settings = static::all();
+            foreach ($settings as $setting) {
+                Cache::forget("setting_{$setting->key}");
+            }
+        } catch (\BadMethodCallException $e) {
+            // Cache doesn't support tagging, ignore
         }
     }
 

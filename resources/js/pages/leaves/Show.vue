@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Calendar, User, FileText, CheckCircle, XCircle, Clock } from 'lucide-vue-next';
 import type { BreadcrumbItem } from '@/types';
+import { useTenant } from '@/composables/useTenant';
 
 interface LeaveDate {
     id: number;
@@ -54,6 +55,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const { url: tenantUrl } = useTenant();
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -129,7 +131,7 @@ const goBack = () => {
 
 const cancelLeave = () => {
     if (confirm('Are you sure you want to cancel this leave application?')) {
-        router.post(`/leaves/${props.leave.id}/cancel`);
+        router.post(tenantUrl(`/leaves/${props.leave.id}/cancel`));
     }
 };
 </script>

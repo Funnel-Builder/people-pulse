@@ -14,6 +14,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { clockIn as clockInRoute, clockOut as clockOutRoute } from '@/routes/attendance';
 
 interface CompanyStats {
     total_employees: number;
@@ -117,7 +118,7 @@ const formatTime = (dateString: string | null) => {
 
 const clockIn = () => {
     isProcessing.value = true;
-    router.post('/attendance/clock-in', {}, {
+    router.post(clockInRoute.url({}), {}, {
         preserveScroll: true,
         onFinish: () => {
             isProcessing.value = false;
@@ -127,7 +128,7 @@ const clockIn = () => {
 
 const clockOut = () => {
     isProcessing.value = true;
-    router.post('/attendance/clock-out', {}, {
+    router.post(clockOutRoute.url({}), {}, {
         preserveScroll: true,
         onFinish: () => {
             isProcessing.value = false;

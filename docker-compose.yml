@@ -20,6 +20,8 @@ services:
       - PHP_MEMORY_LIMIT=512M
       - TZ=Asia/Dhaka
       - APP_TIMEZONE=Asia/Dhaka
+      - DB_HOST=mysql
+      - DB_PORT=3306
 
   # Nginx Web Server
   nginx:
@@ -42,7 +44,7 @@ services:
     container_name: peoplepulse-mysql
     restart: unless-stopped
     ports:
-      - "3307:3307"
+      - "3307:3306"
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-peoplepulse}
       MYSQL_USER: ${DB_USERNAME:-peoplepulse}

@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import type { Attendance, BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
+import { useTenant } from '@/composables/useTenant';
 import { CalendarDays, List } from 'lucide-vue-next';
 import DataTable from '@/components/ui/DataTable.vue';
 
@@ -21,6 +22,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const { url: tenantUrl } = useTenant();
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -54,7 +56,7 @@ const selectedMonthLabel = computed(() => {
 });
 
 const applyFilters = () => {
-    router.get('/attendance', {
+    router.get(tenantUrl('/attendance'), {
         month: selectedMonth.value,
         year: selectedYear.value,
     }, {

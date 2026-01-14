@@ -15,6 +15,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTenant } from '@/composables/useTenant';
 
 interface DailyTrend {
     date: string;
@@ -86,6 +87,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const { url: tenantUrl } = useTenant();
 
 const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -118,7 +120,7 @@ const years = Array.from({ length: 5 }, (_, i) => ({
 }));
 
 const applyFilters = () => {
-    router.get('/reports/attendance', {
+    router.get(tenantUrl('/reports/attendance'), {
         month: selectedMonth.value,
         year: selectedYear.value,
     }, {

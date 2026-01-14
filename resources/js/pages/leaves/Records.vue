@@ -15,6 +15,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import DateRangePicker from '@/components/ui/date-range-picker/DateRangePicker.vue';
+import { useTenant } from '@/composables/useTenant';
 
 interface LeaveType {
     id: number;
@@ -87,6 +88,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const { url: tenantUrl } = useTenant();
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -111,7 +113,7 @@ const applyFilters = () => {
     if (filters.sub_department === 'all_sub_departments') filters.sub_department = '';
     if (filters.employee === 'all_employees') filters.employee = '';
 
-    router.get('/records/leave', filters, {
+    router.get(tenantUrl('/records/leave'), filters, {
         preserveState: true,
         preserveScroll: true,
     });
@@ -186,7 +188,7 @@ const exportRecords = (type: 'csv' | 'xlsx') => {
     if (localFilters.value.sub_department && localFilters.value.sub_department !== 'all_sub_departments') params.append('sub_department', localFilters.value.sub_department);
     if (localFilters.value.employee && localFilters.value.employee !== 'all_employees') params.append('employee', localFilters.value.employee);
     
-    window.location.href = `/records/leave/export?${params.toString()}`;
+    window.location.href = tenantUrl(`/records/leave/export?${params.toString()}`);
 };
 </script>
 

@@ -9,6 +9,7 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTenant } from '@/composables/useTenant';
 
 interface LeaveByType {
     name: string;
@@ -93,6 +94,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const { url: tenantUrl } = useTenant();
 
 const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -125,7 +127,7 @@ const years = Array.from({ length: 5 }, (_, i) => ({
 }));
 
 const applyFilters = () => {
-    router.get('/reports/leave', {
+    router.get(tenantUrl('/reports/leave'), {
         month: selectedMonth.value,
         year: selectedYear.value,
     }, {

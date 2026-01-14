@@ -18,6 +18,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { computed, ref } from 'vue';
+import { useTenant } from '@/composables/useTenant';
 
 interface Department {
     id: number;
@@ -52,6 +53,7 @@ const props = defineProps<Props>();
 
 const page = usePage();
 const currentUser = computed(() => page.props.auth?.user);
+const { url: tenantUrl } = useTenant();
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -99,7 +101,7 @@ const confirmDelete = (employee: Employee) => {
 const deleteEmployee = () => {
     if (!employeeToDelete.value) return;
     
-    router.delete(`/employees/${employeeToDelete.value.id}`, {
+    router.delete(tenantUrl(`/employees/${employeeToDelete.value.id}`), {
         preserveScroll: true,
         onSuccess: () => {
             showDeleteAlert.value = false;

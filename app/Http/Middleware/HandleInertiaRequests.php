@@ -41,13 +41,17 @@ class HandleInertiaRequests extends Middleware
         $quoteImages = glob(public_path('quoteimages/*.png'));
         $randomImage = $quoteImages ? '/quoteimages/' . basename($quoteImages[array_rand($quoteImages)]) : null;
 
-        $user = $request->user();
-        if ($user) {
-            $user->load(['department:id,name', 'subDepartment:id,name']);
-        }
-
         // Get tenant context if in tenant scope
         $tenant = tenant();
+
+        // Only fetch user when in tenant context (users table exists in tenant DB, not central)
+        $user = null;
+        if ($tenant) {
+            $user = $request->user();
+            if ($user) {
+                $user->load(['department:id,name', 'subDepartment:id,name']);
+            }
+        }
         $tenantPrefix = $tenant ? "/app/{$tenant->id}" : '';
 
         return [

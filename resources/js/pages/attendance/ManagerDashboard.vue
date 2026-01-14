@@ -23,6 +23,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { User } from '@/types';
+import { useTenant } from '@/composables/useTenant';
 
 interface SubDepartment {
     id: number;
@@ -47,6 +48,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const { url: tenantUrl } = useTenant();
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -63,7 +65,7 @@ const applyFilters = () => {
     const filters = { ...localFilters.value };
     if (filters.sub_department === 'all_sub_departments') filters.sub_department = '';
 
-    router.get('/attendance/manager', filters, {
+    router.get(tenantUrl('/attendance/manager'), filters, {
         preserveState: true,
         preserveScroll: true,
     });
@@ -92,7 +94,7 @@ const exportData = (type: 'csv' | 'xlsx' = 'csv') => {
     if (localFilters.value.sub_department && localFilters.value.sub_department !== 'all_sub_departments') params.append('sub_department', localFilters.value.sub_department);
     params.append('type', type);
     
-    window.location.href = `/attendance/export?${params.toString()}`;
+    window.location.href = tenantUrl(`/attendance/export?${params.toString()}`);
 };
 
 // Modal State

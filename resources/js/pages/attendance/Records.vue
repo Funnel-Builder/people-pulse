@@ -37,6 +37,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import DateRangePicker from '@/components/ui/date-range-picker/DateRangePicker.vue';
 import DateTimePicker from '@/components/ui/date-time-picker/DateTimePicker.vue';
 import type { User } from '@/types';
+import { useTenant } from '@/composables/useTenant';
+
+const { url: tenantUrl } = useTenant();
 
 interface Department {
     id: number;
@@ -126,7 +129,7 @@ const applyFilters = () => {
     if (filters.sub_department === 'all_sub_departments') filters.sub_department = '';
     if (filters.employee === 'all_employees') filters.employee = '';
 
-    router.get('/records/attendance', filters, {
+    router.get(tenantUrl('/records/attendance'), filters, {
         preserveState: true,
         preserveScroll: true,
     });
@@ -159,7 +162,7 @@ const exportData = (type: 'csv' | 'xlsx' = 'csv') => {
     if (localFilters.value.employee && localFilters.value.employee !== 'all_employees') params.append('employee', localFilters.value.employee);
     params.append('type', type);
 
-    window.location.href = `/records/attendance/export?${params.toString()}`;
+    window.location.href = tenantUrl(`/records/attendance/export?${params.toString()}`);
 };
 
 // Immediate filter application for selects
@@ -178,7 +181,7 @@ const openOverrideModal = (attendance: Attendance) => {
 const submitOverride = () => {
     if (!selectedAttendance.value) return;
 
-    overrideForm.patch(`/attendance/${selectedAttendance.value.id}/override`, {
+    overrideForm.patch(tenantUrl(`/attendance/${selectedAttendance.value.id}/override`), {
         preserveScroll: true,
         onSuccess: () => {
             showOverrideModal.value = false;
@@ -196,7 +199,7 @@ const confirmDelete = (attendance: Attendance) => {
 const deleteAttendance = () => {
     if (!attendanceToDelete.value) return;
 
-    router.delete(`/attendance/${attendanceToDelete.value.id}`, {
+    router.delete(tenantUrl(`/attendance/${attendanceToDelete.value.id}`), {
         preserveScroll: true,
         onSuccess: () => {
             showDeleteAlert.value = false;

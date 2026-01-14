@@ -17,6 +17,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useTenant } from '@/composables/useTenant';
 
 interface Employee {
     id: number;
@@ -49,6 +50,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const { url: tenantUrl } = useTenant();
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -79,7 +81,7 @@ const applyFilters = () => {
         month: selectedMonth.value,
         year: selectedYear.value,
     };
-    router.get('/reports/attendance/employees', params, {
+    router.get(tenantUrl('/reports/attendance/employees'), params, {
         preserveState: true,
         preserveScroll: true,
     });
@@ -97,7 +99,7 @@ const exportReport = (type: 'csv' | 'xlsx') => {
     params.append('year', selectedYear.value);
     params.append('type', type);
 
-    window.location.href = `/reports/attendance/employees/export?${params.toString()}`;
+    window.location.href = tenantUrl(`/reports/attendance/employees/export?${params.toString()}`);
 };
 
 const selectedMonthName = computed(() => {

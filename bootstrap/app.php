@@ -32,6 +32,15 @@ return Application::configure(basePath: dirname(__DIR__))
             }
             return route('login');
         });
+
+        // Configure redirect for authenticated users (e.g., when accessing login page while logged in)
+        $middleware->redirectUsersTo(function (Request $request) {
+            $tenant = tenant();
+            if ($tenant) {
+                return "/app/{$tenant->id}/dashboard";
+            }
+            return '/';
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

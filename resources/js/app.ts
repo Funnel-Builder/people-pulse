@@ -5,6 +5,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import { initializeTheme } from './composables/useAppearance';
+import { setUrlDefaults } from './wayfinder';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -16,6 +17,12 @@ createInertiaApp({
             import.meta.glob<DefineComponent>('./pages/**/*.vue'),
         ),
     setup({ el, App, props, plugin }) {
+        // Set tenant URL default from page props
+        const tenant = (props.initialPage.props as Record<string, unknown>).tenant as { id: string } | null;
+        if (tenant?.id) {
+            setUrlDefaults({ tenant: tenant.id });
+        }
+
         createApp({ render: () => h(App, props) })
             .use(plugin)
             .mount(el);

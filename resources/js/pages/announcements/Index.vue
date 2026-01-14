@@ -29,6 +29,7 @@ import { type BreadcrumbItem, type Announcement, type PaginatedData } from '@/ty
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Plus, MoreHorizontal, Pencil, Trash2, ToggleLeft, ToggleRight, Info, AlertTriangle, CheckCircle, Calendar, Bell } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
+import { useTenant } from '@/composables/useTenant';
 
 interface Props {
     announcements: PaginatedData<Announcement & { created_by: { id: number; name: string } }>;
@@ -39,6 +40,7 @@ interface Props {
 
 const props = defineProps<Props>();
 const page = usePage();
+const { url: tenantUrl } = useTenant();
 
 const flash = computed(() => page.props.flash as { success?: string; error?: string });
 
@@ -50,7 +52,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 const statusFilter = ref(props.filters.status || 'all');
 
 watch(statusFilter, (value) => {
-    router.get('/announcements', { status: value === 'all' ? '' : value }, {
+    router.get(tenantUrl('/announcements'), { status: value === 'all' ? '' : value }, {
         preserveState: true,
         preserveScroll: true,
     });
@@ -77,14 +79,14 @@ const getTypeBadgeClass = (type: string) => {
 };
 
 const toggleAnnouncement = (id: number) => {
-    router.post(`/announcements/${id}/toggle`, {}, {
+    router.post(tenantUrl(`/announcements/${id}/toggle`), {}, {
         preserveScroll: true,
     });
 };
 
 const deleteAnnouncement = (id: number) => {
     if (confirm('Are you sure you want to delete this announcement?')) {
-        router.delete(`/announcements/${id}`, {
+        router.delete(tenantUrl(`/announcements/${id}`), {
             preserveScroll: true,
         });
     }

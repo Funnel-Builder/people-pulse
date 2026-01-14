@@ -11,6 +11,7 @@ import {
     Download, FileText, ArrowLeft
 } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
+import { useTenant } from '@/composables/useTenant';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -67,6 +68,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const { url: tenantUrl } = useTenant();
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -94,7 +96,7 @@ const selectedMonth = ref(String(props.filters.month));
 const selectedYear = ref(String(props.filters.year));
 
 const applyFilters = () => {
-    router.get(`/reports/attendance/employees/${props.employee.id}`, {
+    router.get(tenantUrl(`/reports/attendance/employees/${props.employee.id}`), {
         month: selectedMonth.value,
         year: selectedYear.value,
     }, {
@@ -119,7 +121,7 @@ const exportReport = (type: 'csv' | 'xlsx') => {
     params.append('year', selectedYear.value);
     params.append('type', type);
     
-    window.location.href = `/reports/attendance/employees/${props.employee.id}/export?${params.toString()}`;
+    window.location.href = tenantUrl(`/reports/attendance/employees/${props.employee.id}/export?${params.toString()}`);
 };
 
 const selectedMonthName = computed(() => {

@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { ClipboardList, Check, X, Eye } from 'lucide-vue-next';
 import { ref } from 'vue';
 import type { BreadcrumbItem } from '@/types';
+import { useTenant } from '@/composables/useTenant';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -63,6 +64,7 @@ const props = withDefaults(defineProps<Props>(), {
     pageTitle: 'Leave Requests',
     pageDescription: 'Review and authorize leave applications',
 });
+const { url: tenantUrl } = useTenant();
 
 const showApprovalModal = ref(false);
 const selectedLeave = ref<Leave | null>(null);
@@ -88,7 +90,7 @@ const submitApproval = () => {
     if (approvalAction.value === 'reject' && !comment.value.trim()) return;
 
     isSubmitting.value = true;
-    router.post(`/leaves/${selectedLeave.value.id}/process`, {
+    router.post(tenantUrl(`/leaves/${selectedLeave.value.id}/process`), {
         action: approvalAction.value,
         comment: comment.value || null,
     }, {
