@@ -17,7 +17,7 @@ class PasswordResetResponse implements PasswordResetResponseContract
     public function toResponse($request)
     {
         $tenant = tenant();
-        $loginPath = $tenant ? "/app/{$tenant->id}/login" : '/login';
+        $loginPath = '/login';
 
         return $request->wantsJson()
             ? new JsonResponse(['message' => trans($this->status)], 200)

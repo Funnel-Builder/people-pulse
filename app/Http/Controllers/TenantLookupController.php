@@ -14,7 +14,7 @@ class TenantLookupController extends Controller
      */
     public function show(): Response
     {
-        return Inertia::render('Auth/TenantLookup');
+        return Inertia::render('auth/TenantLookup');
     }
 
     /**
@@ -41,6 +41,15 @@ class TenantLookupController extends Controller
             ]);
         }
 
-        return redirect("/app/{$tenant->id}/login");
+        $domain = $tenant->domains->first()->domain;
+        $protocol = request()->secure() ? 'https://' : 'http://';
+        $port = request()->getPort();
+        $url = $protocol . $domain;
+        if (! in_array($port, [80, 443])) {
+            $url .= ':' . $port;
+        }
+        $url .= '/login';
+
+        return Inertia::location($url);
     }
 }

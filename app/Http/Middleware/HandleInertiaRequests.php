@@ -52,7 +52,7 @@ class HandleInertiaRequests extends Middleware
                 $user->load(['department:id,name', 'subDepartment:id,name']);
             }
         }
-        $tenantPrefix = $tenant ? "/app/{$tenant->id}" : '';
+        $tenantPrefix = '';
 
         return [
             ...parent::share($request),

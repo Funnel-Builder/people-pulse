@@ -8,10 +8,10 @@ use App\Http\Controllers\LeaveRecordsController;
 use App\Http\Controllers\LeaveReportController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
-use App\Http\Middleware\InitializeTenancyByRouteParameter;
+use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
+use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,22 +19,26 @@ use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 |--------------------------------------------------------------------------
 |
 | These routes are for tenant-specific functionality.
-| All routes are prefixed with /app/{tenant}
-| Example: /app/abc-corp/dashboard
+| They are identified by the domain (e.g. tenant.localhost).
 |
 */
 
 Route::middleware([
     'web',
-    InitializeTenancyByRouteParameter::class,
-])->prefix('/app/{tenant}')->group(function () {
+    InitializeTenancyByDomain::class,
+    PreventAccessFromCentralDomains::class,
+])->group(function () {
 
     // =====================================================
     // GUEST ROUTES (Login/Register for Tenant)
     // =====================================================
+    Route::get('/', function () {
+        return redirect()->route('dashboard');
+    });
+
     Route::middleware('guest')->group(function () {
         Route::get('login', function () {
-            return Inertia::render('Auth/Login');
+            return Inertia::render('auth/Login');
         })->name('tenant.login');
 
         Route::post('login', [\Laravel\Fortify\Http\Controllers\AuthenticatedSessionController::class, 'store'])

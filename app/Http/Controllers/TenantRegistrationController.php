@@ -18,7 +18,7 @@ class TenantRegistrationController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Auth/TenantRegister');
+        return Inertia::render('auth/TenantRegister');
     }
 
     /**
@@ -50,6 +50,16 @@ class TenantRegistrationController extends Controller
             'status' => 'active',
         ]);
 
+        // Create the domain for the tenant
+        // We assume localhost for development, but in production this should be the app's central domain
+        // For flexibility, we can use the current host or a config value.
+        // For now, we'll append the current request's host (e.g. 'localhost' or 'peoplepulse.com')
+        // effectively making 'office.localhost' or 'office.peoplepulse.com'
+        $centralDomain = $request->getHost();
+        $tenant->createDomain([
+            'domain' => $officeId . '.' . $centralDomain,
+        ]);
+
         // Create admin user in tenant's database
         $tenant->run(function () use ($request) {
             // Create default leave types
@@ -66,8 +76,17 @@ class TenantRegistrationController extends Controller
             ]);
         });
 
-        return redirect("/app/{$tenant->id}/login")
-            ->with('success', 'Office registered successfully! Please login with your credentials.');
+        $domain = $tenant->domains->first()->domain;
+        $protocol = $request->secure() ? 'https://' : 'http://';
+        $port = $request->getPort();
+
+        $url = $protocol . $domain;
+        if (! in_array($port, [80, 443])) {
+            $url .= ':' . $port;
+        }
+        $url .= '/login';
+
+        return Inertia::location($url);
     }
 
     /**

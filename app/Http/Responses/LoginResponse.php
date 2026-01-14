@@ -18,7 +18,7 @@ class LoginResponse implements LoginResponseContract
         $tenant = tenant();
         
         if ($tenant) {
-            $redirectPath = "/app/{$tenant->id}/dashboard";
+            $redirectPath = "/dashboard";
         } else {
             $redirectPath = '/';
         }

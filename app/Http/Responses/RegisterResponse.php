@@ -10,7 +10,7 @@ class RegisterResponse implements RegisterResponseContract
     public function toResponse($request)
     {
         $tenant = tenant();
-        $redirectPath = $tenant ? "/app/{$tenant->id}/dashboard" : '/';
+        $redirectPath = $tenant ? "/dashboard" : '/';
 
         return $request->wantsJson()
             ? new JsonResponse('', 201)

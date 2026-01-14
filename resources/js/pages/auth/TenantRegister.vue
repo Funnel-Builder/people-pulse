@@ -18,7 +18,8 @@ const form = useForm({
 
 const previewUrl = computed(() => {
     const id = form.office_id.toLowerCase().replace(/[^a-z0-9-_]/g, '') || 'your-id'
-    return `/app/${id}/login`
+    // We let the server handle the redirect to the subdomain
+    return '';
 })
 
 const submit = () => {

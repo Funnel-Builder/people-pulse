@@ -10,7 +10,7 @@ class VerifyEmailResponse implements VerifyEmailResponseContract
     public function toResponse($request)
     {
         $tenant = tenant();
-        $redirectPath = $tenant ? "/app/{$tenant->id}/dashboard?verified=1" : '/?verified=1';
+        $redirectPath = $tenant ? "/dashboard?verified=1" : '/?verified=1';
 
         return $request->wantsJson()
             ? new JsonResponse('', 204)

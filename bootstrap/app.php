@@ -26,10 +26,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Configure redirect for unauthenticated users
         $middleware->redirectGuestsTo(function (Request $request) {
-            $tenant = $request->route('tenant');
-            if ($tenant) {
-                return "/app/{$tenant}/login";
+            // If we are in a tenant context (subdomain), redirect to local login
+            if (tenant()) {
+                return route('tenant.login');
             }
+            // Otherwise central login
             return route('login');
         });
 
@@ -37,7 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(function (Request $request) {
             $tenant = tenant();
             if ($tenant) {
-                return "/app/{$tenant->id}/dashboard";
+                return "/dashboard";
             }
             return '/';
         });
