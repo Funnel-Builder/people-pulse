@@ -6,6 +6,7 @@ import AuthAnimation from '@/components/auth/AuthAnimation.vue';
 const page = usePage();
 const name = page.props.name;
 const quote = page.props.quote;
+const tenantId = (page.props.tenant as { id: string })?.id;
 
 defineProps<{
     title?: string;
@@ -22,7 +23,7 @@ defineProps<{
         >
             <AuthAnimation />
             <Link
-                :href="dashboard()"
+                :href="tenantId ? dashboard(tenantId) : '/'"
                 class="absolute left-8 top-8 z-20 flex items-center"
             >
                 <img

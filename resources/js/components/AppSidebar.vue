@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import NavMain from '@/components/NavMain.vue';
+import { useTenant } from '@/composables/useTenant';
 
 import {
     Sidebar,
@@ -18,17 +19,18 @@ import AppLogo from './AppLogo.vue';
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user);
+const { url } = useTenant();
 
 const mainNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
         {
             title: 'Dashboard',
-            href: '/dashboard',
+            href: url('/dashboard'),
             icon: LayoutGrid,
         },
         {
             title: 'My Attendance',
-            href: '/attendance',
+            href: url('/attendance'),
             icon: Clock,
         },
     ];
@@ -37,7 +39,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     const leaveChildren: NavItem[] = [
         {
             title: 'My Leaves',
-            href: '/leaves',
+            href: url('/leaves'),
             icon: CalendarDays,
         },
     ];
@@ -45,7 +47,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     // Cover Requests - shown to all employees (they may be asked to cover)
     leaveChildren.push({
         title: 'Cover Requests',
-        href: '/leaves/requests',
+        href: url('/leaves/requests'),
         icon: ClipboardList,
     });
 
@@ -53,7 +55,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     if (user.value?.role === 'manager' || user.value?.role === 'admin') {
         leaveChildren.push({
             title: 'Leave Approvals',
-            href: '/leaves/approvals',
+            href: url('/leaves/approvals'),
             icon: ClipboardList,
         });
     }
@@ -76,7 +78,7 @@ const mainNavItems = computed<NavItem[]>(() => {
             children: [
                 {
                     title: 'Team Attendance',
-                    href: '/attendance/manager',
+                    href: url('/attendance/manager'),
                     icon: UsersRound,
                 },
             ],
@@ -90,14 +92,14 @@ const mainNavItems = computed<NavItem[]>(() => {
         if (user.value?.role === 'admin') {
             recordsChildren.push({
                 title: 'Attendance Records',
-                href: '/records/attendance',
+                href: url('/records/attendance'),
                 icon: Clock,
             });
         }
 
         recordsChildren.push({
             title: 'Leave Records',
-            href: '/records/leave',
+            href: url('/records/leave'),
             icon: CalendarDays,
         });
 
@@ -120,12 +122,12 @@ const mainNavItems = computed<NavItem[]>(() => {
             children: [
                 {
                     title: 'Attendance Report',
-                    href: '/reports/attendance',
+                    href: url('/reports/attendance'),
                     icon: FileBarChart,
                 },
                 {
                     title: 'Leave Report',
-                    href: '/reports/leave',
+                    href: url('/reports/leave'),
                     icon: FileBarChart,
                 },
             ],
@@ -136,7 +138,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     if (user.value?.role === 'manager' || user.value?.role === 'admin') {
         items.push({
             title: 'Announcements',
-            href: '/announcements',
+            href: url('/announcements'),
             icon: Bell,
         });
     }
@@ -146,12 +148,12 @@ const mainNavItems = computed<NavItem[]>(() => {
         const officeSettingsChildren: NavItem[] = [
             {
                 title: 'Attendance Settings',
-                href: '/settings/attendance',
+                href: url('/settings/attendance'),
                 icon: Clock,
             },
             {
                 title: 'Leave Settings',
-                href: '/settings/leaves',
+                href: url('/settings/leaves'),
                 icon: CalendarCog,
             },
         ];
@@ -169,7 +171,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     if (user.value?.role === 'admin') {
         items.push({
             title: 'Employee Management',
-            href: '/employees',
+            href: url('/employees'),
             icon: UserCog,
         });
     }
@@ -184,7 +186,7 @@ const mainNavItems = computed<NavItem[]>(() => {
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link href="/dashboard">
+                        <Link :href="url('/dashboard')">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>

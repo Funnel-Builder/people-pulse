@@ -130,7 +130,7 @@ return [
     |
     */
 
-    'views' => true,
+    'views' => false, // Disabled - we handle login views in tenant routes
 
     /*
     |--------------------------------------------------------------------------

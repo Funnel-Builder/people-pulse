@@ -3,13 +3,16 @@ import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
-import { logout } from '@/routes';
+import { logout } from '@/routes/tenant';
 import { send } from '@/routes/verification';
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, usePage } from '@inertiajs/vue3';
 
 defineProps<{
     status?: string;
 }>();
+
+const page = usePage();
+const tenantId = (page.props.tenant as { id: string })?.id;
 </script>
 
 <template>
@@ -38,7 +41,7 @@ defineProps<{
             </Button>
 
             <TextLink
-                :href="logout()"
+                :href="logout(tenantId)"
                 as="button"
                 class="mx-auto block text-sm"
             >

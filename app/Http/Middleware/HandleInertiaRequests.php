@@ -37,14 +37,18 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
-        
+
         $quoteImages = glob(public_path('quoteimages/*.png'));
-        $randomImage = '/quoteimages/' . basename($quoteImages[array_rand($quoteImages)]);
+        $randomImage = $quoteImages ? '/quoteimages/' . basename($quoteImages[array_rand($quoteImages)]) : null;
 
         $user = $request->user();
         if ($user) {
             $user->load(['department:id,name', 'subDepartment:id,name']);
         }
+
+        // Get tenant context if in tenant scope
+        $tenant = tenant();
+        $tenantPrefix = $tenant ? "/app/{$tenant->id}" : '';
 
         return [
             ...parent::share($request),
@@ -53,10 +57,15 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user,
             ],
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'tenant' => $tenant ? [
+                'id' => $tenant->id,
+                'name' => $tenant->name,
+                'prefix' => $tenantPrefix,
+            ] : null,
+            'sidebarOpen' => !$request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error' => fn () => $request->session()->get('error'),
+                'success' => fn() => $request->session()->get('success'),
+                'error' => fn() => $request->session()->get('error'),
             ],
         ];
     }

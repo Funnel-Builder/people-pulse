@@ -1,33 +1,35 @@
 <script setup lang="ts">
+import { useTenant } from '@/composables/useTenant';
 import { Link, usePage } from '@inertiajs/vue3';
 import { Clock, LayoutGrid, Menu, Users } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user);
+const { url } = useTenant();
 
 const items = computed(() => {
     const navItems = [
         {
             title: 'Home',
-            href: '/dashboard',
+            href: url('/dashboard'),
             icon: LayoutGrid,
-            active: page.url.startsWith('/dashboard'),
+            active: page.url.includes('/dashboard'),
         },
         {
             title: 'Attendance',
-            href: '/attendance',
+            href: url('/attendance'),
             icon: Clock,
-            active: page.url.startsWith('/attendance') && !page.url.includes('/manager'),
+            active: page.url.includes('/attendance') && !page.url.includes('/manager'),
         },
     ];
 
     if (user.value?.role === 'manager' || user.value?.role === 'admin') {
         navItems.push({
             title: 'Team',
-            href: '/attendance/manager',
+            href: url('/attendance/manager'),
             icon: Users,
-            active: page.url.startsWith('/attendance/manager'),
+            active: page.url.includes('/attendance/manager'),
         });
     }
 

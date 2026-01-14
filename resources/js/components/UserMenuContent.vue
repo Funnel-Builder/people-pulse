@@ -6,15 +6,18 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { logout } from '@/routes';
+import { logout } from '@/routes/tenant';
 import { edit } from '@/routes/profile';
 import type { User } from '@/types';
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { LogOut, Settings } from 'lucide-vue-next';
 
 interface Props {
     user: User;
 }
+
+const page = usePage();
+const tenantId = (page.props.tenant as { id: string })?.id;
 
 const handleLogout = () => {
     router.flushAll();
@@ -42,7 +45,7 @@ defineProps<Props>();
     <DropdownMenuItem :as-child="true">
         <Link
             class="block w-full"
-            :href="logout()"
+            :href="logout(tenantId)"
             @click="handleLogout"
             as="button"
             data-test="logout-button"
