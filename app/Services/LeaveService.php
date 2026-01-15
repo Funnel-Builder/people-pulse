@@ -226,11 +226,14 @@ class LeaveService
 
     /**
      * Get cover requests for a user (where they are the cover person).
+     * Only returns leaves that are pending and awaiting cover person approval.
+     * Explicitly excludes cancelled and rejected leaves.
      */
     public function getCoverRequestsForUser(User $user): Collection
     {
         return Leave::with(['dates', 'leaveType', 'user', 'coverPerson', 'approvals'])
             ->where('status', Leave::STATUS_PENDING)
+            ->whereNotIn('status', [Leave::STATUS_CANCELLED, Leave::STATUS_REJECTED])
             ->where('cover_person_id', $user->id)
             ->where('current_approval_step', 1)
             ->where('type', Leave::TYPE_ADVANCE)
@@ -240,6 +243,8 @@ class LeaveService
 
     /**
      * Get pending approvals for managers and admins (excludes cover person requests).
+     * Only returns leaves that are pending approval at the appropriate step.
+     * Explicitly excludes cancelled and rejected leaves.
      */
     public function getManagerAdminApprovals(User $user): Collection
     {
@@ -248,7 +253,8 @@ class LeaveService
         }
 
         $query = Leave::with(['dates', 'leaveType', 'user', 'coverPerson', 'approvals'])
-            ->where('status', Leave::STATUS_PENDING);
+            ->where('status', Leave::STATUS_PENDING)
+            ->whereNotIn('status', [Leave::STATUS_CANCELLED, Leave::STATUS_REJECTED]);
 
         if ($user->isAdmin()) {
             // Admin sees all leaves at admin approval step
@@ -348,10 +354,12 @@ class LeaveService
 
     /**
      * Get count of pending cover requests for a user.
+     * Explicitly excludes cancelled and rejected leaves.
      */
     public function getCoverRequestCount(User $user): int
     {
         return Leave::where('status', Leave::STATUS_PENDING)
+            ->whereNotIn('status', [Leave::STATUS_CANCELLED, Leave::STATUS_REJECTED])
             ->where('cover_person_id', $user->id)
             ->where('current_approval_step', 1)
             ->where('type', Leave::TYPE_ADVANCE)
@@ -360,6 +368,7 @@ class LeaveService
 
     /**
      * Get count of pending leave approvals for managers and admins.
+     * Explicitly excludes cancelled and rejected leaves.
      */
     public function getLeaveApprovalCount(User $user): int
     {
@@ -367,7 +376,8 @@ class LeaveService
             return 0;
         }
 
-        $query = Leave::where('status', Leave::STATUS_PENDING);
+        $query = Leave::where('status', Leave::STATUS_PENDING)
+            ->whereNotIn('status', [Leave::STATUS_CANCELLED, Leave::STATUS_REJECTED]);
 
         if ($user->isAdmin()) {
             // Admin sees all leaves at admin approval step

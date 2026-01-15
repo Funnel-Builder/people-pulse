@@ -64,6 +64,12 @@ const isGroupOpen = (item: NavItem): boolean => {
 const handleToggle = (title: string, newValue: boolean) => {
     openGroups.value[title] = newValue;
 };
+
+// Check if any child in a group has a badge
+const hasBadgedChild = (item: NavItem): boolean => {
+    if (!item.children) return false;
+    return item.children.some(child => child.badge && child.badge > 0);
+};
 </script>
 
 <template>
@@ -83,10 +89,8 @@ const handleToggle = (title: string, newValue: boolean) => {
                                 <component :is="subItem.icon" v-if="subItem.icon" />
                                 <span 
                                     v-if="subItem.badge && subItem.badge > 0"
-                                    class="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-semibold text-white"
-                                >
-                                    {{ subItem.badge }}
-                                </span>
+                                    class="absolute top-0 right-0 h-2 w-2 rounded-full bg-amber-500"
+                                ></span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -105,12 +109,17 @@ const handleToggle = (title: string, newValue: boolean) => {
                             <CollapsibleTrigger as-child>
                                 <SidebarMenuButton 
                                     :tooltip="item.title"
+                                    class="relative"
                                 >
                                     <component :is="item.icon" v-if="item.icon" />
                                     <span>{{ item.title }}</span>
                                     <ChevronRight 
                                         class="ml-auto h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" 
                                     />
+                                    <span 
+                                        v-if="hasBadgedChild(item) && !isGroupOpen(item)"
+                                        class="absolute top-1/2 right-8 -translate-y-1/2 h-2 w-2 rounded-full bg-amber-500"
+                                    ></span>
                                 </SidebarMenuButton>
                             </CollapsibleTrigger>
                             <CollapsibleContent>
@@ -126,10 +135,8 @@ const handleToggle = (title: string, newValue: boolean) => {
                                                 <span class="text-sm flex-1">{{ subItem.title }}</span>
                                                 <span 
                                                     v-if="subItem.badge && subItem.badge > 0"
-                                                    class="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold text-white"
-                                                >
-                                                    {{ subItem.badge }}
-                                                </span>
+                                                    class="h-2 w-2 rounded-full bg-amber-500"
+                                                ></span>
                                             </Link>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>

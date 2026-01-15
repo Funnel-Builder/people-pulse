@@ -152,8 +152,18 @@ class LeaveController extends Controller
      */
     public function show(Request $request, Leave $leave): Response
     {
-        // Only allow viewing own leaves
-        if ($leave->user_id !== $request->user()->id) {
+        $user = $request->user();
+
+        // Allow viewing if user is:
+        // 1. The leave owner
+        // 2. The designated cover person
+        // 3. A manager or admin
+        $canView = $leave->user_id === $user->id
+            || $leave->cover_person_id === $user->id
+            || $user->isManager()
+            || $user->isAdmin();
+
+        if (!$canView) {
             abort(403, 'Unauthorized');
         }
 
