@@ -28,9 +28,18 @@ interface LeaveType {
     code: string;
 }
 
+interface LeaveBalance {
+    leave_type_code: string;
+    leave_type_name: string;
+    balance: number;
+    used: number;
+    available: number;
+}
+
 interface Props {
     coverPersonOptions: CoverPersonOption[];
     leaveTypes: LeaveType[];
+    leaveBalances: LeaveBalance[];
     warningDays: number;
     defaultAdvanceLeaveType: string;
     defaultPostLeaveType: string;
@@ -112,6 +121,7 @@ const goBack = () => {
                 <AdvanceLeaveForm
                     :cover-person-options="coverPersonOptions"
                     :leave-types="leaveTypes"
+                    :leave-balances="leaveBalances"
                     :warning-days="warningDays"
                     :default-leave-type="defaultAdvanceLeaveType"
                     :show-header="false"
@@ -125,6 +135,7 @@ const goBack = () => {
                 </Button>
                 <PostLeaveForm
                     :leave-types="leaveTypes"
+                    :leave-balances="leaveBalances"
                     :default-leave-type="defaultPostLeaveType"
                     :show-header="false"
                 />

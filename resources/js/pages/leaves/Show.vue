@@ -138,7 +138,7 @@ const cancelLeave = () => {
     <Head :title="`Leave Request #${leave.id}`" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 p-4 md:p-6 max-w-4xl mx-auto">
+        <div class="flex h-full flex-1 flex-col gap-6 p-4 md:p-6 max-w-7xl mx-auto">
             <!-- Header -->
             <div class="flex items-center gap-4">
                 <Button variant="ghost" size="icon" @click="goBack">
@@ -153,148 +153,154 @@ const cancelLeave = () => {
                 </Badge>
             </div>
 
-            <div class="grid gap-6 md:grid-cols-2">
-                <!-- Leave Information -->
-                <Card>
-                    <CardHeader>
-                        <CardTitle class="flex items-center gap-2">
-                            <FileText class="h-5 w-5" />
-                            Leave Information
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent class="space-y-4">
-                        <div>
-                            <p class="text-sm text-muted-foreground">Leave Type</p>
-                            <p class="font-medium">{{ leave.leave_type.name }}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-muted-foreground">Application Type</p>
-                            <Badge variant="outline">
-                                {{ leave.type === 'advance' ? 'Advance Leave' : 'Post Leave' }}
-                            </Badge>
-                        </div>
-                        <div>
-                            <p class="text-sm text-muted-foreground">Applied On</p>
-                            <p class="font-medium">{{ formatDateTime(leave.created_at) }}</p>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <!-- Dates as Calendar Cards -->
-                <Card>
-                    <CardHeader>
-                        <CardTitle class="flex items-center gap-2">
-                            <Calendar class="h-5 w-5" />
-                            Leave Dates
-                        </CardTitle>
-                        <CardDescription>{{ leave.dates.length }} day(s) requested</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div class="flex flex-wrap gap-3">
-                            <div 
-                                v-for="leaveDate in leave.dates" 
-                                :key="leaveDate.id"
-                                class="flex flex-col items-center justify-center w-16 h-18 rounded-lg border-2 border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors"
-                            >
-                                <span class="text-xs font-medium text-primary uppercase">
-                                    {{ new Date(leaveDate.date).toLocaleDateString('en-US', { weekday: 'short' }) }}
-                                </span>
-                                <span class="text-2xl font-bold text-foreground">
-                                    {{ new Date(leaveDate.date).getDate() }}
-                                </span>
-                                <span class="text-xs text-muted-foreground">
-                                    {{ new Date(leaveDate.date).toLocaleDateString('en-US', { month: 'short' }) }}
-                                </span>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <!-- Reason Section -->
-            <Card>
-                <CardHeader>
-                    <CardTitle class="flex items-center gap-2">
-                        <FileText class="h-5 w-5" />
-                        Reason for Leave
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p class="text-sm leading-relaxed">{{ leave.reason }}</p>
-                </CardContent>
-            </Card>
-
-            <!-- Cover Person (if advance leave) -->
-            <Card v-if="leave.cover_person">
-                <CardHeader>
-                    <CardTitle class="flex items-center gap-2">
-                        <User class="h-5 w-5" />
-                        Cover Person
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <User class="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                            <p class="font-medium">{{ leave.cover_person.name }}</p>
-                            <p class="text-sm text-muted-foreground">
-                                {{ leave.cover_person.employee_id }} • {{ leave.cover_person.designation }}
-                            </p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <!-- Approval Progress -->
-            <Card>
-                <CardHeader>
-                    <CardTitle>Approval Progress</CardTitle>
-                    <CardDescription>
-                        Step {{ leave.current_approval_step }} of {{ leave.approvals.length }}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div class="space-y-4">
-                        <div 
-                            v-for="approval in leave.approvals" 
-                            :key="approval.id"
-                            class="flex items-start gap-4 p-4 rounded-lg border"
-                        >
-                            <component 
-                                :is="getApprovalStatusIcon(approval.status)" 
-                                :class="['h-6 w-6', getApprovalStatusColor(approval.status)]"
-                            />
-                            <div class="flex-1">
-                                <div class="flex items-center justify-between">
-                                    <p class="font-medium">
-                                        Step {{ approval.step }}: {{ getApproverTypeLabel(approval.approver_type) }}
-                                    </p>
-                                    <Badge :variant="getStatusBadgeVariant(approval.status)">
-                                        {{ capitalizeStatus(approval.status) }}
+            <!-- Two Column Layout -->
+            <div class="grid gap-6 lg:grid-cols-[1fr_400px]">
+                <!-- Left Column: Leave Information -->
+                <div class="space-y-6">
+                    <!-- Leave Information -->
+                    <Card>
+                        <CardHeader>
+                            <CardTitle class="flex items-center gap-2">
+                                <FileText class="h-5 w-5" />
+                                Leave Information
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-muted-foreground mb-1">Leave Type</p>
+                                    <p class="font-medium">{{ leave.leave_type.name }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-muted-foreground mb-1">Application Type</p>
+                                    <Badge variant="outline">
+                                        {{ leave.type === 'advance' ? 'Advance Leave' : 'Post Leave' }}
                                     </Badge>
                                 </div>
-                                <div v-if="approval.approver" class="text-sm text-muted-foreground mt-1">
-                                    {{ approval.approver.name }}
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-muted-foreground mb-1">Applied On</p>
+                                    <p class="font-medium">{{ formatDateTime(leave.created_at) }}</p>
                                 </div>
-                                <div v-if="approval.acted_at" class="text-xs text-muted-foreground mt-1">
-                                    {{ formatDateTime(approval.acted_at) }}
-                                </div>
-                                <div v-if="approval.comment" class="mt-2 p-2 rounded bg-muted text-sm">
-                                    "{{ approval.comment }}"
+                                <div>
+                                    <p class="text-sm text-muted-foreground mb-1">Leave Dates ({{ leave.dates.length }} day(s))</p>
+                                    <p class="font-medium text-sm">
+                                        <span v-for="(leaveDate, index) in leave.dates" :key="leaveDate.id">
+                                            {{ new Date(leaveDate.date).toLocaleDateString('en-US', { weekday: 'short' }).substring(0, 3) }}, 
+                                            {{ new Date(leaveDate.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}{{ index < leave.dates.length - 1 ? '; ' : '' }}
+                                        </span>
+                                    </p>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
 
-            <!-- Actions -->
-            <div v-if="leave.status === 'pending'" class="flex justify-end">
-                <Button variant="destructive" @click="cancelLeave">
-                    Cancel Application
-                </Button>
+
+
+                    <!-- Reason -->
+                    <Card>
+                        <CardHeader>
+                            <CardTitle class="flex items-center gap-2">
+                                <FileText class="h-5 w-5" />
+                                Reason for Leave
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p class="text-sm leading-relaxed">{{ leave.reason }}</p>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Cover Person -->
+                    <Card v-if="leave.cover_person">
+                        <CardHeader>
+                            <CardTitle class="flex items-center gap-2">
+                                <User class="h-5 w-5" />
+                                Cover Person
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                                <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <User class="h-6 w-6 text-primary" />
+                                </div>
+                                <div>
+                                    <p class="font-medium">{{ leave.cover_person.name }}</p>
+                                    <p class="text-sm text-muted-foreground">
+                                        {{ leave.cover_person.employee_id }} • {{ leave.cover_person.designation }}
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                </div>
+
+                <!-- Right Column: Approval Workflow -->
+                <div>
+                    <Card class="sticky top-4">
+                        <CardHeader>
+                            <CardTitle>Approval Workflow</CardTitle>
+                            <CardDescription>
+                                Step {{ leave.current_approval_step }} of {{ leave.approvals.length }}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="relative space-y-6">
+                                <!-- Timeline line -->
+                                <div class="absolute left-[15px] top-3 bottom-3 w-[2px] bg-border"></div>
+                                
+                                <div 
+                                    v-for="(approval, index) in leave.approvals" 
+                                    :key="approval.id"
+                                    class="relative pl-10"
+                                >
+                                    <!-- Status Dot -->
+                                    <div 
+                                        :class="[
+                                            'absolute left-0 top-0 w-8 h-8 rounded-full border-4 bg-background z-10',
+                                            approval.status === 'approved' ? 'border-green-500' :
+                                            approval.status === 'rejected' ? 'border-red-500' :
+                                            approval.status === 'pending' ? 'border-yellow-500' :
+                                            'border-gray-300'
+                                        ]"
+                                    >
+                                    </div>
+
+                                    <!-- Content -->
+                                    <div class="pb-6">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <p class="font-semibold text-sm">
+                                                {{ getApproverTypeLabel(approval.approver_type) }}
+                                            </p>
+                                            <Badge 
+                                                :variant="getStatusBadgeVariant(approval.status)"
+                                                class="text-xs"
+                                            >
+                                                {{ capitalizeStatus(approval.status) }}
+                                            </Badge>
+                                        </div>
+                                        
+                                        <div v-if="approval.approver" class="text-sm text-muted-foreground mb-1">
+                                            <User class="h-3 w-3 inline mr-1" />
+                                            {{ approval.approver.name }}
+                                        </div>
+                                        
+                                        <div v-if="approval.acted_at" class="text-xs text-muted-foreground mb-2">
+                                            <Clock class="h-3 w-3 inline mr-1" />
+                                            {{ formatDateTime(approval.acted_at) }}
+                                        </div>
+                                        
+                                        <div v-if="approval.comment" class="mt-2 p-3 rounded-lg bg-muted text-sm border-l-2 border-primary">
+                                            <p class="text-xs text-muted-foreground mb-1">Comment:</p>
+                                            <p class="italic">"{{ approval.comment }}"</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </div>
     </AppLayout>

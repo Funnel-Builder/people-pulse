@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { CalendarDays, Clock, CheckCircle, XCircle, ArrowLeft, User, FileText, Shield, UserCheck } from 'lucide-vue-next';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { BreadcrumbItem } from '@/types';
 
 // Interfaces
@@ -71,10 +72,29 @@ const approvalForm = useForm({
     comment: '',
 });
 
+const showApproveDialog = ref(false);
+const showRejectDialog = ref(false);
+
+const openApproveDialog = () => {
+    approvalForm.clearErrors();
+    showApproveDialog.value = true;
+};
+
+const openRejectDialog = () => {
+    approvalForm.clearErrors();
+    showRejectDialog.value = true;
+};
+
 const submitApproval = (action: 'approve' | 'reject') => {
     approvalForm.action = action;
     approvalForm.post(`/leaves/${props.leave.id}/process`, {
         preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            approvalForm.reset('comment');
+            showApproveDialog.value = false;
+            showRejectDialog.value = false;
+        },
     });
 };
 
@@ -134,8 +154,8 @@ const getStepIcon = (stepType: string) => {
 const getStepTitle = (stepType: string) => {
     switch (stepType) {
         case 'cover_person': return 'Cover Person';
-        case 'manager': return 'Line Manager';
-        case 'admin': return 'HR / Admin';
+        case 'manager': return 'Manager';
+        case 'admin': return 'Admin';
         default: return 'Approver';
     }
 };
@@ -155,7 +175,7 @@ const getStepDescription = (stepType: string) => {
     <Head title="Manage Leave" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+        <div class="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
             
             <!-- Header -->
             <div class="flex items-center gap-4">
@@ -261,30 +281,34 @@ const getStepDescription = (stepType: string) => {
                             <CardDescription>Current status of the application</CardDescription>
                         </CardHeader>
                         <CardContent class="flex-1">
-                            <div class="relative pl-6 space-y-8 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-muted">
+                            <div class="relative pl-8 space-y-6">
                                 
-                                <div v-for="step in ['cover_person', 'manager', 'admin']" :key="step" class="relative">
-                                    <div class="absolute -left-6 z-10 bg-background p-1">
-                                        <div class="h-6 w-6 rounded-full border-2 flex items-center justify-center"
+                                <div v-for="(step, index) in ['cover_person', 'manager', 'admin']" :key="step" class="relative flex items-start gap-3">
+                                    <!-- Vertical Line connecting to next step -->
+                                    <div v-if="index !== 2" 
+                                        class="absolute left-[11.5px] top-[12px] w-0.5 bg-border -z-10"
+                                        style="height: calc(100% + 24px);"
+                                    ></div>
+
+                                    <div class="absolute left-[6px] top-[6px] z-10">
+                                        <div class="h-3 w-3 rounded-full"
                                             :class="{
-                                                'border-green-500 text-green-500 bg-green-50': getApprovalStepStatus(step) === 'completed',
-                                                'border-red-500 text-red-500 bg-red-50': getApprovalStepStatus(step) === 'rejected',
-                                                'border-primary text-primary bg-primary/10': getApprovalStepStatus(step) === 'current',
-                                                'border-muted text-muted-foreground bg-muted': getApprovalStepStatus(step) === 'pending'
+                                                'bg-green-500': getApprovalStepStatus(step) === 'completed',
+                                                'bg-red-500': getApprovalStepStatus(step) === 'rejected',
+                                                'bg-yellow-500': getApprovalStepStatus(step) === 'current' || getApprovalStepStatus(step) === 'pending'
                                             }"
                                         >
-                                            <component :is="getApprovalStepStatus(step) === 'completed' ? CheckCircle : (getApprovalStepStatus(step) === 'rejected' ? XCircle : getStepIcon(step))" class="h-3.5 w-3.5" />
                                         </div>
                                     </div>
                                     
-                                    <div class="space-y-1">
-                                        <div class="flex items-center justify-between">
+                                    <div class="flex-1 space-y-1 ml-[26px]">
+                                        <div class="flex items-center justify-between gap-2">
                                             <span class="font-medium text-sm">{{ getStepTitle(step) }}</span>
-                                            <Badge variant="secondary" class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5"
+                                            <Badge variant="secondary" class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 flex-shrink-0"
                                                 :class="{
                                                     'bg-green-100 text-green-700': getApprovalStepStatus(step) === 'completed',
                                                     'bg-red-100 text-red-700': getApprovalStepStatus(step) === 'rejected',
-                                                    'bg-blue-100 text-blue-700': getApprovalStepStatus(step) === 'current'
+                                                    'bg-yellow-100 text-yellow-700': getApprovalStepStatus(step) === 'current' || getApprovalStepStatus(step) === 'pending'
                                                 }"
                                             >
                                                 {{ getApprovalStepStatus(step) === 'current' ? 'InProgress' : getApprovalStepStatus(step) }}
@@ -307,38 +331,113 @@ const getStepDescription = (stepType: string) => {
 
                         <!-- Actions Footer -->
                         <div v-if="canApproveCurrentStep" class="p-4 border-t bg-muted/20">
-                            <div class="space-y-4">
-                                <Label>Action Required</Label>
-                                <Textarea 
-                                    placeholder="Add a comment (optional)..." 
-                                    v-model="approvalForm.comment"
-                                    rows="3"
-                                    class="resize-none"
-                                />
-                                <div class="grid grid-cols-2 gap-3">
-                                    <Button 
-                                        class="bg-green-600 hover:bg-green-700 text-white" 
-                                        @click="submitApproval('approve')" 
-                                        :disabled="approvalForm.processing"
-                                    >
-                                        <CheckCircle class="mr-2 h-4 w-4" />
-                                        Approve
-                                    </Button>
-                                    <Button 
-                                        variant="destructive" 
-                                        @click="submitApproval('reject')"
-                                        :disabled="approvalForm.processing"
-                                    >
-                                        <XCircle class="mr-2 h-4 w-4" />
-                                        Reject
-                                    </Button>
-                                </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <Button 
+                                    class="bg-green-600 hover:bg-green-700 text-white" 
+                                    @click="openApproveDialog" 
+                                    :disabled="approvalForm.processing"
+                                >
+                                    <CheckCircle class="mr-2 h-4 w-4" />
+                                    Approve
+                                </Button>
+                                <Button 
+                                    variant="destructive" 
+                                    @click="openRejectDialog"
+                                    :disabled="approvalForm.processing"
+                                >
+                                    <XCircle class="mr-2 h-4 w-4" />
+                                    Reject
+                                </Button>
                             </div>
                         </div>
 
                     </Card>
                 </div>
             </div>
+
+            <!-- Approve Dialog -->
+            <Dialog v-model:open="showApproveDialog">
+                <DialogContent class="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle class="flex items-center gap-2 text-green-600">
+                            <CheckCircle class="h-5 w-5" />
+                            Approve Leave Application
+                        </DialogTitle>
+                        <DialogDescription>
+                            You are approving this leave application. You may add an optional comment.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div class="space-y-4 py-4">
+                        <div class="space-y-2">
+                            <Label for="approve-comment">Comment (Optional)</Label>
+                            <Textarea 
+                                id="approve-comment"
+                                placeholder="Add a comment..." 
+                                v-model="approvalForm.comment"
+                                rows="3"
+                                class="resize-none"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" @click="showApproveDialog = false" :disabled="approvalForm.processing">
+                            Cancel
+                        </Button>
+                        <Button 
+                            class="bg-green-600 hover:bg-green-700 text-white" 
+                            @click="submitApproval('approve')"
+                            :disabled="approvalForm.processing"
+                        >
+                            <CheckCircle class="mr-2 h-4 w-4" />
+                            Confirm Approval
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <!-- Reject Dialog -->
+            <Dialog v-model:open="showRejectDialog">
+                <DialogContent class="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle class="flex items-center gap-2 text-red-600">
+                            <XCircle class="h-5 w-5" />
+                            Reject Leave Application
+                        </DialogTitle>
+                        <DialogDescription>
+                            You are rejecting this leave application. Please provide a reason for rejection.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div class="space-y-4 py-4">
+                        <div class="space-y-2">
+                            <Label for="reject-comment">Reason for Rejection <span class="text-destructive">*</span></Label>
+                            <Textarea 
+                                id="reject-comment"
+                                placeholder="Please explain why you are rejecting this leave..." 
+                                v-model="approvalForm.comment"
+                                rows="3"
+                                class="resize-none"
+                                required
+                            />
+                            <p v-if="approvalForm.errors.comment" class="text-sm text-red-500">
+                                {{ approvalForm.errors.comment }}
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" @click="showRejectDialog = false" :disabled="approvalForm.processing">
+                            Cancel
+                        </Button>
+                        <Button 
+                            variant="destructive" 
+                            @click="submitApproval('reject')"
+                            :disabled="approvalForm.processing || !approvalForm.comment"
+                        >
+                            <XCircle class="mr-2 h-4 w-4" />
+                            Confirm Rejection
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     </AppLayout>
 </template>
