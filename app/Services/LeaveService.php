@@ -345,4 +345,65 @@ class LeaveService
                 return false;
         }
     }
+
+    /**
+     * Get count of pending cover requests for a user.
+     */
+    public function getCoverRequestCount(User $user): int
+    {
+        return Leave::where('status', Leave::STATUS_PENDING)
+            ->where('cover_person_id', $user->id)
+            ->where('current_approval_step', 1)
+            ->where('type', Leave::TYPE_ADVANCE)
+            ->count();
+    }
+
+    /**
+     * Get count of pending leave approvals for managers and admins.
+     */
+    public function getLeaveApprovalCount(User $user): int
+    {
+        if (!$user->isAdmin() && !$user->isManager()) {
+            return 0;
+        }
+
+        $query = Leave::where('status', Leave::STATUS_PENDING);
+
+        if ($user->isAdmin()) {
+            // Admin sees all leaves at admin approval step
+            $query->whereHas('approvals', function ($q) {
+                $q->where('status', LeaveApproval::STATUS_PENDING)
+                    ->where('approver_type', LeaveApproval::TYPE_ADMIN);
+            })->where(function ($q) {
+                $q->where('type', Leave::TYPE_ADVANCE)
+                    ->where('current_approval_step', 3)
+                    ->orWhere(function ($q2) {
+                        $q2->where('type', Leave::TYPE_POST)
+                            ->where('current_approval_step', 2);
+                    });
+            });
+        } elseif ($user->isManager()) {
+            // Manager sees leaves from their department at manager step
+            $managedSubDeptIds = $user->getManagedSubDepartmentIds();
+
+            $query->whereHas('user', function ($q) use ($user, $managedSubDeptIds) {
+                $q->where('department_id', $user->department_id);
+                if (!empty($managedSubDeptIds)) {
+                    $q->whereIn('sub_department_id', $managedSubDeptIds);
+                }
+            })->whereHas('approvals', function ($q) {
+                $q->where('status', LeaveApproval::STATUS_PENDING)
+                    ->where('approver_type', LeaveApproval::TYPE_MANAGER);
+            })->where(function ($q) {
+                $q->where('type', Leave::TYPE_ADVANCE)
+                    ->where('current_approval_step', 2)
+                    ->orWhere(function ($q2) {
+                        $q2->where('type', Leave::TYPE_POST)
+                            ->where('current_approval_step', 1);
+                    });
+            });
+        }
+
+        return $query->count();
+    }
 }

@@ -31,7 +31,7 @@ docker compose up -d
 
 # Wait for MySQL to be ready
 echo "Waiting for MySQL to be ready..."
-sleep 10
+sleep 20
 
 # Check if MySQL is actually ready
 until docker compose exec -T mysql mysqladmin ping -h "localhost" --silent; do

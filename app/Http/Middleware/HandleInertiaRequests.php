@@ -37,13 +37,21 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
-        
+
         $quoteImages = glob(public_path('quoteimages/*.png'));
         $randomImage = '/quoteimages/' . basename($quoteImages[array_rand($quoteImages)]);
 
         $user = $request->user();
+        $pendingCoverRequests = 0;
+        $pendingLeaveApprovals = 0;
+
         if ($user) {
             $user->load(['department:id,name', 'subDepartment:id,name']);
+
+            // Get pending approval counts for menu badges
+            $leaveService = app(\App\Services\LeaveService::class);
+            $pendingCoverRequests = $leaveService->getCoverRequestCount($user);
+            $pendingLeaveApprovals = $leaveService->getLeaveApprovalCount($user);
         }
 
         return [
@@ -52,11 +60,13 @@ class HandleInertiaRequests extends Middleware
             'quote' => ['message' => trim($message), 'author' => trim($author), 'image' => $randomImage],
             'auth' => [
                 'user' => $user,
+                'pendingCoverRequests' => $pendingCoverRequests,
+                'pendingLeaveApprovals' => $pendingLeaveApprovals,
             ],
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'sidebarOpen' => !$request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error' => fn () => $request->session()->get('error'),
+                'success' => fn() => $request->session()->get('success'),
+                'error' => fn() => $request->session()->get('error'),
             ],
         ];
     }

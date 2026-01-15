@@ -79,8 +79,14 @@ const handleToggle = (title: string, newValue: boolean) => {
                             :is-active="urlIsActive(subItem.href, page.url)"
                             :tooltip="subItem.title"
                         >
-                            <Link :href="subItem.href" class="flex items-center justify-center">
+                            <Link :href="subItem.href" class="flex items-center justify-center relative">
                                 <component :is="subItem.icon" v-if="subItem.icon" />
+                                <span 
+                                    v-if="subItem.badge && subItem.badge > 0"
+                                    class="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-semibold text-white"
+                                >
+                                    {{ subItem.badge }}
+                                </span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -115,9 +121,15 @@ const handleToggle = (title: string, newValue: boolean) => {
                                             :is-active="urlIsActive(subItem.href, page.url)"
                                             class="pl-8"
                                         >
-                                            <Link :href="subItem.href">
+                                            <Link :href="subItem.href" class="flex items-center gap-2">
                                                 <component :is="subItem.icon" v-if="subItem.icon" class="h-3.5 w-3.5 !text-gray-500" />
-                                                <span class="text-sm">{{ subItem.title }}</span>
+                                                <span class="text-sm flex-1">{{ subItem.title }}</span>
+                                                <span 
+                                                    v-if="subItem.badge && subItem.badge > 0"
+                                                    class="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold text-white"
+                                                >
+                                                    {{ subItem.badge }}
+                                                </span>
                                             </Link>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
