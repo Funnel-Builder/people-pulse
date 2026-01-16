@@ -19,7 +19,7 @@ const isCollapsed = computed(() => state.value === 'collapsed');
         <!-- Full logo when expanded -->
         <template v-else>
             <img
-                src="/logos/logo-icon-peoplepulse.png"
+                src="/logos/logo-icon-peoplepulse-white-mode.png"
                 alt="PeoplePulse Logo"
                 class="h-10 w-auto block dark:hidden"
             />

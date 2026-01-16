@@ -39,15 +39,19 @@ defineProps<{
             >
                 <div class="flex flex-col items-center space-y-2 text-center">
                     <!-- Logo Icon -->
-                    <img
-                        src="/logos/logo-icon.png"
-                        alt="PeoplePulse"
-                        class="h-12 w-auto sm:h-14 md:h-16"
-                    />
-                    <!-- Brand Name -->
-                    <h1 class="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
-                        PeoplePulse
-                    </h1>
+
+                    <div class="flex justify-center mb-0">
+                         <img
+                            src="/logos/logo-icon-peoplepulse-vartical-white-mode.png"
+                            alt="PeoplePulse"
+                            class="h-20 w-auto block dark:hidden"
+                        />
+                        <img
+                            src="/logos/logo-icon-peoplepulse-vartical-dark-mode.png"
+                            alt="PeoplePulse"
+                            class="h-20 w-auto hidden dark:block"
+                        />
+                    </div>
                     <!-- Subtitle -->
                     <p class="text-xs sm:text-sm text-muted-foreground">
                         Sign in with your organizational Email ID
