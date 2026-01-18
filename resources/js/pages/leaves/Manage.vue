@@ -199,7 +199,6 @@ const getStepDescription = (stepType: string) => {
                     <Card>
                         <CardHeader class="pb-3">
                             <CardTitle class="text-base flex items-center gap-2">
-                                <User class="h-4 w-4 text-muted-foreground" />
                                 Applicant Information
                             </CardTitle>
                         </CardHeader>
@@ -228,7 +227,6 @@ const getStepDescription = (stepType: string) => {
                     <Card>
                         <CardHeader class="pb-3">
                             <CardTitle class="text-base flex items-center gap-2">
-                                <FileText class="h-4 w-4 text-muted-foreground" />
                                 Application Details
                             </CardTitle>
                         </CardHeader>
@@ -281,28 +279,26 @@ const getStepDescription = (stepType: string) => {
                             <CardDescription>Current status of the application</CardDescription>
                         </CardHeader>
                         <CardContent class="flex-1">
-                            <div class="relative pl-8 space-y-6">
+                            <div class="relative space-y-6">
+                                <!-- Timeline line -->
+                                <div class="absolute left-[15px] top-3 bottom-3 w-[2px] bg-border"></div>
                                 
-                                <div v-for="(step, index) in ['cover_person', 'manager', 'admin']" :key="step" class="relative flex items-start gap-3">
-                                    <!-- Vertical Line connecting to next step -->
-                                    <div v-if="index !== 2" 
-                                        class="absolute left-[11.5px] top-[12px] w-0.5 bg-border -z-10"
-                                        style="height: calc(100% + 24px);"
-                                    ></div>
-
-                                    <div class="absolute left-[6px] top-[6px] z-10">
+                                <div v-for="(step, index) in ['cover_person', 'manager', 'admin']" :key="step" class="relative pl-10">
+                                    <!-- Status Dot -->
+                                    <div class="absolute left-[10px] top-1 z-10">
                                         <div class="h-3 w-3 rounded-full"
                                             :class="{
                                                 'bg-green-500': getApprovalStepStatus(step) === 'completed',
                                                 'bg-red-500': getApprovalStepStatus(step) === 'rejected',
-                                                'bg-yellow-500': getApprovalStepStatus(step) === 'current' || getApprovalStepStatus(step) === 'pending'
-                                            }"
+                                                'bg-yellow-500': getApprovalStepStatus(step) === 'current',
+                                                'bg-gray-300': getApprovalStepStatus(step) === 'pending'
+                                            }" 
                                         >
                                         </div>
                                     </div>
                                     
-                                    <div class="flex-1 space-y-1 ml-[26px]">
-                                        <div class="flex items-center justify-between gap-2">
+                                    <div class="pb-2">
+                                        <div class="flex items-center justify-between gap-2 mb-1">
                                             <span class="font-medium text-sm">{{ getStepTitle(step) }}</span>
                                             <Badge variant="secondary" class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 flex-shrink-0"
                                                 :class="{
@@ -314,18 +310,17 @@ const getStepDescription = (stepType: string) => {
                                                 {{ getApprovalStepStatus(step) === 'current' ? 'InProgress' : getApprovalStepStatus(step) }}
                                             </Badge>
                                         </div>
-                                        <p class="text-xs text-muted-foreground">{{ getStepDescription(step) }}</p>
+                                        <p class="text-xs text-muted-foreground mb-2">{{ getStepDescription(step) }}</p>
                                         
                                         <!-- Step Details (if applicable) -->
-                                        <div v-if="step === 'cover_person' && props.leave.cover_person" class="mt-2 text-xs bg-muted/50 p-2 rounded">
+                                        <div v-if="step === 'cover_person' && props.leave.cover_person" class="text-xs bg-muted/50 p-2 rounded">
                                             <span class="font-medium">Selected:</span> {{ props.leave.cover_person.name }}
                                         </div>
-                                        <div v-if="step === 'cover_person' && !props.leave.cover_person" class="mt-2 text-xs text-muted-foreground italic">
+                                        <div v-if="step === 'cover_person' && !props.leave.cover_person" class="text-xs text-muted-foreground italic">
                                             Not required
                                         </div>
                                     </div>
                                 </div>
-
                             </div>
                         </CardContent>
 

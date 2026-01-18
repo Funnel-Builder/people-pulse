@@ -161,7 +161,6 @@ const cancelLeave = () => {
                     <Card>
                         <CardHeader>
                             <CardTitle class="flex items-center gap-2">
-                                <FileText class="h-5 w-5" />
                                 Leave Information
                             </CardTitle>
                         </CardHeader>
@@ -202,7 +201,6 @@ const cancelLeave = () => {
                     <Card>
                         <CardHeader>
                             <CardTitle class="flex items-center gap-2">
-                                <FileText class="h-5 w-5" />
                                 Reason for Leave
                             </CardTitle>
                         </CardHeader>
@@ -258,11 +256,11 @@ const cancelLeave = () => {
                                     <!-- Status Dot -->
                                     <div 
                                         :class="[
-                                            'absolute left-0 top-0 w-8 h-8 rounded-full border-4 bg-background z-10',
-                                            approval.status === 'approved' ? 'border-green-500' :
-                                            approval.status === 'rejected' ? 'border-red-500' :
-                                            approval.status === 'pending' ? 'border-yellow-500' :
-                                            'border-gray-300'
+                                            'absolute left-[10px] top-1 w-3 h-3 rounded-full z-10',
+                                            approval.status === 'approved' ? 'bg-green-500' :
+                                            approval.status === 'rejected' ? 'bg-red-500' :
+                                            approval.status === 'pending' ? 'bg-yellow-500' :
+                                            'bg-gray-300'
                                         ]"
                                     >
                                     </div>

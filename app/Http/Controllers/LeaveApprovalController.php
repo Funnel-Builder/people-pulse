@@ -62,7 +62,7 @@ class LeaveApprovalController extends Controller
             ? 'Leave application approved successfully.'
             : 'Leave application rejected.';
 
-        return redirect()->route('leaves.requests')
+        return redirect()->back()
             ->with('success', $message);
     }
 }
