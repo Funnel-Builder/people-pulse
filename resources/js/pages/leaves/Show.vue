@@ -4,7 +4,7 @@ import { Head, router } from '@inertiajs/vue3';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, User, FileText, CheckCircle, XCircle, Clock } from 'lucide-vue-next';
+import { ArrowLeft, Calendar, User, Clock, CheckCircle, XCircle } from 'lucide-vue-next';
 import type { BreadcrumbItem } from '@/types';
 
 interface LeaveDate {
@@ -132,6 +132,33 @@ const cancelLeave = () => {
         router.post(`/leaves/${props.leave.id}/cancel`);
     }
 };
+
+const getCardColorClass = (code: string) => {
+    const lowerCode = code.toLowerCase();
+    if (lowerCode.includes('sick')) return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800';
+    if (lowerCode.includes('casual')) return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800';
+    if (lowerCode.includes('annual') || lowerCode.includes('earned')) return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800';
+    return 'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800';
+};
+
+const formatLeaveDateRange = (dates: LeaveDate[]) => {
+    if (!dates.length) return '';
+    
+    // Sort dates to find start and end
+    const sortedDates = [...dates].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const startDate = new Date(sortedDates[0].date);
+    const endDate = new Date(sortedDates[sortedDates.length - 1].date);
+
+    const options: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: '2-digit' };
+    const startStr = startDate.toLocaleDateString('en-US', options);
+    
+    if (dates.length === 1) {
+        return `${startStr}, ${startDate.getFullYear()}`;
+    }
+
+    const endStr = endDate.toLocaleDateString('en-US', options);
+    return `${startStr} — ${endStr}, ${endDate.getFullYear()}`;
+};
 </script>
 
 <template>
@@ -158,38 +185,45 @@ const cancelLeave = () => {
                 <!-- Left Column: Leave Information -->
                 <div class="space-y-6">
                     <!-- Leave Information -->
-                    <Card>
-                        <CardHeader>
-                            <CardTitle class="flex items-center gap-2">
+                    <Card class="border-border/50 shadow-sm">
+                        <CardHeader class="pb-2">
+                            <CardTitle class="text-[15px] font-semibold flex items-center gap-2">
                                 Leave Information
                             </CardTitle>
                         </CardHeader>
-                        <CardContent class="space-y-4">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p class="text-sm text-muted-foreground mb-1">Leave Type</p>
-                                    <p class="font-medium">{{ leave.leave_type.name }}</p>
+                        <CardContent class="pt-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-4">
+                                <div class="space-y-3">
+                                    <p class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Leave Type</p>
+                                    <div class="flex items-center gap-3">
+                                        <div class="p-2 rounded-lg bg-secondary/50">
+                                            <div :class="['w-2.5 h-2.5 rounded-full', getCardColorClass(leave.leave_type.code).split(' ')[0].replace('text-', 'bg-')]"></div>
+                                        </div>
+                                        <span class="font-semibold text-base">{{ leave.leave_type.name }}</span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p class="text-sm text-muted-foreground mb-1">Application Type</p>
-                                    <Badge variant="outline">
+
+                                <div class="space-y-3">
+                                    <p class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Application Type</p>
+                                    <Badge variant="secondary" class="bg-secondary/50 text-secondary-foreground font-medium px-3 py-1 rounded-md text-sm border-none">
                                         {{ leave.type === 'advance' ? 'Advance Leave' : 'Post Leave' }}
                                     </Badge>
                                 </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p class="text-sm text-muted-foreground mb-1">Applied On</p>
-                                    <p class="font-medium">{{ formatDateTime(leave.created_at) }}</p>
+
+                                <div class="space-y-3">
+                                    <p class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Applied On</p>
+                                    <div class="flex items-center gap-2 text-sm font-medium">
+                                        <Calendar class="h-4 w-4 text-muted-foreground" />
+                                        <span>{{ formatDateTime(leave.created_at) }}</span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p class="text-sm text-muted-foreground mb-1">Leave Dates ({{ leave.dates.length }} day(s))</p>
-                                    <p class="font-medium text-sm">
-                                        <span v-for="(leaveDate, index) in leave.dates" :key="leaveDate.id">
-                                            {{ new Date(leaveDate.date).toLocaleDateString('en-US', { weekday: 'short' }).substring(0, 3) }}, 
-                                            {{ new Date(leaveDate.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}{{ index < leave.dates.length - 1 ? '; ' : '' }}
-                                        </span>
-                                    </p>
+
+                                <div class="space-y-3">
+                                    <p class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Duration ({{ leave.dates.length }} Days)</p>
+                                    <div class="flex items-center gap-2 text-sm font-medium">
+                                        <Calendar class="h-4 w-4 text-muted-foreground" />
+                                        <span>{{ formatLeaveDateRange(leave.dates) }}</span>
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
@@ -198,14 +232,18 @@ const cancelLeave = () => {
 
 
                     <!-- Reason -->
-                    <Card>
-                        <CardHeader>
-                            <CardTitle class="flex items-center gap-2">
+                    <Card class="border-border/50 shadow-sm">
+                        <CardHeader class="pb-2">
+                            <CardTitle class="text-[15px] font-semibold">
                                 Reason for Leave
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p class="text-sm leading-relaxed">{{ leave.reason }}</p>
+                            <div class="bg-blue-50/50 dark:bg-blue-900/10 border-l-4 border-blue-500 rounded-r-lg p-4 mt-2">
+                                <p class="text-sm leading-relaxed text-muted-foreground italic">
+                                    "{{ leave.reason }}"
+                                </p>
+                            </div>
                         </CardContent>
                     </Card>
 

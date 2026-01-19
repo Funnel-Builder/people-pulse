@@ -13,8 +13,25 @@ import {
     AlertCircle,
     Coffee,
     Clock,
-    Calendar as CalendarIcon 
+    Calendar as CalendarIcon,
+    MoreHorizontal
 } from 'lucide-vue-next';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { computed, ref } from 'vue';
 import type { BreadcrumbItem } from '@/types';
 
@@ -94,15 +111,37 @@ const formatLeaveDate = (dateStr: string) => {
 };
 
 // Format multiple dates nicely
-const formatLeaveDates = (dates: LeaveDate[]) => {
+// Format date range nicely
+const formatLeaveDateRange = (dates: LeaveDate[]) => {
+    if (!dates.length) return '';
+    
+    // Sort dates to find start and end
+    const sortedDates = [...dates].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const startDate = new Date(sortedDates[0].date);
+    const endDate = new Date(sortedDates[sortedDates.length - 1].date);
+
+    const options: Intl.DateTimeFormatOptions = { month: 'short', day: '2-digit' };
+    const startStr = startDate.toLocaleDateString('en-US', options);
+    
     if (dates.length === 1) {
-        return formatLeaveDate(dates[0].date);
+        return `${startStr}, ${startDate.getFullYear()}`;
     }
-    if (dates.length === 2) {
-        return `${formatLeaveDate(dates[0].date)} & ${formatLeaveDate(dates[1].date)}`;
+
+    const endStr = endDate.toLocaleDateString('en-US', options);
+    return `${startStr} - ${endStr}, ${endDate.getFullYear()}`;
+};
+
+const leaveToCancel = ref<Leave | null>(null);
+
+const confirmCancel = () => {
+    if (leaveToCancel.value) {
+        router.post(`/leaves/${leaveToCancel.value.id}/cancel`, {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                leaveToCancel.value = null;
+            }
+        });
     }
-    // For more than 2 dates, show first and count
-    return `${formatLeaveDate(dates[0].date)} + ${dates.length - 1} more`;
 };
 
 // View leave details
@@ -135,10 +174,10 @@ const getCardIcon = (code: string) => {
 
 const getCardColorClass = (code: string) => {
     const lowerCode = code.toLowerCase();
-    if (lowerCode.includes('sick')) return 'text-red-600 bg-red-50 border-red-100';
-    if (lowerCode.includes('casual')) return 'text-amber-600 bg-amber-50 border-amber-100';
-    if (lowerCode.includes('annual') || lowerCode.includes('earned')) return 'text-blue-600 bg-blue-50 border-blue-100';
-    return 'text-slate-600 bg-slate-50 border-slate-100';
+    if (lowerCode.includes('sick')) return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800';
+    if (lowerCode.includes('casual')) return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800';
+    if (lowerCode.includes('annual') || lowerCode.includes('earned')) return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800';
+    return 'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800';
 };
 
 // Demo data for Planning Calendar
@@ -156,7 +195,7 @@ const planningEvents = [
     <Head title="My Leaves" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 p-4 md:p-6 bg-slate-50/50">
+        <div class="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
@@ -174,38 +213,25 @@ const planningEvents = [
                 <Card 
                     v-for="balance in leaveBalances" 
                     :key="balance.leave_type_id"
-                    class="hover:shadow-md transition-all duration-200 border-none shadow-sm relative group bg-white"
+                    class="hover:shadow-md transition-all duration-200 border-border/50 shadow-sm relative group bg-card"
                 >
-                    <CardContent class="p-4 flex flex-col h-full justify-between">
-                        <div class="flex items-start justify-between mb-2">
+                    <CardContent class="p-5 flex items-center justify-between h-full">
+                        <div class="space-y-4">
+                            <p class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                {{ balance.leave_type_name }}
+                            </p>
                             <div class="space-y-1">
-                                <p class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                                    {{ balance.leave_type_name }}
-                                </p>
-                                <div class="flex items-baseline gap-1">
-                                    <span class="text-2xl font-bold tracking-tight text-foreground">{{ balance.available }}</span>
-                                    <span class="text-xs font-medium text-muted-foreground">/ {{ balance.balance }}</span>
+                                <div class="flex items-baseline gap-1.5">
+                                    <span class="text-2xl font-bold tracking-tight text-foreground">{{ Number(balance.available) }}</span>
+                                    <span class="text-xs font-medium text-muted-foreground">/ {{ Number(balance.balance) }} days</span>
                                 </div>
-                            </div>
-                            <div :class="['p-2 rounded-lg transition-colors', getCardColorClass(balance.leave_type_code)]">
-                                <component :is="getCardIcon(balance.leave_type_code)" class="h-4 w-4" />
+                                <p class="text-xs font-medium text-muted-foreground">
+                                    {{ Number(balance.used) }} used this year
+                                </p>
                             </div>
                         </div>
-                        
-                        <div class="space-y-2">
-                            <div class="flex items-center justify-between text-[10px] font-medium">
-                                <span class="text-muted-foreground">Used: {{ balance.used }}</span>
-                                <span :class="balance.available < 3 ? 'text-red-500' : 'text-green-500'">
-                                    {{ Math.round((balance.available / balance.balance) * 100) }}% Left
-                                </span>
-                            </div>
-                            <div class="h-1.5 w-full bg-secondary/50 rounded-full overflow-hidden">
-                                <div 
-                                    class="h-full rounded-full transition-all duration-500" 
-                                    :class="getCardColorClass(balance.leave_type_code).split(' ')[0].replace('text-', 'bg-')"
-                                    :style="{ width: `${(balance.used / balance.balance) * 100}%` }"
-                                ></div>
-                            </div>
+                        <div :class="['p-2 rounded-lg transition-colors', getCardColorClass(balance.leave_type_code)]">
+                            <component :is="getCardIcon(balance.leave_type_code)" class="h-4 w-4" />
                         </div>
                     </CardContent>
                 </Card>
@@ -215,7 +241,7 @@ const planningEvents = [
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 <!-- Recent Leave Applications (2/3 width) -->
-                <Card class="lg:col-span-2 shadow-sm flex flex-col h-[520px]">
+                <Card class="lg:col-span-2 shadow-sm flex flex-col h-[520px] bg-card border-border/50">
                     <CardHeader class="border-b pb-4">
                         <div class="flex items-center justify-between">
                             <CardTitle class="text-lg font-semibold flex items-center gap-2">
@@ -232,11 +258,11 @@ const planningEvents = [
                             <table class="w-full">
                                 <thead class="bg-muted/50 sticky top-0 z-10">
                                     <tr class="text-left text-xs uppercase tracking-wider text-muted-foreground font-medium border-b">
-                                        <th class="px-6 py-4 w-[25%]">Leave Type</th>
-                                        <th class="px-6 py-4 w-[30%]">Dates</th>
-                                        <th class="px-6 py-4 w-[15%]">Duration</th>
-                                        <th class="px-6 py-4 w-[15%]">Status</th>
-                                        <th class="px-6 py-4 w-[15%] text-right">Actions</th>
+                                        <th class="px-6 py-4 w-[25%] font-semibold">Leave Type</th>
+                                        <th class="px-6 py-4 w-[30%] font-semibold">Dates</th>
+                                        <th class="px-6 py-4 w-[15%] font-semibold">Duration</th>
+                                        <th class="px-6 py-4 w-[15%] font-semibold">Status</th>
+                                        <th class="px-6 py-4 w-[15%] text-right font-semibold">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y">
@@ -247,26 +273,42 @@ const planningEvents = [
                                     >
                                         <td class="px-6 py-4">
                                             <div class="flex items-center gap-3">
-                                                <div :class="['w-2 h-2 rounded-full', getCardColorClass(leave.leave_type.code).split(' ')[0].replace('text-', 'bg-')]"></div>
-                                                <span class="font-medium text-sm text-foreground">{{ leave.leave_type.name }}</span>
+                                                <div :class="['w-2.5 h-2.5 rounded-full', getCardColorClass(leave.leave_type.code).split(' ')[0].replace('text-', 'bg-')]"></div>
+                                                <span class="font-semibold text-sm text-foreground">{{ leave.leave_type.name }}</span>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4">
-                                            <span class="text-sm font-medium text-foreground">{{ formatLeaveDates(leave.dates) }}</span>
+                                            <span class="text-sm font-medium text-foreground">{{ formatLeaveDateRange(leave.dates) }}</span>
                                             <div class="text-xs text-muted-foreground mt-0.5" v-if="leave.type === 'advance'">Advance Appl.</div>
                                         </td>
                                         <td class="px-6 py-4">
                                             <span class="text-sm text-foreground">{{ leave.dates.length }} Days</span>
                                         </td>
                                         <td class="px-6 py-4">
-                                            <Badge :variant="getStatusBadgeVariant(leave.status)" class="capitalize font-medium shadow-none">
+                                            <Badge :variant="getStatusBadgeVariant(leave.status)" class="capitalize font-medium shadow-none rounded-full px-3">
                                                 {{ capitalizeStatus(leave.status) }}
                                             </Badge>
                                         </td>
                                         <td class="px-6 py-4 text-right">
-                                            <Button size="icon" variant="ghost" class="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" @click="viewLeave(leave.id)">
-                                                <Eye class="h-4 w-4" />
-                                            </Button>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger as-child>
+                                                    <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground">
+                                                        <MoreHorizontal class="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem @click="viewLeave(leave.id)">
+                                                        View
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem 
+                                                        v-if="leave.status === 'pending'"
+                                                        @click="leaveToCancel = leave"
+                                                        class="text-red-600 focus:text-red-600"
+                                                    >
+                                                        Cancel
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </td>
                                     </tr>
                                     <!-- Empty state filler to maintain height if needed, or just message -->
@@ -280,7 +322,7 @@ const planningEvents = [
                         </div>
                         
                         <!-- Pagination fixed at bottom -->
-                        <div class="p-4 border-t mt-auto bg-white" v-if="totalPages > 0">
+                        <div class="p-4 border-t mt-auto bg-card" v-if="totalPages > 0">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs text-muted-foreground">
                                     Showing {{ (currentPage - 1) * itemsPerPage + 1 }} - {{ Math.min(currentPage * itemsPerPage, leaves.length) }} of {{ leaves.length }}
@@ -311,7 +353,7 @@ const planningEvents = [
                 </Card>
 
                 <!-- Planning Calendar (1/3 width) -->
-                <Card class="shadow-sm flex flex-col h-[520px]">
+                <Card class="shadow-sm flex flex-col h-[520px] bg-card border-border/50">
                     <CardHeader class="pb-4 border-b">
                         <div class="flex items-center justify-between">
                             <CardTitle class="text-lg font-semibold">Planning Calendar</CardTitle>
@@ -320,17 +362,17 @@ const planningEvents = [
                             </Button>
                         </div>
                     </CardHeader>
-                    <CardContent class="p-0 flex-1 overflow-auto bg-slate-50/30">
+                    <CardContent class="p-0 flex-1 overflow-auto bg-muted/10">
                         <div class="divide-y">
-                            <div v-for="(event, index) in planningEvents" :key="index" class="p-4 hover:bg-white transition-colors group">
+                            <div v-for="(event, index) in planningEvents" :key="index" class="p-4 hover:bg-muted/30 transition-colors group">
                                 <div class="flex items-start gap-4">
-                                    <div class="flex flex-col items-center justify-center bg-white border rounded-xl w-14 h-14 shadow-sm group-hover:border-primary/20 group-hover:shadow-md transition-all">
+                                    <div class="flex flex-col items-center justify-center bg-background border rounded-xl w-14 h-14 shadow-sm group-hover:border-primary/20 group-hover:shadow-md transition-all">
                                         <span class="text-[0.65rem] font-bold uppercase text-muted-foreground">{{ event.month }}</span>
                                         <span class="text-xl font-bold text-foreground">{{ event.date }}</span>
                                     </div>
                                     <div class="flex-1 py-1">
                                         <h4 class="font-medium text-sm text-foreground mb-1">{{ event.title }}</h4>
-                                        <Badge variant="secondary" class="font-normal text-xs bg-slate-100 text-slate-600">{{ event.type }}</Badge>
+                                        <Badge variant="secondary" class="font-normal text-xs bg-muted text-muted-foreground">{{ event.type }}</Badge>
                                     </div>
                                 </div>
                             </div>
@@ -339,6 +381,25 @@ const planningEvents = [
                 </Card>
             </div>
         </div>
+        
+        <AlertDialog :open="!!leaveToCancel" @update:open="leaveToCancel = null">
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel Leave Application?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Are you sure you want to cancel your leave application for 
+                        <span class="font-medium text-foreground" v-if="leaveToCancel">{{ leaveToCancel.leave_type.name }}</span>? 
+                        This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Keep Application</AlertDialogCancel>
+                    <AlertDialogAction class="bg-red-600 hover:bg-red-700" @click="confirmCancel">
+                        Yes, Cancel It
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </AppLayout>
 </template>
 
