@@ -149,13 +149,18 @@ const viewLeave = (leaveId: number) => {
     router.visit(`/leaves/${leaveId}`);
 };
 
-const getStatusBadgeVariant = (status: string) => {
+const getStatusBadgeClass = (status: string) => {
     switch (status) {
-        case 'approved': return 'default'; // Greenish usually
-        case 'pending': return 'secondary'; // Yellowish/Gray
-        case 'rejected': return 'destructive'; // Red
-        case 'cancelled': return 'outline';
-        default: return 'outline';
+        case 'approved': 
+            return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800';
+        case 'pending': 
+            return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800';
+        case 'rejected': 
+            return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
+        case 'cancelled': 
+            return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-700';
+        default: 
+            return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-700';
     }
 };
 
@@ -285,7 +290,7 @@ const planningEvents = [
                                             <span class="text-sm text-foreground">{{ leave.dates.length }} Days</span>
                                         </td>
                                         <td class="px-6 py-4">
-                                            <Badge :variant="getStatusBadgeVariant(leave.status)" class="capitalize font-medium shadow-none rounded-full px-3">
+                                            <Badge :class="['capitalize font-medium shadow-none rounded-full px-3 border', getStatusBadgeClass(leave.status)]">
                                                 {{ capitalizeStatus(leave.status) }}
                                             </Badge>
                                         </td>
@@ -393,10 +398,10 @@ const planningEvents = [
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Keep Application</AlertDialogCancel>
-                    <AlertDialogAction class="bg-red-600 hover:bg-red-700" @click="confirmCancel">
+                    <AlertDialogCancel @click="leaveToCancel = null">Keep Application</AlertDialogCancel>
+                    <Button class="bg-red-600 hover:bg-red-700 text-white" @click="confirmCancel">
                         Yes, Cancel It
-                    </AlertDialogAction>
+                    </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

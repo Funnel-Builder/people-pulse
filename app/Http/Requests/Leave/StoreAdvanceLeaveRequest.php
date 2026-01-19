@@ -22,7 +22,7 @@ class StoreAdvanceLeaveRequest extends FormRequest
     {
         return [
             'leave_type' => ['required', 'string', 'exists:leave_types,code'],
-            'reason' => ['required', 'string', 'min:10', 'max:1000'],
+            'reason' => ['required', 'string', 'min:1', 'max:1000'],
             'dates' => ['required', 'array', 'min:1'],
             'dates.*' => ['required', 'date', 'after:today'],
             'cover_person_id' => [
@@ -41,7 +41,7 @@ class StoreAdvanceLeaveRequest extends FormRequest
     {
         return [
             'reason.required' => 'Please provide a reason for your leave.',
-            'reason.min' => 'The reason must be at least 10 characters.',
+            'reason.min' => 'The reason must be at least 1 character.',
             'date.required' => 'Please select a date for your leave.',
             'date.after' => 'Advance leave must be for a future date.',
             'cover_person_id.required' => 'Please select a cover person.',

@@ -83,13 +83,18 @@ const formatDateTime = (dateStr: string) => {
     });
 };
 
-const getStatusBadgeVariant = (status: string) => {
+const getStatusBadgeClass = (status: string) => {
     switch (status) {
-        case 'approved': return 'default';
-        case 'pending': return 'secondary';
-        case 'rejected': return 'destructive';
-        case 'cancelled': return 'outline';
-        default: return 'outline';
+        case 'approved': 
+            return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800';
+        case 'pending': 
+            return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800';
+        case 'rejected': 
+            return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
+        case 'cancelled': 
+            return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-700';
+        default: 
+            return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-700';
     }
 };
 
@@ -175,7 +180,7 @@ const formatLeaveDateRange = (dates: LeaveDate[]) => {
                     <h1 class="text-2xl font-bold">Leave Request Details</h1>
                     <p class="text-muted-foreground">Application #{{ leave.id }}</p>
                 </div>
-                <Badge :variant="getStatusBadgeVariant(leave.status)" class="text-sm px-3 py-1">
+                <Badge :class="['text-sm px-3 py-1 border', getStatusBadgeClass(leave.status)]">
                     {{ capitalizeStatus(leave.status) }}
                 </Badge>
             </div>
@@ -310,7 +315,7 @@ const formatLeaveDateRange = (dates: LeaveDate[]) => {
                                                 {{ getApproverTypeLabel(approval.approver_type) }}
                                             </p>
                                             <Badge 
-                                                :variant="getStatusBadgeVariant(approval.status)"
+                                                :class="['text-xs capitalize border', getStatusBadgeClass(approval.status)]"
                                                 class="text-xs"
                                             >
                                                 {{ capitalizeStatus(approval.status) }}

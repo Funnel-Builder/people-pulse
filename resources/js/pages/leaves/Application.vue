@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CalendarPlus, CalendarMinus } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
-import AdvanceLeaveForm from '@/components/leaves/AdvanceLeaveForm.vue';
-import PostLeaveForm from '@/components/leaves/PostLeaveForm.vue';
+import LeaveApplicationWizard from '@/components/leaves/LeaveApplicationWizard.vue';
 import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -113,31 +112,16 @@ const goBack = () => {
                 </Card>
             </div>
 
-            <!-- Advance Leave Form -->
-            <div v-else-if="selectedType === 'advance'" class="w-full max-w-xl">
-                <Button variant="ghost" class="mb-4" @click="goBack">
-                    ← Back
-                </Button>
-                <AdvanceLeaveForm
+            <!-- Wizard Form -->
+            <div v-else class="w-full">
+                <LeaveApplicationWizard
+                    :type="selectedType"
                     :cover-person-options="coverPersonOptions"
                     :leave-types="leaveTypes"
                     :leave-balances="leaveBalances"
                     :warning-days="warningDays"
-                    :default-leave-type="defaultAdvanceLeaveType"
-                    :show-header="false"
-                />
-            </div>
-
-            <!-- Post Leave Form -->
-            <div v-else-if="selectedType === 'post'" class="w-full max-w-xl">
-                <Button variant="ghost" class="mb-4" @click="goBack">
-                    ← Back
-                </Button>
-                <PostLeaveForm
-                    :leave-types="leaveTypes"
-                    :leave-balances="leaveBalances"
-                    :default-leave-type="defaultPostLeaveType"
-                    :show-header="false"
+                    :default-leave-type="selectedType === 'advance' ? defaultAdvanceLeaveType : defaultPostLeaveType"
+                    @cancel="goBack"
                 />
             </div>
         </div>

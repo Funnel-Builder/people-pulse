@@ -18,6 +18,7 @@ interface Props {
         year: number;
     };
     availableYears: number[];
+    userWeekendDays: string[];
 }
 
 const props = defineProps<Props>();
@@ -206,10 +207,25 @@ const getStatusDotColor = (attendance: Attendance | undefined) => {
 // Stats Calculation
 const monthlyStats = computed(() => {
     const presentDays = props.attendances.filter(a => a.status === 'present' || (a.clock_in && a.status !== 'weekend')).length;
-    const totalDays = props.attendances.length > 0 ? daysInMonth.value : 0; // Or filter working days?
-    // "Present Days" in design shows "12 / 22" -> implying (Present / Total Working Days so far or Total Working Days in month)
-    // For now, let's just show Present Count / Total Days in Month (excluding weekends possibly?)
-    // Let's stick to simplest interpretation first: Present / Total formatted.
+    
+    // Calculate actual working days (total days in month - weekends)
+    const totalDaysInMonth = daysInMonth.value;
+    let workingDays = 0;
+    
+    // Map day names to indices
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const userWeekends = (props.userWeekendDays || ['saturday', 'sunday']).map(d => d.toLowerCase());
+    
+    // Count working days (days that are not user's weekends)
+    for (let day = 1; day <= totalDaysInMonth; day++) {
+        const date = new Date(parseInt(selectedYear.value), parseInt(selectedMonth.value) - 1, day);
+        const dayOfWeek = date.getDay();
+        const dayName = dayNames[dayOfWeek];
+        
+        if (!userWeekends.includes(dayName)) {
+            workingDays++;
+        }
+    }
     
     // Calculate Average Clock In
     let totalClockInMinutes = 0;
@@ -242,7 +258,7 @@ const monthlyStats = computed(() => {
 
     return {
         present: presentDays,
-        total: 22, // Hardcoded "Working Days" estimate or calculate properly if easy
+        total: workingDays,
         avgClockIn: avgClockInStr,
         score: score
     };
