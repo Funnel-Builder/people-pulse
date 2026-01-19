@@ -6,20 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MultiSelectCalendar } from '@/components/ui/calendar';
-import { Info, AlertTriangle, ChevronRight, ChevronLeft, CheckSquare, Search, Briefcase, Heart, Stethoscope, Baby, Check, ChevronsUpDown } from 'lucide-vue-next';
-import { 
-    ComboboxRoot, 
-    ComboboxInput, 
-    ComboboxTrigger, 
-    ComboboxContent, 
-    ComboboxItem, 
-    ComboboxPortal, 
-    ComboboxViewport, 
-    ComboboxEmpty, 
-    ComboboxGroup, 
-    ComboboxItemIndicator,
-    ComboboxLabel
-} from 'reka-ui';
+import { Info, AlertTriangle, ChevronRight, ChevronLeft, CheckSquare, Search, Briefcase, Heart, Stethoscope, Baby } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -159,19 +146,10 @@ const formatDate = (dateStr: string) => {
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 };
 
-// Handover Person Logic
+// Handover Person Label
 const selectedCoverPersonName = computed(() => {
     const person = props.coverPersonOptions.find(p => String(p.id) === form.cover_person_id);
     return person ? person.name : 'Select Colleague';
-});
-
-const searchTerm = ref('');
-const filteredCoverPersonOptions = computed(() => {
-    if (!searchTerm.value) return props.coverPersonOptions;
-    return props.coverPersonOptions.filter(person => 
-        person.name.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
-        person.employee_id.toLowerCase().includes(searchTerm.value.toLowerCase())
-    );
 });
 
 // Navigation
@@ -284,54 +262,27 @@ const submit = () => {
                     <!-- Covering Person (Advance Only) -->
                     <div v-if="type === 'advance'" class="space-y-4">
                         <Label class="text-xs text-muted-foreground uppercase tracking-widest font-bold">Covering Person</Label>
-                        <ComboboxRoot 
-                            v-model="form.cover_person_id" 
-                            v-model:searchTerm="searchTerm"
-                            class="relative"
-                        >
-                            <div class="relative">
-                                <ComboboxInput
-                                    class="flex h-12 w-full items-center justify-between rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                    placeholder="Search colleague..."
-                                    @display-value="() => selectedCoverPersonName"
-                                />
-                                <ComboboxTrigger class="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground">
-                                    <ChevronsUpDown class="h-4 w-4" />
-                                </ComboboxTrigger>
-                            </div>
-
-                            <ComboboxPortal>
-                                <ComboboxContent 
-                                    class="z-50 min-w-[200px] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+                        <Select v-model="form.cover_person_id">
+                            <SelectTrigger class="rounded-xl h-12">
+                                <SelectValue placeholder="Select Colleague">
+                                    <div v-if="form.cover_person_id" class="flex items-center gap-2">
+                                        {{ selectedCoverPersonName }}
+                                    </div>
+                                    <div v-else class="flex items-center gap-2 text-muted-foreground">
+                                        <span>Select Colleague</span>
+                                    </div>
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem 
+                                    v-for="person in coverPersonOptions" 
+                                    :key="person.id" 
+                                    :value="String(person.id)"
                                 >
-                                    <ComboboxViewport class="p-1">
-                                        <ComboboxEmpty class="py-6 text-center text-sm text-muted-foreground">
-                                            No colleague found.
-                                        </ComboboxEmpty>
-
-                                        <ComboboxGroup>
-                                            <ComboboxLabel class="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                                                Suggestions
-                                            </ComboboxLabel>
-                                            <ComboboxItem 
-                                                v-for="person in filteredCoverPersonOptions" 
-                                                :key="person.id" 
-                                                :value="String(person.id)"
-                                                class="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:opacity-50"
-                                            >
-                                                <ComboboxItemIndicator class="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                                                    <Check class="h-4 w-4" />
-                                                </ComboboxItemIndicator>
-                                                <div class="flex flex-col">
-                                                    <span class="font-medium">{{ person.name }}</span>
-                                                    <span class="text-xs text-muted-foreground">{{ person.designation }} ({{ person.employee_id }})</span>
-                                                </div>
-                                            </ComboboxItem>
-                                        </ComboboxGroup>
-                                    </ComboboxViewport>
-                                </ComboboxContent>
-                            </ComboboxPortal>
-                        </ComboboxRoot>
+                                    {{ person.name }} ({{ person.employee_id }})
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
                         <p class="text-[10px] text-muted-foreground flex items-center gap-1">
                             <CheckSquare class="h-3 w-3" />
                             This person will be notified to accept your handover.
