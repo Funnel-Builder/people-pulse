@@ -157,8 +157,8 @@ const getAttendanceColor = (attendance: Attendance | undefined) => {
     if (!attendance) return 'bg-gray-200 dark:bg-gray-700'; // Should not happen often if checking properly
     if (attendance.status === 'weekend') return 'bg-blue-500';
     if (attendance.status === 'sick_leave' || attendance.status === 'casual_leave') return 'bg-purple-500';
+    if (!attendance.clock_in) return 'bg-[#F45B5B]'; // Reddish (Treat as absent if no clock in)
     if (attendance.status === 'absent') return 'bg-[#F45B5B]'; // Reddish
-    if (!attendance.clock_in) return 'bg-gray-300 dark:bg-gray-600';
     if (attendance.is_late) return 'bg-[#F59E0B]'; // Amber/Orange
     return 'bg-[#2ECC71]'; // Green
 };
@@ -197,6 +197,7 @@ const getStatusDotColor = (attendance: Attendance | undefined) => {
     if (attendance.status === 'weekend') return 'bg-blue-500';
     if (attendance.status === 'sick_leave' || attendance.status === 'casual_leave') return 'bg-purple-500';
     if (attendance.status === 'absent') return 'bg-[#F45B5B]';
+    if (!attendance.clock_in) return 'bg-[#F45B5B]'; // Treat as absent if no clock in
     if (attendance.is_late) return 'bg-[#F59E0B]';
     if (attendance.clock_in || attendance.status === 'present') return 'bg-[#2ECC71]';
     
@@ -265,6 +266,11 @@ const monthlyStats = computed(() => {
 });
 
 const getStatusInfo = (attendance: Attendance) => {
+    // Override 'present' logic: if no clock_in, treat as absent
+    if (attendance.status === 'present' && !attendance.clock_in) {
+         return { label: 'Absent', variant: 'destructive' as const, class: '' };
+    }
+
     switch (attendance.status) {
         case 'present': return { label: 'Present', variant: 'default' as const, class: 'bg-green-600' };
         case 'absent': return { label: 'Absent', variant: 'destructive' as const, class: '' };

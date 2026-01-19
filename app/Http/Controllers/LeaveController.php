@@ -64,11 +64,16 @@ class LeaveController extends Controller
             ->take(5)
             ->get();
 
+        $allHolidays = \App\Models\Holiday::whereYear('date', now()->year)
+            ->orderBy('date')
+            ->get();
+
         return Inertia::render('leaves/Index', [
             'leaves' => $leaves,
             'calendarLeaves' => $calendarLeaves,
             'leaveBalances' => $leaveBalances,
             'upcomingHolidays' => $upcomingHolidays,
+            'holidays' => $allHolidays, // Pass full list for modal
         ]);
     }
 

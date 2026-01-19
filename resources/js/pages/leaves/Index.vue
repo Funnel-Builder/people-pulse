@@ -32,6 +32,14 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { computed, ref } from 'vue';
 import type { BreadcrumbItem } from '@/types';
 
@@ -81,6 +89,7 @@ interface Props {
     leaves: Leave[];
     leaveBalances: LeaveBalance[];
     upcomingHolidays: Holiday[];
+    holidays: Holiday[];
 }
 
 const props = defineProps<Props>();
@@ -208,6 +217,36 @@ const planningEvents = computed(() => {
         };
     });
 });
+
+// Group filtered holidays by month for the modal
+const groupedHolidays = computed(() => {
+    if (!props.holidays) return {};
+    const groups: Record<string, Holiday[]> = {};
+    const sorted = [...props.holidays].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    sorted.forEach(holiday => {
+        const date = new Date(holiday.date);
+        const month = date.toLocaleString('default', { month: 'long' });
+        if (!groups[month]) {
+            groups[month] = [];
+        }
+        groups[month].push(holiday);
+    });
+    
+    return groups;
+});
+
+const getBadgeVariant = (type: string) => {
+    switch (type) {
+        case 'national': return 'default';
+        case 'company': return 'success';
+        case 'religious': return 'secondary';
+        case 'optional': return 'outline';
+        default: return 'outline';
+    }
+};
+
+const isHolidayModalOpen = ref(false);
 
 </script>
 
@@ -377,12 +416,12 @@ const planningEvents = computed(() => {
                     <CardHeader class="pb-4 border-b">
                         <div class="flex items-center justify-between">
                             <CardTitle class="text-lg font-semibold">Planning Calendar</CardTitle>
-                            <Button variant="ghost" size="sm" class="text-xs h-7 text-primary hover:text-primary/80">
+                            <Button variant="ghost" size="sm" class="text-xs h-7 text-primary hover:text-primary/80" @click="isHolidayModalOpen = true">
                                 View All
                             </Button>
                         </div>
                     </CardHeader>
-                    <CardContent class="p-0 flex-1 overflow-auto bg-muted/10">
+                    <CardContent class="p-0 flex-1 overflow-auto bg-muted/10 no-scrollbar">
                         <div class="divide-y">
                             <div v-for="(event, index) in planningEvents" :key="index" class="p-4 hover:bg-muted/30 transition-colors group">
                                 <div class="flex items-start gap-4">
@@ -420,9 +459,61 @@ const planningEvents = computed(() => {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+
+        <!-- Holiday List Modal -->
+        <Dialog v-model:open="isHolidayModalOpen">
+            <DialogContent class="sm:max-w-[600px] h-[80vh] flex flex-col p-0">
+                <DialogHeader class="px-6 py-4 border-b">
+                    <DialogTitle>Holiday Calendar {{ new Date().getFullYear() }}</DialogTitle>
+                    <DialogDescription>
+                        Full list of holidays for this year.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="flex-1 overflow-y-auto pb-4">
+                    <div v-for="(holidays, month) in groupedHolidays" :key="month" class="mb-6 last:mb-0 first:mt-4">
+                        <h3 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider sticky top-0 bg-background py-2 z-10 mb-2 px-6 border-b">
+                            {{ month }}
+                        </h3>
+                        <div class="grid gap-3 px-6">
+                            <div v-for="holiday in holidays" :key="holiday.id" 
+                                class="flex items-center justify-between p-3 rounded-lg border bg-card/50">
+                                <div class="flex items-center gap-4">
+                                    <div class="flex flex-col items-center justify-center w-10 h-10 rounded-md bg-muted text-muted-foreground shrink-0 border">
+                                        <span class="text-[0.6rem] font-bold uppercase">{{ new Date(holiday.date).toLocaleDateString('en-US', { month: 'short' }) }}</span>
+                                        <span class="text-sm font-bold text-foreground">{{ new Date(holiday.date).getDate() }}</span>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <h4 class="font-medium text-sm">{{ holiday.name }}</h4>
+                                        </div>
+                                        <div class="flex items-center gap-2 mt-0.5">
+                                            <Badge :variant="getBadgeVariant(holiday.type)" class="capitalize text-[10px] px-1.5 py-0 h-4 font-normal">
+                                                {{ holiday.type }}
+                                            </Badge>
+                                            <span class="text-xs text-muted-foreground">
+                                                {{ new Date(holiday.date).toLocaleDateString('en-US', { weekday: 'long' }) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>
 
 <style scoped>
-/* Ensure consistent height even with empty content if needed */
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
 </style>
