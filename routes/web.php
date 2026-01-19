@@ -40,7 +40,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/post', [\App\Http\Controllers\LeaveController::class, 'storePost'])->name('store.post');
         Route::get('/requests', [\App\Http\Controllers\LeaveController::class, 'requests'])->name('requests');
         Route::get('/approvals', [\App\Http\Controllers\LeaveController::class, 'approvals'])->name('approvals');
-        
+
         // Individual leave record
         Route::get('/{leave}', [\App\Http\Controllers\LeaveController::class, 'show'])->name('show');
         Route::post('/{leave}/process', [\App\Http\Controllers\LeaveApprovalController::class, 'process'])->name('process');
@@ -54,7 +54,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Attendance Records
         Route::get('/attendance', [AttendanceController::class, 'adminDashboard'])->name('attendance');
         Route::get('/attendance/export', [AttendanceController::class, 'export'])->name('attendance.export');
-        
+
         // Leave Records
         Route::get('/leave', [LeaveRecordsController::class, 'index'])->name('leave');
         Route::get('/leave/export', [LeaveRecordsController::class, 'export'])->name('leave.export');
@@ -83,6 +83,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // EMPLOYEE MANAGEMENT (Admin only)
     // =====================================================
     Route::resource('employees', \App\Http\Controllers\EmployeeController::class)->except(['show']);
+
+    // =====================================================
+    // SETTINGS (Admin only)
+    // =====================================================
+    Route::prefix('settings')->group(function () {
+        Route::get('/attendance', [App\Http\Controllers\Admin\AttendanceSettingController::class, 'index'])->name('settings.attendance');
+        Route::post('/attendance', [App\Http\Controllers\Admin\AttendanceSettingController::class, 'update'])->name('settings.attendance.update');
+        Route::get('/leaves', [App\Http\Controllers\Admin\LeaveSettingController::class, 'index'])->name('settings.leaves');
+
+        // Holidays
+        Route::resource('holidays', App\Http\Controllers\Settings\HolidayController::class)->except(['create', 'edit', 'show']);
+    });
 
     // =====================================================
     // ANNOUNCEMENTS (Admin/Manager)

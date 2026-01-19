@@ -156,6 +156,11 @@ const mainNavItems = computed<NavItem[]>(() => {
                 href: '/settings/leaves',
                 icon: CalendarCog,
             },
+            {
+                title: 'Holidays',
+                href: '/settings/holidays',
+                icon: CalendarDays,
+            },
         ];
 
         items.push({

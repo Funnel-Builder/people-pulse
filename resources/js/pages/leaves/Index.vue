@@ -70,9 +70,17 @@ interface LeaveBalance {
     available: number;
 }
 
+interface Holiday {
+    id: number;
+    name: string;
+    date: string;
+    type: string;
+}
+
 interface Props {
     leaves: Leave[];
     leaveBalances: LeaveBalance[];
+    upcomingHolidays: Holiday[];
 }
 
 const props = defineProps<Props>();
@@ -185,14 +193,21 @@ const getCardColorClass = (code: string) => {
     return 'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800';
 };
 
-// Demo data for Planning Calendar
-const planningEvents = [
-    { date: '25', month: 'DEC', title: 'Christmas Day', type: 'Public Holiday', isHoliday: true },
-    { date: '01', month: 'JAN', title: "New Year's Day", type: 'Public Holiday', isHoliday: true },
-    { date: '21', month: 'FEB', title: 'Intl. Mother Language Day', type: 'Public Holiday', isHoliday: true },
-    { date: '26', month: 'MAR', title: 'Independence Day', type: 'Public Holiday', isHoliday: true },
-    { date: '14', month: 'APR', title: 'Bengali New Year', type: 'Public Holiday', isHoliday: true },
-];
+// Format upcoming holidays for display
+const planningEvents = computed(() => {
+    if (!props.upcomingHolidays) return [];
+    
+    return props.upcomingHolidays.map(holiday => {
+        const date = new Date(holiday.date);
+        return {
+            date: date.getDate().toString().padStart(2, '0'),
+            month: date.toLocaleString('default', { month: 'short' }).toUpperCase(),
+            title: holiday.name,
+            type: holiday.type.charAt(0).toUpperCase() + holiday.type.slice(1),
+            isHoliday: true
+        };
+    });
+});
 
 </script>
 

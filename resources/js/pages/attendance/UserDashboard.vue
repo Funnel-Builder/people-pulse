@@ -293,6 +293,13 @@ const formatDate = (dateString: string) => {
         day: 'numeric',
     });
 };
+
+const getLocation = (attendance: Attendance | null | undefined) => {
+    if (attendance && (attendance.status === 'present' || attendance.clock_in)) {
+        return 'Office';
+    }
+    return 'Not Defined';
+};
 </script>
 
 <template>
@@ -512,7 +519,7 @@ const formatDate = (dateString: string) => {
                                         <MapPin class="h-4 w-4 text-gray-400" />
                                         <span class="text-sm text-gray-600 dark:text-gray-400">Location</span>
                                     </div>
-                                    <span class="text-sm font-bold text-gray-900 dark:text-gray-100">Remote / Not Defined</span>
+                                    <span class="text-sm font-bold text-gray-900 dark:text-gray-100">{{ getLocation(selectedAttendance) }}</span>
                                 </div>
                              </div>
 

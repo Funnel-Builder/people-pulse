@@ -58,10 +58,17 @@ class LeaveController extends Controller
             ];
         });
 
+        // Get next 5 upcoming holidays
+        $upcomingHolidays = \App\Models\Holiday::where('date', '>=', now()->toDateString())
+            ->orderBy('date')
+            ->take(5)
+            ->get();
+
         return Inertia::render('leaves/Index', [
             'leaves' => $leaves,
             'calendarLeaves' => $calendarLeaves,
             'leaveBalances' => $leaveBalances,
+            'upcomingHolidays' => $upcomingHolidays,
         ]);
     }
 
