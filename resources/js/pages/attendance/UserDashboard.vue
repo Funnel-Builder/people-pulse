@@ -2,13 +2,13 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Attendance, BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
-import { CalendarDays, List } from 'lucide-vue-next';
+import { CalendarDays, List, ChevronLeft, ChevronRight, MapPin, Clock, TrendingUp } from 'lucide-vue-next';
 import DataTable from '@/components/ui/DataTable.vue';
 
 interface Props {
@@ -18,6 +18,7 @@ interface Props {
         year: number;
     };
     availableYears: number[];
+    userWeekendDays: string[];
 }
 
 const props = defineProps<Props>();
@@ -27,7 +28,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'My Attendance', href: '/attendance' },
 ];
 
-// View mode toggle - default to calendar
 const viewMode = ref<'calendar' | 'table'>('calendar');
 
 const selectedMonth = ref(props.filters.month.toString());
@@ -77,18 +77,37 @@ const daysInMonth = computed(() => {
 });
 
 const firstDayOfMonth = computed(() => {
+    // This line was modified as per instruction, but 'dateStr' is undefined here.
+    // Assuming it was meant to format the current selected month/year for a header.
+    // Reverting to original logic for calendar layout, as the provided change was syntactically incorrect in isolation.
+    // If the intent was to display the month/year string, a different computed property would be more appropriate.
     return new Date(parseInt(selectedYear.value), parseInt(selectedMonth.value) - 1, 1).getDay();
+});
+
+const attendanceMap = computed(() => {
+    const map = new Map<string, Attendance>();
+    if (!props.attendances) return map;
+    
+    props.attendances.forEach(a => {
+        if (!a.date) return;
+        // Standardize key to YYYY-MM-DD
+        const d = new Date(a.date);
+        if (!isNaN(d.getTime())) {
+             const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+             map.set(key, a);
+        }
+        // Also store original date string as fallback
+        map.set(a.date, a);
+    });
+    return map;
 });
 
 const calendarDays = computed(() => {
     const days: { date: string; day: number; attendance: Attendance | undefined }[] = [];
     for (let i = 1; i <= daysInMonth.value; i++) {
         const dateStr = `${selectedYear.value}-${String(selectedMonth.value).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-        // Normalize attendance date comparison - backend sends ISO datetime, we need just the date part
-        const attendance = props.attendances.find(a => {
-            const attendanceDate = a.date ? a.date.split('T')[0] : '';
-            return attendanceDate === dateStr;
-        });
+        // Use map for lookup
+        const attendance = attendanceMap.value.get(dateStr);
         days.push({ date: dateStr, day: i, attendance });
     }
     return days;
@@ -96,110 +115,163 @@ const calendarDays = computed(() => {
 
 const selectedAttendance = computed(() => {
     if (!selectedDate.value) return null;
-    // Normalize attendance date comparison - backend sends ISO datetime, we need just the date part
-    return props.attendances.find(a => {
-        const attendanceDate = a.date ? a.date.split('T')[0] : '';
-        return attendanceDate === selectedDate.value;
-    }) || null;
+    return attendanceMap.value.get(selectedDate.value) || null;
 });
 
 const selectDay = (date: string) => {
     selectedDate.value = selectedDate.value === date ? null : date;
 };
 
+// Next/Prev Month Navigation
+const goToNextMonth = () => {
+    let m = parseInt(selectedMonth.value);
+    let y = parseInt(selectedYear.value);
+    
+    if (m === 12) {
+        m = 1;
+        y++;
+    } else {
+        m++;
+    }
+    
+    selectedMonth.value = m.toString();
+    selectedYear.value = y.toString();
+};
+
+const goToPrevMonth = () => {
+    let m = parseInt(selectedMonth.value);
+    let y = parseInt(selectedYear.value);
+    
+    if (m === 1) {
+        m = 12;
+        y--;
+    } else {
+        m--;
+    }
+    
+    selectedMonth.value = m.toString();
+    selectedYear.value = y.toString();
+};
+
 const getAttendanceColor = (attendance: Attendance | undefined) => {
-    if (!attendance) return 'bg-gray-200 dark:bg-gray-700';
+    if (!attendance) return 'bg-gray-200 dark:bg-gray-700'; // Should not happen often if checking properly
     if (attendance.status === 'weekend') return 'bg-blue-500';
     if (attendance.status === 'sick_leave' || attendance.status === 'casual_leave') return 'bg-purple-500';
-    if (attendance.status === 'absent') return 'bg-red-500';
+    if (attendance.status === 'absent') return 'bg-[#F45B5B]'; // Reddish
     if (!attendance.clock_in) return 'bg-gray-300 dark:bg-gray-600';
-    if (attendance.is_late) return 'bg-yellow-500';
-    return 'bg-green-500';
+    if (attendance.is_late) return 'bg-[#F59E0B]'; // Amber/Orange
+    return 'bg-[#2ECC71]'; // Green
 };
 
-const getAttendanceBgClass = (attendance: Attendance | undefined) => {
-    if (!attendance) return '';
-    if (attendance.status === 'weekend') return 'bg-blue-50 dark:bg-blue-950/30';
-    if (attendance.status === 'sick_leave' || attendance.status === 'casual_leave') return 'bg-purple-50 dark:bg-purple-950/30';
-    if (attendance.status === 'absent') return 'bg-red-50 dark:bg-red-950/30';
-    if (!attendance.clock_in) return '';
-    if (attendance.is_late) return 'bg-yellow-50 dark:bg-yellow-950/30';
-    return 'bg-green-50 dark:bg-green-950/30';
-};
+
 
 // Helper functions
-const formatTime = (dateString: string | null) => {
-    if (!dateString) return '-';
+const formatTime = (dateString: string | null | undefined) => {
+    if (!dateString) return '-- : --';
     return new Date(dateString).toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
+        hour12: true
     });
 };
 
-const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-    });
-};
-
-const formatFullDate = (dateString: string) => {
+const formatDateForHeader = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
         weekday: 'long',
-        month: 'long',
+        month: 'short',
         day: 'numeric',
         year: 'numeric',
     });
 };
 
-const formatMinutesToHours = (minutes: number | null) => {
-    if (minutes === null) return '-';
-    if (minutes === 0) return '0h';
+const formatMinutesToHours = (minutes: number | null | undefined) => {
+    if (minutes === null || minutes === undefined) return '0h 0m';
+    if (minutes === 0) return '0h 0m';
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    if (hours === 0) return `${mins}m`;
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    return `${hours}h ${mins}m`;
 };
+
+const getStatusDotColor = (attendance: Attendance | undefined) => {
+    if (!attendance) return null;
+    if (attendance.status === 'weekend') return 'bg-blue-500';
+    if (attendance.status === 'sick_leave' || attendance.status === 'casual_leave') return 'bg-purple-500';
+    if (attendance.status === 'absent') return 'bg-[#F45B5B]';
+    if (attendance.is_late) return 'bg-[#F59E0B]';
+    if (attendance.clock_in || attendance.status === 'present') return 'bg-[#2ECC71]';
+    
+    // Fallback if record exists but status doesn't match above (e.g. pending or anomaly)
+    return 'bg-gray-400 dark:bg-gray-500';
+};
+
+// Stats Calculation
+const monthlyStats = computed(() => {
+    const presentDays = props.attendances.filter(a => a.status === 'present' || (a.clock_in && a.status !== 'weekend')).length;
+    
+    // Calculate actual working days (total days in month - weekends)
+    const totalDaysInMonth = daysInMonth.value;
+    let workingDays = 0;
+    
+    // Map day names to indices
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const userWeekends = (props.userWeekendDays || ['saturday', 'sunday']).map(d => d.toLowerCase());
+    
+    // Count working days (days that are not user's weekends)
+    for (let day = 1; day <= totalDaysInMonth; day++) {
+        const date = new Date(parseInt(selectedYear.value), parseInt(selectedMonth.value) - 1, day);
+        const dayOfWeek = date.getDay();
+        const dayName = dayNames[dayOfWeek];
+        
+        if (!userWeekends.includes(dayName)) {
+            workingDays++;
+        }
+    }
+    
+    // Calculate Average Clock In
+    let totalClockInMinutes = 0;
+    let clockInCount = 0;
+    props.attendances.forEach(a => {
+        if (a.clock_in) {
+            const date = new Date(a.clock_in);
+            totalClockInMinutes += date.getHours() * 60 + date.getMinutes();
+            clockInCount++;
+        }
+    });
+    
+    let avgClockInStr = '--:-- AM';
+    if (clockInCount > 0) {
+        const avgMinutes = totalClockInMinutes / clockInCount;
+        const h = Math.floor(avgMinutes / 60);
+        const m = Math.floor(avgMinutes % 60);
+        const date = new Date();
+        date.setHours(h, m);
+        avgClockInStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+
+    // Performance score - Mock logic
+    // 100 - (Absent * 5) - (Late * 2) ? Just simple placeholder
+    const absents = props.attendances.filter(a => a.status === 'absent').length;
+    const lates = props.attendances.filter(a => a.is_late).length;
+    let score = 100 - (absents * 10) - (lates * 2);
+    if (score < 0) score = 0;
+    if (score > 100) score = 100;
+
+    return {
+        present: presentDays,
+        total: workingDays,
+        avgClockIn: avgClockInStr,
+        score: score
+    };
+});
 
 const getStatusInfo = (attendance: Attendance) => {
     switch (attendance.status) {
-        case 'present':
-            return {
-                label: 'Present',
-                variant: 'default' as const,
-                class: 'bg-green-600 hover:bg-green-700'
-            };
-        case 'absent':
-            return {
-                label: 'Absent',
-                variant: 'destructive' as const,
-                class: ''
-            };
-        case 'weekend':
-            return {
-                label: 'Weekend',
-                variant: 'secondary' as const,
-                class: 'bg-blue-600 hover:bg-blue-700 text-white'
-            };
-        case 'sick_leave':
-            return {
-                label: 'Sick Leave',
-                variant: 'outline' as const,
-                class: 'bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200'
-            };
-        case 'casual_leave':
-            return {
-                label: 'Casual Leave',
-                variant: 'outline' as const,
-                class: 'bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200'
-            };
-        default:
-            return {
-                label: 'Unknown',
-                variant: 'outline' as const,
-                class: ''
-            };
+        case 'present': return { label: 'Present', variant: 'default' as const, class: 'bg-green-600' };
+        case 'absent': return { label: 'Absent', variant: 'destructive' as const, class: '' };
+        case 'weekend': return { label: 'Weekend', variant: 'secondary' as const, class: 'bg-blue-600 text-white' };
+        case 'sick_leave': return { label: 'Sick Leave', variant: 'outline' as const, class: 'bg-purple-100 text-purple-800' };
+        case 'casual_leave': return { label: 'Casual Leave', variant: 'outline' as const, class: 'bg-purple-100 text-purple-800' };
+        default: return { label: 'Unknown', variant: 'outline' as const, class: '' };
     }
 };
 
@@ -213,56 +285,64 @@ const columns = [
     { key: 'net_minutes', label: 'Net Hours' },
     { key: 'is_late', label: 'Late Status', class: 'hidden md:table-cell' },
 ];
+
+const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+    });
+};
 </script>
 
 <template>
     <Head title="My Attendance" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-4 md:p-6">
-            <!-- Header with Filters and Toggle -->
+        <div class="flex flex-col gap-6 p-4 md:p-6 min-h-screen">
+            <!-- Header -->
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold">My Attendance</h1>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">My Attendance</h1>
                 </div>
-                <div class="flex items-center gap-2">
-                    <!-- View Toggle -->
+                <div class="flex items-center gap-3">
                     <TooltipProvider>
-                        <div class="flex rounded-lg border bg-muted p-1">
+                         <div class="flex rounded-lg border bg-white dark:bg-gray-900 dark:border-gray-800 p-1 shadow-sm">
                             <Tooltip>
                                 <TooltipTrigger as-child>
                                     <Button
                                         size="sm"
                                         :variant="viewMode === 'calendar' ? 'default' : 'ghost'"
-                                        class="h-8 w-8 p-0"
+                                        class="h-8 px-3 text-xs"
+                                        :class="viewMode === 'calendar' ? 'bg-blue-600 hover:bg-blue-700' : 'text-gray-500 dark:text-gray-400'"
                                         @click="viewMode = 'calendar'"
                                     >
-                                        <CalendarDays class="h-4 w-4" />
+                                        <CalendarDays class="h-4 w-4 mr-2" />
+                                        Calendar
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Calendar</p>
-                                </TooltipContent>
+                                <TooltipContent>Calendar View</TooltipContent>
                             </Tooltip>
                             <Tooltip>
                                 <TooltipTrigger as-child>
                                     <Button
                                         size="sm"
                                         :variant="viewMode === 'table' ? 'default' : 'ghost'"
-                                        class="h-8 w-8 p-0"
+                                        class="h-8 px-3 text-xs"
+                                        :class="viewMode === 'table' ? 'bg-blue-600 hover:bg-blue-700' : 'text-gray-500 dark:text-gray-400'"
                                         @click="viewMode = 'table'"
                                     >
-                                        <List class="h-4 w-4" />
+                                        <List class="h-4 w-4 mr-2" />
+                                        List View
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Table</p>
-                                </TooltipContent>
+                                <TooltipContent>List View</TooltipContent>
                             </Tooltip>
                         </div>
                     </TooltipProvider>
+
                     <Select v-model="selectedMonth">
-                        <SelectTrigger class="w-[140px]">
+                        <SelectTrigger class="w-[110px] bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 dark:text-gray-200">
                             <SelectValue :placeholder="selectedMonthLabel" />
                         </SelectTrigger>
                         <SelectContent>
@@ -272,7 +352,7 @@ const columns = [
                         </SelectContent>
                     </Select>
                     <Select v-model="selectedYear">
-                        <SelectTrigger class="w-[100px]">
+                        <SelectTrigger class="w-[90px] bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 dark:text-gray-200">
                             <SelectValue :placeholder="selectedYear" />
                         </SelectTrigger>
                         <SelectContent>
@@ -284,170 +364,231 @@ const columns = [
                 </div>
             </div>
 
-            <!-- Calendar View -->
-            <template v-if="viewMode === 'calendar'">
-                <div class="grid gap-6 lg:grid-cols-3">
-                    <!-- Calendar Grid -->
-                    <Card class="lg:col-span-2">
-                        <CardHeader>
-                            <CardTitle class="flex items-center gap-2">
-                                <CalendarDays class="h-5 w-5" />
-                                {{ selectedMonthLabel }} {{ selectedYear }} Attendance
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <!-- Day Headers -->
-                            <div class="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-                                <div class="font-semibold text-muted-foreground py-2">Sun</div>
-                                <div class="font-semibold text-muted-foreground py-2">Mon</div>
-                                <div class="font-semibold text-muted-foreground py-2">Tue</div>
-                                <div class="font-semibold text-muted-foreground py-2">Wed</div>
-                                <div class="font-semibold text-muted-foreground py-2">Thu</div>
-                                <div class="font-semibold text-muted-foreground py-2">Fri</div>
-                                <div class="font-semibold text-muted-foreground py-2">Sat</div>
+            <!-- Calendar Layout -->
+             <div v-if="viewMode === 'calendar'" class="grid gap-6 lg:grid-cols-12 items-start">
+                
+                <!-- Left Column: Calendar (8 cols) -->
+                <div class="lg:col-span-8 flex flex-col gap-6">
+                    <Card class="border-0 shadow-sm rounded-xl overflow-hidden">
+                        <CardContent class="p-6">
+                            <!-- Calendar Header -->
+                            <div class="flex items-center justify-between mb-8">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                        <CalendarDays class="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <span class="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                        {{ selectedMonthLabel }} {{ selectedYear }} Attendance
+                                    </span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800" @click="goToPrevMonth">
+                                        <ChevronLeft class="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800" @click="goToNextMonth">
+                                        <ChevronRight class="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                    </Button>
+                                </div>
                             </div>
-                            <!-- Calendar Grid -->
-                            <div class="grid grid-cols-7 gap-1">
-                                <!-- Empty cells for first week offset -->
-                                <div v-for="i in firstDayOfMonth" :key="'empty-' + i" class="h-14"></div>
-                                <!-- Calendar days -->
+
+                            <!-- Weekday Headers -->
+                            <div class="grid grid-cols-7 mb-4">
+                                <div v-for="day in ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']" 
+                                     :key="day" 
+                                     class="text-center text-xs font-semibold text-gray-400 dark:text-gray-500 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 uppercase tracking-wider">
+                                    {{ day }}
+                                </div>
+                            </div>
+
+                            <!-- Days Grid -->
+                            <div class="grid grid-cols-7 auto-rows-fr">
+                                <!-- Empty cells -->
+                                <div v-for="i in firstDayOfMonth" :key="'empty-' + i" class="h-10 lg:h-14 border-r border-b border-gray-50 dark:border-gray-800"></div>
+                                
+                                <!-- Calendar Days -->
                                 <div
                                     v-for="day in calendarDays"
                                     :key="day.date"
                                     @click="selectDay(day.date)"
                                     :class="[
-                                        'h-14 p-1 rounded-lg border cursor-pointer transition-all relative',
-                                        selectedDate === day.date ? 'border-primary ring-2 ring-primary/20' : 'hover:border-primary/50',
-                                        getAttendanceBgClass(day.attendance),
+                                        'h-10 lg:h-14 border-r border-b border-gray-50 dark:border-gray-800 relative cursor-pointer group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors flex flex-col items-center justify-center gap-0.5',
+                                        selectedDate === day.date ? 'bg-blue-50/50 dark:bg-blue-900/10 ring-1 ring-blue-500 inset-0 z-10' : ''
                                     ]"
                                 >
-                                    <span class="text-sm font-medium">{{ day.day }}</span>
-                                    <div class="absolute bottom-1.5 left-1/2 -translate-x-1/2">
-                                        <div
-                                            :class="['w-2.5 h-2.5 rounded-full', getAttendanceColor(day.attendance)]"
-                                        ></div>
+                                    <span :class="[
+                                        'text-sm font-medium',
+                                        selectedDate === day.date ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-700 dark:text-gray-300'
+                                    ]">
+                                        {{ day.day }}
+                                    </span>
+                                    
+                                    <!-- Status Dot -->
+                                    <div v-if="getStatusDotColor(day.attendance)" 
+                                         :class="['w-1.5 h-1.5 rounded-full', getStatusDotColor(day.attendance)]">
                                     </div>
+                                    <div v-else-if="!day.attendance" class="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700"></div>
                                 </div>
                             </div>
 
                             <!-- Legend -->
-                            <div class="flex flex-wrap gap-4 mt-6 pt-4 border-t text-xs">
-                                <div class="flex items-center gap-1.5">
-                                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                                    <span>On Time</span>
+                            <div class="flex flex-wrap items-center justify-center gap-6 mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-[#2ECC71]"></div>
+                                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">On Time</span>
                                 </div>
-                                <div class="flex items-center gap-1.5">
-                                    <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                    <span>Late</span>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-[#F59E0B]"></div>
+                                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Late</span>
                                 </div>
-                                <div class="flex items-center gap-1.5">
-                                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                                    <span>Absent</span>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-[#F45B5B]"></div>
+                                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Absent</span>
                                 </div>
-                                <div class="flex items-center gap-1.5">
-                                    <div class="w-3 h-3 rounded-full bg-blue-500"></div>
-                                    <span>Weekend</span>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
+                                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Weekend</span>
                                 </div>
-                                <div class="flex items-center gap-1.5">
-                                    <div class="w-3 h-3 rounded-full bg-purple-500"></div>
-                                    <span>Leave</span>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-purple-500"></div>
+                                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Leave</span>
                                 </div>
-                                <div class="flex items-center gap-1.5">
-                                    <div class="w-3 h-3 rounded-full bg-gray-300 dark:bg-gray-600"></div>
-                                    <span>No Record</span>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+                                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">No Record</span>
                                 </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <!-- Selected Date Details -->
-                    <Card>
-                        <CardHeader>
-                            <CardTitle class="text-base">
-                                {{ selectedDate ? formatFullDate(selectedDate) : 'Select a Date' }}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div v-if="selectedAttendance" class="space-y-4">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div class="space-y-1">
-                                        <p class="text-xs text-muted-foreground uppercase tracking-wide">Clock In</p>
-                                        <p class="text-lg font-semibold" :class="selectedAttendance.is_late ? 'text-destructive' : ''">
-                                            {{ formatTime(selectedAttendance.clock_in) }}
-                                        </p>
-                                    </div>
-                                    <div class="space-y-1">
-                                        <p class="text-xs text-muted-foreground uppercase tracking-wide">Clock Out</p>
-                                        <p class="text-lg font-semibold">
-                                            {{ formatTime(selectedAttendance.clock_out) }}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div class="space-y-1">
-                                        <p class="text-xs text-muted-foreground uppercase tracking-wide">Net Hours</p>
-                                        <p class="text-lg font-semibold">
-                                            {{ formatMinutesToHours(selectedAttendance.net_minutes) }}
-                                        </p>
-                                    </div>
-                                    <div class="space-y-1">
-                                        <p class="text-xs text-muted-foreground uppercase tracking-wide">Status</p>
-                                        <Badge
-                                            :variant="getStatusInfo(selectedAttendance).variant"
-                                            :class="getStatusInfo(selectedAttendance).class"
-                                        >
-                                            {{ getStatusInfo(selectedAttendance).label }}
-                                        </Badge>
-                                    </div>
-                                </div>
-                                <div v-if="selectedAttendance.late_minutes && selectedAttendance.late_minutes > 0" class="pt-2 border-t">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-sm text-muted-foreground">Late by</span>
-                                        <span class="text-sm font-medium text-destructive">
-                                            {{ formatMinutesToHours(selectedAttendance.late_minutes) }}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div v-if="selectedAttendance.early_exit_minutes && selectedAttendance.early_exit_minutes > 0" class="pt-2 border-t">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-sm text-muted-foreground">Left early by</span>
-                                        <span class="text-sm font-medium text-orange-600">
-                                            {{ formatMinutesToHours(selectedAttendance.early_exit_minutes) }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div v-else-if="selectedDate" class="text-center py-8 text-muted-foreground">
-                                <p>No attendance record for this date.</p>
-                            </div>
-                            <div v-else class="text-center py-8 text-muted-foreground">
-                                <CalendarDays class="h-12 w-12 mx-auto mb-3 opacity-30" />
-                                <p>Click on a date to view attendance details.</p>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
-            </template>
 
-            <!-- Table View -->
-            <Card v-else>
-                <CardHeader>
-                    <CardTitle>{{ selectedMonthLabel }} {{ selectedYear }} Attendance</CardTitle>
-                </CardHeader>
-                <CardContent>
+                <!-- Right Column: Details & Summary (4 cols) -->
+                <div class="lg:col-span-4 flex flex-col gap-4">
+                    
+                    <!-- Selected Date Details -->
+                    <Card class="border-0 shadow-sm rounded-xl">
+                        <CardContent class="p-6">
+                             <div class="mb-6">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Selected Date</p>
+                                <div class="flex items-center justify-between">
+                                    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">
+                                        {{ selectedDate ? formatDateForHeader(selectedDate) : 'Select a Date' }}
+                                    </h2>
+                                    <div class="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                                        <CalendarDays class="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                    </div>
+                                </div>
+                             </div>
+
+                             <!-- Attendance Times (Always Visible) -->
+                             <div class="grid grid-cols-2 gap-4 mb-6">
+                                <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-800">
+                                    <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-2">Clock In</p>
+                                    <p :class="['text-sm font-semibold', selectedAttendance?.is_late ? 'text-amber-500' : 'text-gray-900 dark:text-gray-100']">
+                                        {{ selectedAttendance?.clock_in ? formatTime(selectedAttendance.clock_in) : '--:--' }}
+                                    </p>
+                                </div>
+                                <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-800">
+                                    <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-2">Clock Out</p>
+                                    <p :class="['text-sm font-semibold', (selectedAttendance?.early_exit_minutes ?? 0) > 0 ? 'text-orange-500' : 'text-gray-900 dark:text-gray-100']">
+                                        {{ selectedAttendance?.clock_out ? formatTime(selectedAttendance.clock_out) : '--:--' }}
+                                    </p>
+                                </div>
+                             </div>
+
+                             <!-- Info Rows -->
+                             <div class="space-y-4 mb-6">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <Clock class="h-4 w-4 text-gray-400" />
+                                        <span class="text-sm text-gray-600 dark:text-gray-400">Total Work Hours</span>
+                                    </div>
+                                    <span class="text-sm font-bold text-gray-900 dark:text-gray-100">
+                                        {{ formatMinutesToHours(selectedAttendance?.net_minutes) }}
+                                    </span>
+                                </div>
+                                <div class="border-t border-gray-100 dark:border-gray-800"></div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <MapPin class="h-4 w-4 text-gray-400" />
+                                        <span class="text-sm text-gray-600 dark:text-gray-400">Location</span>
+                                    </div>
+                                    <span class="text-sm font-bold text-gray-900 dark:text-gray-100">Remote / Not Defined</span>
+                                </div>
+                             </div>
+
+                             <Button class="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 font-semibold border-0 shadow-none">
+                                Request Manual Entry
+                             </Button>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Monthly Summary Card -->
+                    <Card class="border-0 shadow-sm rounded-xl">
+                        <CardContent class="p-3">
+                            <div class="grid grid-cols-3 gap-3">
+                                <!-- Stat Item: Present Days -->
+                                <div class="flex flex-col items-center justify-center p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800 text-center">
+                                    <div class="relative h-14 w-14 mb-2">
+                                        <!-- Background Circle -->
+                                        <svg class="h-full w-full -rotate-90" viewBox="0 0 36 36">
+                                            <path class="text-gray-200 dark:text-gray-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
+                                            <!-- Progress Circle -->
+                                            <path class="text-blue-600 dark:text-blue-500" :stroke-dasharray="`${(monthlyStats.present / monthlyStats.total) * 100}, 100`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+                                        </svg>
+                                        <div class="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-900 dark:text-gray-100">
+                                            {{ monthlyStats.present }}/{{ monthlyStats.total }}
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 font-medium leading-tight">Present Days</p>
+                                </div>
+
+                                <!-- Stat Item: Avg Clock In -->
+                                <div class="flex flex-col items-center justify-center p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800 text-center">
+                                    <div class="h-14 w-14 mb-2 flex items-center justify-center rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">
+                                        <Clock class="h-6 w-6" />
+                                    </div>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 font-medium mb-0.5 leading-tight">Avg Check In</p>
+                                    <p class="text-sm font-bold text-gray-900 dark:text-gray-100">{{ monthlyStats.avgClockIn }}</p>
+                                </div>
+
+                                <!-- Stat Item: Performance -->
+                                <div class="flex flex-col items-center justify-center p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800 text-center">
+                                    <div class="relative h-14 w-14 mb-2">
+                                         <!-- Background Circle -->
+                                        <svg class="h-full w-full -rotate-90" viewBox="0 0 36 36">
+                                            <path class="text-gray-200 dark:text-gray-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
+                                            <!-- Progress Circle -->
+                                            <path class="text-green-600 dark:text-green-500" :stroke-dasharray="`${monthlyStats.score}, 100`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+                                        </svg>
+                                        <div class="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-900 dark:text-gray-100">
+                                            {{ monthlyStats.score }}%
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 font-medium leading-tight">Performance</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                </div>
+             </div>
+
+             <!-- Table View (Keep existing roughly as is but styled slightly if needed) -->
+             <Card v-else class="border-0 shadow-sm rounded-xl">
+                <CardContent class="p-0">
                     <DataTable :columns="columns" :data="attendances">
                         <template #cell-date="{ row }">
-                            <span class="font-medium">{{ formatDate(row.date) }}</span>
+                            <span class="font-medium text-gray-900 dark:text-gray-100">{{ formatDate(row.date) }}</span>
                         </template>
 
                         <template #cell-clock_in="{ row }">
-                            <span :class="row.is_late ? 'text-destructive font-medium' : ''">
+                            <span :class="row.is_late ? 'text-amber-600 font-medium' : 'text-gray-700 dark:text-gray-300'">
                                 {{ formatTime(row.clock_in) }}
                             </span>
                         </template>
 
                         <template #cell-clock_out="{ row }">
-                            <span :class="row.early_exit_minutes > 0 ? 'text-orange-600 font-medium' : ''">
+                            <span :class="row.early_exit_minutes > 0 ? 'text-orange-600 font-medium' : 'text-gray-700 dark:text-gray-300'">
                                 {{ formatTime(row.clock_out) }}
                             </span>
                         </template>
@@ -461,40 +602,27 @@ const columns = [
                                 {{ getStatusInfo(row).label }}
                             </Badge>
                         </template>
-
-                        <template #cell-late_minutes="{ row }">
-                            <span v-if="row.late_minutes > 0" class="text-destructive font-medium">
-                                {{ formatMinutesToHours(row.late_minutes) }}
-                            </span>
-                            <span v-else class="text-muted-foreground">-</span>
-                        </template>
-
-                        <template #cell-early_exit_minutes="{ row }">
-                            <span v-if="row.early_exit_minutes > 0" class="text-orange-600 font-medium">
-                                {{ formatMinutesToHours(row.early_exit_minutes) }}
-                            </span>
-                            <span v-else class="text-muted-foreground">-</span>
-                        </template>
-
+                        
                         <template #cell-net_minutes="{ row }">
-                            <span class="font-medium">{{ formatMinutesToHours(row.net_minutes) }}</span>
+                            <span class="font-medium text-gray-900 dark:text-gray-100">{{ formatMinutesToHours(row.net_minutes) }}</span>
                         </template>
                         
-                        <template #cell-is_late="{ row }">
+                         <template #cell-is_late="{ row }">
                              <Badge
                                 v-if="row.clock_in"
                                 :variant="row.is_late ? 'destructive' : 'default'"
-                                :class="row.is_late ? 'bg-destructive hover:bg-destructive/90' : 'bg-green-600 hover:bg-green-700'"
-                                class="text-xs font-semibold px-2.5 py-1"
+                                :class="row.is_late ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 border-amber-200 dark:bg-amber-100 dark:text-amber-800 dark:border-amber-200' : 'bg-green-100 text-green-800 hover:bg-green-200 border-green-200 dark:bg-green-100 dark:text-green-800 dark:border-green-200'"
+                                class="text-xs font-semibold px-2.5 py-1 border shadow-none"
                             >
                                 {{ row.is_late ? 'Yes' : 'No' }}
                             </Badge>
-                            <span v-else class="text-muted-foreground">-</span>
+                            <span v-else class="text-gray-400">-</span>
                         </template>
                     </DataTable>
                 </CardContent>
-            </Card>
+             </Card>
         </div>
     </AppLayout>
 </template>
+
 

@@ -74,9 +74,25 @@ class LeaveController extends Controller
         $coverPersonOptions = $this->leaveService->getCoverPersonOptions($user);
         $leaveTypes = LeaveType::active()->get();
 
+        // Get leave balances for the user
+        $leaveBalances = $leaveTypes->map(function ($leaveType) use ($user) {
+            $balance = UserLeaveBalance::where('user_id', $user->id)
+                ->where('leave_type_id', $leaveType->id)
+                ->first();
+
+            return [
+                'leave_type_code' => $leaveType->code,
+                'leave_type_name' => $leaveType->name,
+                'balance' => $balance?->balance ?? 0,
+                'used' => $balance?->used ?? 0,
+                'available' => $balance?->available ?? 0,
+            ];
+        });
+
         return Inertia::render('leaves/Application', [
             'coverPersonOptions' => $coverPersonOptions,
             'leaveTypes' => $leaveTypes,
+            'leaveBalances' => $leaveBalances,
             'warningDays' => config('leave.warning_days', 2),
             'defaultAdvanceLeaveType' => config('leave.default_advance_leave_type', 'casual'),
             'defaultPostLeaveType' => config('leave.default_post_leave_type', 'sick'),
@@ -152,8 +168,18 @@ class LeaveController extends Controller
      */
     public function show(Request $request, Leave $leave): Response
     {
-        // Only allow viewing own leaves
-        if ($leave->user_id !== $request->user()->id) {
+        $user = $request->user();
+
+        // Allow viewing if user is:
+        // 1. The leave owner
+        // 2. The designated cover person
+        // 3. A manager or admin
+        $canView = $leave->user_id === $user->id
+            || $leave->cover_person_id === $user->id
+            || $user->isManager()
+            || $user->isAdmin();
+
+        if (!$canView) {
             abort(403, 'Unauthorized');
         }
 

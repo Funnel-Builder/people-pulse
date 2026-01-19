@@ -47,6 +47,7 @@ const mainNavItems = computed<NavItem[]>(() => {
         title: 'Cover Requests',
         href: '/leaves/requests',
         icon: ClipboardList,
+        badge: page.props.auth?.pendingCoverRequests || 0,
     });
 
     // Leave Approvals - only for managers and admins
@@ -55,6 +56,7 @@ const mainNavItems = computed<NavItem[]>(() => {
             title: 'Leave Approvals',
             href: '/leaves/approvals',
             icon: ClipboardList,
+            badge: page.props.auth?.pendingLeaveApprovals || 0,
         });
     }
 

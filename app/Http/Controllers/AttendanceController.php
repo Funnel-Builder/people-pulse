@@ -148,6 +148,7 @@ class AttendanceController extends Controller
                 'year' => (int) $year,
             ],
             'availableYears' => $availableYears,
+            'userWeekendDays' => $user->weekend_days ?? ['saturday', 'sunday'],
         ]);
     }
 

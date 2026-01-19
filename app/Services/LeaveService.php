@@ -151,18 +151,10 @@ class LeaveService
 
     /**
      * Get cover person options for a user.
-     * Admins can see all users, regular users see only their sub-department members.
+     * Returns users from the same sub-department.
      */
     public function getCoverPersonOptions(User $user): Collection
     {
-        // Admins can select any user as cover person
-        if ($user->isAdmin()) {
-            return User::where('id', '!=', $user->id)
-                ->orderBy('name')
-                ->get(['id', 'name', 'employee_id', 'designation']);
-        }
-
-        // Regular users can only select from their sub-department
         if (!$user->sub_department_id) {
             return collect([]);
         }
@@ -216,18 +208,13 @@ class LeaveService
             });
         }
 
-        // Cover person requests
-        // Admins can see all advance leave requests at cover person step
-        $coverPersonQuery = Leave::with(['dates', 'leaveType', 'user', 'coverPerson', 'approvals'])
+        // Cover person requests (for any user)
+        $coverPersonLeaves = Leave::with(['dates', 'leaveType', 'user', 'coverPerson', 'approvals'])
             ->where('status', Leave::STATUS_PENDING)
+            ->where('cover_person_id', $user->id)
             ->where('current_approval_step', 1)
-            ->where('type', Leave::TYPE_ADVANCE);
-
-        if (!$user->isAdmin()) {
-            $coverPersonQuery->where('cover_person_id', $user->id);
-        }
-
-        $coverPersonLeaves = $coverPersonQuery->get();
+            ->where('type', Leave::TYPE_ADVANCE)
+            ->get();
 
         // Merge and return unique leaves
         if ($user->isAdmin() || $user->isManager()) {
@@ -239,25 +226,25 @@ class LeaveService
 
     /**
      * Get cover requests for a user (where they are the cover person).
-     * Admins can see all advance leave requests pending cover person approval.
+     * Only returns leaves that are pending and awaiting cover person approval.
+     * Explicitly excludes cancelled and rejected leaves.
      */
     public function getCoverRequestsForUser(User $user): Collection
     {
-        $query = Leave::with(['dates', 'leaveType', 'user', 'coverPerson', 'approvals'])
+        return Leave::with(['dates', 'leaveType', 'user', 'coverPerson', 'approvals'])
             ->where('status', Leave::STATUS_PENDING)
+            ->whereNotIn('status', [Leave::STATUS_CANCELLED, Leave::STATUS_REJECTED])
+            ->where('cover_person_id', $user->id)
             ->where('current_approval_step', 1)
-            ->where('type', Leave::TYPE_ADVANCE);
-
-        // Admins can see and approve all cover person requests
-        if (!$user->isAdmin()) {
-            $query->where('cover_person_id', $user->id);
-        }
-
-        return $query->orderByDesc('created_at')->get();
+            ->where('type', Leave::TYPE_ADVANCE)
+            ->orderByDesc('created_at')
+            ->get();
     }
 
     /**
      * Get pending approvals for managers and admins (excludes cover person requests).
+     * Only returns leaves that are pending approval at the appropriate step.
+     * Explicitly excludes cancelled and rejected leaves.
      */
     public function getManagerAdminApprovals(User $user): Collection
     {
@@ -266,7 +253,8 @@ class LeaveService
         }
 
         $query = Leave::with(['dates', 'leaveType', 'user', 'coverPerson', 'approvals'])
-            ->where('status', Leave::STATUS_PENDING);
+            ->where('status', Leave::STATUS_PENDING)
+            ->whereNotIn('status', [Leave::STATUS_CANCELLED, Leave::STATUS_REJECTED]);
 
         if ($user->isAdmin()) {
             // Admin sees all leaves at admin approval step
@@ -362,5 +350,70 @@ class LeaveService
             default:
                 return false;
         }
+    }
+
+    /**
+     * Get count of pending cover requests for a user.
+     * Explicitly excludes cancelled and rejected leaves.
+     */
+    public function getCoverRequestCount(User $user): int
+    {
+        return Leave::where('status', Leave::STATUS_PENDING)
+            ->whereNotIn('status', [Leave::STATUS_CANCELLED, Leave::STATUS_REJECTED])
+            ->where('cover_person_id', $user->id)
+            ->where('current_approval_step', 1)
+            ->where('type', Leave::TYPE_ADVANCE)
+            ->count();
+    }
+
+    /**
+     * Get count of pending leave approvals for managers and admins.
+     * Explicitly excludes cancelled and rejected leaves.
+     */
+    public function getLeaveApprovalCount(User $user): int
+    {
+        if (!$user->isAdmin() && !$user->isManager()) {
+            return 0;
+        }
+
+        $query = Leave::where('status', Leave::STATUS_PENDING)
+            ->whereNotIn('status', [Leave::STATUS_CANCELLED, Leave::STATUS_REJECTED]);
+
+        if ($user->isAdmin()) {
+            // Admin sees all leaves at admin approval step
+            $query->whereHas('approvals', function ($q) {
+                $q->where('status', LeaveApproval::STATUS_PENDING)
+                    ->where('approver_type', LeaveApproval::TYPE_ADMIN);
+            })->where(function ($q) {
+                $q->where('type', Leave::TYPE_ADVANCE)
+                    ->where('current_approval_step', 3)
+                    ->orWhere(function ($q2) {
+                        $q2->where('type', Leave::TYPE_POST)
+                            ->where('current_approval_step', 2);
+                    });
+            });
+        } elseif ($user->isManager()) {
+            // Manager sees leaves from their department at manager step
+            $managedSubDeptIds = $user->getManagedSubDepartmentIds();
+
+            $query->whereHas('user', function ($q) use ($user, $managedSubDeptIds) {
+                $q->where('department_id', $user->department_id);
+                if (!empty($managedSubDeptIds)) {
+                    $q->whereIn('sub_department_id', $managedSubDeptIds);
+                }
+            })->whereHas('approvals', function ($q) {
+                $q->where('status', LeaveApproval::STATUS_PENDING)
+                    ->where('approver_type', LeaveApproval::TYPE_MANAGER);
+            })->where(function ($q) {
+                $q->where('type', Leave::TYPE_ADVANCE)
+                    ->where('current_approval_step', 2)
+                    ->orWhere(function ($q2) {
+                        $q2->where('type', Leave::TYPE_POST)
+                            ->where('current_approval_step', 1);
+                    });
+            });
+        }
+
+        return $query->count();
     }
 }

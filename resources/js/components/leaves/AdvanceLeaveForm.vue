@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { MultiSelectCalendar } from '@/components/ui/calendar';
-import { CalendarPlus, AlertTriangle, X } from 'lucide-vue-next';
+import { CalendarPlus, AlertTriangle, X, AlertCircle } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 
@@ -26,9 +26,18 @@ interface LeaveType {
     code: string;
 }
 
+interface LeaveBalance {
+    leave_type_code: string;
+    leave_type_name: string;
+    balance: number;
+    used: number;
+    available: number;
+}
+
 interface Props {
     coverPersonOptions: CoverPersonOption[];
     leaveTypes: LeaveType[];
+    leaveBalances: LeaveBalance[];
     warningDays: number;
     defaultLeaveType: string;
     showHeader?: boolean;
@@ -54,6 +63,19 @@ const form = useForm({
 const showWarningModal = ref(false);
 const warningModalShown = ref(false);
 const pendingWarningDate = ref<string | null>(null);
+const showInsufficientBalanceModal = ref(false);
+
+// Get current balance for selected leave type
+const currentBalance = computed(() => {
+    const balance = props.leaveBalances.find(b => b.leave_type_code === form.leave_type);
+    return balance || { leave_type_code: form.leave_type, leave_type_name: '', balance: 0, used: 0, available: 0 };
+});
+
+// Get selected leave type name
+const selectedLeaveTypeName = computed(() => {
+    const leaveType = advanceLeaveTypes.value.find(t => t.code === form.leave_type);
+    return leaveType?.name || '';
+});
 
 // Calculate minimum date (tomorrow)
 const minDate = computed(() => {
@@ -116,6 +138,12 @@ const formatDate = (dateStr: string) => {
 };
 
 const submit = () => {
+    // Check if user has sufficient balance
+    if (form.dates.length > currentBalance.value.available) {
+        showInsufficientBalanceModal.value = true;
+        return;
+    }
+
     form.post('/leaves/advance', {
         preserveScroll: true,
     });
@@ -275,6 +303,28 @@ const submit = () => {
                 </Button>
                 <Button @click="confirmWarningDate">
                     Confirm
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
+    <!-- Insufficient Balance Modal -->
+    <Dialog v-model:open="showInsufficientBalanceModal">
+        <DialogContent class="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle class="flex items-center gap-2 text-amber-600 dark:text-amber-500">
+                    <AlertCircle class="h-5 w-5" />
+                    Insufficient Leave Balance
+                </DialogTitle>
+                <DialogDescription class="space-y-3 pt-2">
+                    <p class="text-sm text-foreground">
+                        You don't have enough leave balance to apply for this request. Please reduce the number of days or select a different leave type.
+                    </p>
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+                <Button variant="default" @click="showInsufficientBalanceModal = false">
+                    Back to Form
                 </Button>
             </DialogFooter>
         </DialogContent>

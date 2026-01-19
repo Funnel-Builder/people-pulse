@@ -3,6 +3,8 @@ import type { LucideIcon } from 'lucide-vue-next';
 
 export interface Auth {
     user: User;
+    pendingCoverRequests?: number;
+    pendingLeaveApprovals?: number;
 }
 
 export interface BreadcrumbItem {
@@ -17,6 +19,7 @@ export interface NavItem {
     isActive?: boolean;
     isGroup?: boolean;
     children?: NavItem[];
+    badge?: number;
 }
 
 export type AppPageProps<

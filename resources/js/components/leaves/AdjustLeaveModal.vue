@@ -116,9 +116,22 @@ const toggleAccrualType = (leaveTypeId: number) => {
     const balance = getBalance(leaveTypeId);
     if (balance) {
         balance.accrual_type = balance.accrual_type === 'manual' ? 'attendance' : 'manual';
+        
         if (balance.accrual_type === 'attendance') {
-            // Use the balance value itself as the threshold
-            balance.attendance_days_threshold = balance.balance || 30;
+            balance.attendance_days_threshold = balance.balance || 0;
+        } else {
+            // When switching back to manual, preserve the visible value
+            balance.balance = balance.attendance_days_threshold || 0;
+        }
+    }
+};
+
+const handleBlur = (leaveTypeId: number) => {
+    const b = getBalance(leaveTypeId);
+    if (b && isAttendanceBased(leaveTypeId)) {
+        if (!b.attendance_days_threshold || b.attendance_days_threshold === 0) {
+            b.attendance_days_threshold = 1;
+            b.balance = 1;
         }
     }
 };
@@ -141,7 +154,7 @@ const submit = () => {
     // Sync attendance_days_threshold with balance for attendance-based leaves
     form.balances.forEach(balance => {
         if (balance.accrual_type === 'attendance') {
-            balance.attendance_days_threshold = balance.balance || 30;
+            balance.attendance_days_threshold = balance.balance || 0;
         }
     });
     
@@ -227,20 +240,21 @@ const close = () => {
                                 class="pr-12"
                                 placeholder="0"
                                 :model-value="isAttendanceBased(leaveType.id) 
-                                    ? (getBalance(leaveType.id)?.attendance_days_threshold ?? 30) 
+                                    ? (getBalance(leaveType.id)?.attendance_days_threshold ?? 0) 
                                     : Math.floor(getBalance(leaveType.id)?.balance ?? 0)"
                                 @update:model-value="(v) => { 
                                     const b = getBalance(leaveType.id); 
                                     if (b) { 
                                         const val = parseInt(String(v)) || 0;
                                         if (isAttendanceBased(leaveType.id)) {
-                                            b.attendance_days_threshold = val || 30;
-                                            b.balance = val || 30;
+                                            b.attendance_days_threshold = val;
+                                            b.balance = val;
                                         } else {
                                             b.balance = val;
                                         }
                                     } 
                                 }"
+                                @blur="handleBlur(leaveType.id)"
                             />
                             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">days</span>
                         </div>
