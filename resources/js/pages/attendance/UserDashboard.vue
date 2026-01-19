@@ -326,12 +326,12 @@ const getLocation = (attendance: Attendance | null | undefined) => {
                                     <Button
                                         size="sm"
                                         :variant="viewMode === 'calendar' ? 'default' : 'ghost'"
-                                        class="h-8 px-3 text-xs"
+                                        class="h-8 px-2 md:px-3 text-xs"
                                         :class="viewMode === 'calendar' ? 'bg-blue-600 hover:bg-blue-700' : 'text-gray-500 dark:text-gray-400'"
                                         @click="viewMode = 'calendar'"
                                     >
-                                        <CalendarDays class="h-4 w-4 mr-2" />
-                                        Calendar
+                                        <CalendarDays class="h-4 w-4 md:mr-2" />
+                                        <span class="hidden md:inline">Calendar</span>
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>Calendar View</TooltipContent>
@@ -341,12 +341,12 @@ const getLocation = (attendance: Attendance | null | undefined) => {
                                     <Button
                                         size="sm"
                                         :variant="viewMode === 'table' ? 'default' : 'ghost'"
-                                        class="h-8 px-3 text-xs"
+                                        class="h-8 px-2 md:px-3 text-xs"
                                         :class="viewMode === 'table' ? 'bg-blue-600 hover:bg-blue-700' : 'text-gray-500 dark:text-gray-400'"
                                         @click="viewMode = 'table'"
                                     >
-                                        <List class="h-4 w-4 mr-2" />
-                                        List View
+                                        <List class="h-4 w-4 md:mr-2" />
+                                        <span class="hidden md:inline">List View</span>
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>List View</TooltipContent>

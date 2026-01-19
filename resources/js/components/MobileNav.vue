@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Clock, LayoutGrid, Menu, Users } from 'lucide-vue-next';
+import { Clock, LayoutGrid, Menu, Users, Calendar } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user);
 
 const items = computed(() => {
-    const navItems = [
+    return [
         {
             title: 'Home',
             href: '/dashboard',
@@ -20,25 +20,18 @@ const items = computed(() => {
             icon: Clock,
             active: page.url.startsWith('/attendance') && !page.url.includes('/manager'),
         },
+        {
+            title: 'My Leaves',
+            href: '/leaves',
+            icon: Calendar,
+            active: page.url.startsWith('/leaves'),
+        },
     ];
-
-    if (user.value?.role === 'manager' || user.value?.role === 'admin') {
-        navItems.push({
-            title: 'Team',
-            href: '/attendance/manager',
-            icon: Users,
-            active: page.url.startsWith('/attendance/manager'),
-        });
-    }
-
-    // "More" or "Menu" item to trigger sidebar or go to settings
-    // For now, let's just link to settings or profile if sidebar is hidden
-    return navItems;
 });
 </script>
 
 <template>
-    <div class="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border bg-background pb-safe md:hidden">
+    <div class="fixed bottom-0 left-0 right-0 z-50 grid grid-cols-3 h-16 items-center border-t border-border bg-background pb-safe md:hidden">
         <Link
             v-for="item in items"
             :key="item.href"

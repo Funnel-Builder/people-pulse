@@ -7,10 +7,12 @@ import { computed } from 'vue';
 interface Props {
     user: User;
     showEmail?: boolean;
+    showText?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     showEmail: false,
+    showText: true,
 });
 
 const { getInitials } = useInitials();
@@ -35,7 +37,7 @@ const showAvatar = computed(() => avatarUrl.value !== null);
         </AvatarFallback>
     </Avatar>
 
-    <div class="grid flex-1 text-left text-sm leading-tight">
+    <div v-if="showText" class="grid flex-1 text-left text-sm leading-tight">
         <span class="truncate font-medium">{{ user.name }}</span>
         <span v-if="user.designation" class="truncate text-xs text-muted-foreground">{{ user.designation }}</span>
         <span v-else-if="showEmail" class="truncate text-xs text-muted-foreground">{{
@@ -43,3 +45,4 @@ const showAvatar = computed(() => avatarUrl.value !== null);
         }}</span>
     </div>
 </template>
+

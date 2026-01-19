@@ -41,8 +41,15 @@ const user = computed(() => page.props.auth.user);
         <div class="flex items-center gap-2">
             <DropdownMenu>
                 <DropdownMenuTrigger class="flex items-center gap-2 outline-none">
-                    <div class="flex items-center gap-2 rounded-full border border-transparent px-2 py-1 transition-colors hover:bg-muted/50">
-                        <UserInfo :user="user" />
+                    <div class="flex items-center rounded-full border border-transparent transition-colors hover:bg-muted/50 p-0 pr-2 gap-1 md:px-2 md:py-1 md:gap-2">
+                        <!-- Mobile: Only show avatar, hide text and chevron -->
+                        <div class="md:hidden">
+                            <UserInfo :user="user" :show-text="false" />
+                        </div>
+                        <!-- Desktop: Show full user info -->
+                        <div class="hidden md:flex items-center gap-2">
+                            <UserInfo :user="user" />
+                        </div>
                         <ChevronDown class="h-4 w-4 text-muted-foreground" />
                     </div>
                 </DropdownMenuTrigger>
