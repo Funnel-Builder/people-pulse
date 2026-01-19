@@ -416,4 +416,142 @@ class LeaveService
 
         return $query->count();
     }
+    /**
+     * Get cover request history for a user.
+     * Returns leaves where user is cover person, excluding current pending requests.
+     */
+    public function getCoverRequestHistory(User $user): Collection
+    {
+        return Leave::with(['dates', 'leaveType', 'user', 'coverPerson', 'approvals'])
+            ->where('cover_person_id', $user->id)
+            ->where(function ($query) {
+                // Include if status is NOT pending
+                $query->where('status', '!=', Leave::STATUS_PENDING)
+                    // OR if status is pending but step is > 1 (already passed cover person)
+                    ->orWhere('current_approval_step', '>', 1);
+            })
+            ->where('status', '!=', Leave::STATUS_CANCELLED)
+            ->orderByDesc('updated_at')
+            ->get()
+            ->map(function ($leave) use ($user) {
+                // Find the action taken by this user
+                $approval = $leave->approvals
+                    ->where('approver_type', LeaveApproval::TYPE_COVER_PERSON)
+                    ->first();
+
+                $leave->action_date = $approval?->acted_at;
+                $leave->action_status = $approval?->status ?? ($leave->status === Leave::STATUS_CANCELLED ? 'Cancelled' : 'Expired');
+
+                return $leave;
+            });
+    }
+
+    /**
+     * Get cover request statistics for a user.
+     */
+    public function getCoverRequestStats(User $user, ?Collection $history = null): array
+    {
+        $history = $history ?? $this->getCoverRequestHistory($user);
+        $pendingCount = $this->getCoverRequestCount($user);
+
+        $totalHandled = $history->count();
+
+        // Calculate coverage days (only for leaves where user agreed/approved)
+        $coverageDays = $history->filter(function ($leave) {
+            // Check if user approved it (regardless of final status, if they approved, they committed to cover)
+            // Or maybe only if the leave is finally approved? 
+            // The image says "Coverage Days", implying days I successfully covered.
+            // Let's count days for leaves where I approved.
+            if ($leave->status === Leave::STATUS_REJECTED)
+                return false; // If finally rejected, no coverage
+            if ($leave->status === Leave::STATUS_CANCELLED)
+                return false; // If cancelled, no coverage
+
+            // Check if I approved it
+            return $leave->approvals
+                ->where('approver_type', LeaveApproval::TYPE_COVER_PERSON)
+                ->where('status', LeaveApproval::STATUS_APPROVED)
+                ->isNotEmpty();
+        })->sum(function ($leave) {
+            return $leave->dates->count();
+        });
+
+        return [
+            'total_handled' => $totalHandled,
+            'pending' => $pendingCount,
+            'coverage_days' => $coverageDays,
+        ];
+    }
+    /**
+     * Get approval history for managers and admins.
+     */
+    public function getApprovalHistory(User $user): Collection
+    {
+        if (!$user->isAdmin() && !$user->isManager()) {
+            return collect([]);
+        }
+
+        $query = Leave::with(['dates', 'leaveType', 'user', 'coverPerson', 'approvals'])
+            ->where('status', '!=', Leave::STATUS_CANCELLED); // Exclude cancelled
+
+        if ($user->isAdmin()) {
+            // Admin history: Leaves where admin HAS ACTED
+            $query->whereHas('approvals', function ($q) use ($user) {
+                $q->where('approver_type', LeaveApproval::TYPE_ADMIN)
+                    ->where('status', '!=', LeaveApproval::STATUS_PENDING) // Acted upon
+                    ->whereNotNull('acted_at');
+            });
+        } elseif ($user->isManager()) {
+            // Manager history: Leaves where manager HAS ACTED
+            $query->whereHas('approvals', function ($q) use ($user) {
+                $q->where('approver_type', LeaveApproval::TYPE_MANAGER)
+                    ->where('status', '!=', LeaveApproval::STATUS_PENDING) // Acted upon
+                    ->whereNotNull('acted_at')
+                    ->where('approver_id', $user->id); // Specifically this manager (though usually limited by dept)
+            });
+        }
+
+        return $query->orderByDesc('updated_at')
+            ->get()
+            ->map(function ($leave) use ($user) {
+                // Find the action taken by this user (or their role)
+                $approverType = $user->isAdmin() ? LeaveApproval::TYPE_ADMIN : LeaveApproval::TYPE_MANAGER;
+
+                $approval = $leave->approvals
+                    ->where('approver_type', $approverType)
+                    ->where('status', '!=', LeaveApproval::STATUS_PENDING)
+                    ->sortByDesc('acted_at')
+                    ->first();
+
+                $leave->action_date = $approval?->acted_at;
+                $leave->action_status = $approval?->status;
+
+                return $leave;
+            });
+    }
+
+    /**
+     * Get approval statistics for managers and admins.
+     */
+    public function getApprovalStats(User $user, ?Collection $history = null): array
+    {
+        $history = $history ?? $this->getApprovalHistory($user);
+        $pendingCount = $this->getLeaveApprovalCount($user);
+
+        $totalHandled = $history->count();
+
+        // Calculate approved days (days for leaves this user approved)
+        $approvedDays = $history->filter(function ($leave) {
+            // Check if action status was approved
+            return $leave->action_status === LeaveApproval::STATUS_APPROVED;
+        })->sum(function ($leave) {
+            return $leave->dates->count();
+        });
+
+        return [
+            'total_handled' => $totalHandled,
+            'pending' => $pendingCount,
+            'coverage_days' => $approvedDays, // Reusing key for compatibility with UI
+        ];
+    }
 }

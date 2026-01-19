@@ -41,6 +41,7 @@ interface Employee {
     designation: string;
     role: 'admin' | 'manager' | 'user';
     managedSubDepartments?: SubDepartment[];
+    joining_date?: string;
     created_at: string;
 }
 
@@ -72,6 +73,12 @@ const filteredEmployees = computed(() => {
         emp.designation?.toLowerCase().includes(query)
     );
 });
+
+const formatJoiningDate = (dateStr: string | undefined) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' }).replace(/\//g, '-');
+};
 
 const getRoleBadgeVariant = (role: string) => {
     switch (role) {
@@ -112,8 +119,8 @@ import DataTable from '@/components/ui/DataTable.vue';
 
 const columns = [
     { key: 'employee_id', label: 'ID', class: 'w-[100px] hidden md:table-cell' },
-    { key: 'name', label: 'Name' },
-    { key: 'email', label: 'Email', class: 'hidden md:table-cell' },
+    { key: 'employee', label: 'Employee' },
+    { key: 'joining_date', label: 'Joining Date', class: 'hidden md:table-cell' },
     { key: 'department', label: 'Department' },
     { key: 'designation', label: 'Designation' },
     { key: 'role', label: 'Role' },
@@ -161,9 +168,17 @@ const columns = [
 
                     <DataTable :columns="columns" :data="filteredEmployees">
                         <!-- Custom Slots -->
-                        <template #cell-name="{ row }">
-                            <div class="font-medium">{{ row.name }}</div>
-                            <div class="text-xs text-muted-foreground md:hidden">{{ row.email }}</div>
+                        <template #cell-employee="{ row }">
+                            <div>
+                                <div class="font-medium">{{ row.name }}</div>
+                                <div class="text-sm text-muted-foreground">{{ row.email }}</div>
+                            </div>
+                        </template>
+
+                        <template #cell-joining_date="{ row }">
+                            <div class="text-sm">
+                                {{ row.joining_date ? formatJoiningDate(row.joining_date) : '-' }}
+                            </div>
                         </template>
 
                         <template #cell-department="{ row }">

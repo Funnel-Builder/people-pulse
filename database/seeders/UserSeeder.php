@@ -39,6 +39,7 @@ class UserSeeder extends Seeder
                 'designation' => 'CEO',
                 'email' => 'mojtahid1000@gmail.com',
                 'role' => 'admin',
+                'joining_date' => '2023-08-01',
             ],
             [
                 'employee_id' => 'BDFB002',
@@ -48,6 +49,7 @@ class UserSeeder extends Seeder
                 'designation' => 'CTO',
                 'email' => 'sijony@onlinetechacademy.org',
                 'role' => 'admin',
+                'joining_date' => '2023-08-01',
             ],
             [
                 'employee_id' => 'BDFB215',
@@ -57,6 +59,7 @@ class UserSeeder extends Seeder
                 'designation' => 'UI/UX Designer',
                 'email' => 'mdjahidul306@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2023-10-01',
             ],
             [
                 'employee_id' => 'BDFB201',
@@ -66,6 +69,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Senior Software Engineer',
                 'email' => 'yeasirarafat321@gmail.com', // Also yeasirarafat@bdfunnelbuilder.org
                 'role' => 'manager',
+                'joining_date' => '2023-11-02',
             ],
             [
                 'employee_id' => 'BDFB212',
@@ -75,6 +79,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Senior Software Engineer',
                 'email' => 'mosabberulislam55@gmail.com', // Also leon@bdfunnelbuilder.org
                 'role' => 'user',
+                'joining_date' => '2023-11-03',
             ],
             [
                 'employee_id' => 'BDFB205',
@@ -84,6 +89,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Software Engineer',
                 'email' => 'dasssanik124102@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2023-11-04',
             ],
             [
                 'employee_id' => 'BDFB213',
@@ -93,6 +99,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Software QA Engineer',
                 'email' => 'jannatulferdoushtonima@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2023-11-07',
             ],
             [
                 'employee_id' => 'BDFB203',
@@ -102,6 +109,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Software Engineer',
                 'email' => 'sauravpaljoy@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2023-11-09',
             ],
             [
                 'employee_id' => 'BDFB214',
@@ -111,6 +119,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Software QA Engineer',
                 'email' => 'paulankita0715@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2023-12-12',
             ],
             [
                 'employee_id' => 'BDFB208',
@@ -120,6 +129,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Support Executive',
                 'email' => 'shoeabrafi553@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2024-09-11',
             ],
             [
                 'employee_id' => 'BDFB206',
@@ -129,6 +139,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Support Executive',
                 'email' => 'maruf00019@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2024-09-29',
             ],
             [
                 'employee_id' => 'BDFB209',
@@ -138,6 +149,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Junior Support Executive',
                 'email' => 'sakafi.m@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2024-11-02',
             ],
             [
                 'employee_id' => 'BDFB216',
@@ -147,6 +159,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Junior People & Operations Executive',
                 'email' => 'mishkatfahmidhossain@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2024-11-09',
             ],
             [
                 'employee_id' => 'BDFB202',
@@ -156,6 +169,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Senior Support Executive',
                 'email' => 'hrbdfunnel07@gmail.com', // Also sabbir@bdfunnelbuilder.org
                 'role' => 'manager',
+                'joining_date' => '2024-11-25',
             ],
             [
                 'employee_id' => 'BDFB218',
@@ -165,6 +179,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Junior Support Executive',
                 'email' => 'shoebsikder1@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2025-01-12',
             ],
             [
                 'employee_id' => 'BDFB217',
@@ -174,6 +189,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Junior Software QA Engineer',
                 'email' => 'anupmondal6970@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2025-01-12',
             ],
             [
                 'employee_id' => 'BDFB221',
@@ -183,6 +199,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Junior Software Engineer',
                 'email' => 'ziaulhasanf@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2025-04-17',
             ],
             [
                 'employee_id' => 'BDFB220',
@@ -192,6 +209,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Junior Software Engineer',
                 'email' => 'rafeeuzzamandihan@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2025-04-17',
             ],
             [
                 'employee_id' => 'BDFB222',
@@ -201,6 +219,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Junior Software Engineer',
                 'email' => 'shahed34563456@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2025-04-17',
             ],
             [
                 'employee_id' => 'BDFB223',
@@ -210,6 +229,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Junior Software Engineer',
                 'email' => 'ronssrony@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2025-04-17',
             ],
             [
                 'employee_id' => 'BDFB224',
@@ -219,6 +239,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Content Executive',
                 'email' => 'moon2024taha@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2025-10-09',
             ],
             [
                 'employee_id' => 'BDFB225',
@@ -228,6 +249,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Sales Executive',
                 'email' => 'habibur0018@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2025-11-20',
             ],
             [
                 'employee_id' => 'BDFB226',
@@ -237,6 +259,7 @@ class UserSeeder extends Seeder
                 'designation' => 'Sales Executive',
                 'email' => 'shantoinjamul@gmail.com',
                 'role' => 'user',
+                'joining_date' => '2025-11-20',
             ],
             [
                 'employee_id' => 'BDFB227',
@@ -246,6 +269,7 @@ class UserSeeder extends Seeder
                 'designation' => 'People & Operations Manager',
                 'email' => 'towsif@bdfunnelbuilder.net',
                 'role' => 'admin',
+                'joining_date' => '2025-12-10',
             ],
         ];
 
@@ -279,6 +303,7 @@ class UserSeeder extends Seeder
                 'sub_department_id' => $subDepartment->id,
                 'designation' => $emp['designation'],
                 'role' => $emp['role'],
+                'joining_date' => $emp['joining_date'],
                 'weekend_days' => ['friday'], // Defaulting to Friday as weekend, can be adjusted
                 'email_verified_at' => now(),
             ]);
@@ -289,7 +314,7 @@ class UserSeeder extends Seeder
             // Eg: Yeasir Arafat is Manager of Dev? 
             // Since the requirements didn't specify the management scope, we'll stick to basic user creation.
         }
-        
+
         $this->command->info(count($employees) . ' users seeded successfully.');
     }
 }

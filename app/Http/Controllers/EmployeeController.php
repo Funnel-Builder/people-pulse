@@ -25,7 +25,8 @@ class EmployeeController extends Controller
         }
 
         $employees = User::with(['department:id,name', 'subDepartment:id,name'])
-            ->orderBy('created_at', 'desc')
+            ->orderBy('joining_date', 'asc')
+            ->orderBy('employee_id', 'asc')
             ->paginate(30);
 
         $departments = Department::active()->get(['id', 'name']);

@@ -109,8 +109,8 @@ const closeModal = () => {
                         <table class="w-full">
                             <thead>
                                 <tr class="border-b bg-muted/50">
-                                    <th class="px-4 py-3 text-left text-sm font-medium">Employee</th>
                                     <th class="px-4 py-3 text-left text-sm font-medium">Employee ID</th>
+                                    <th class="px-4 py-3 text-left text-sm font-medium">Employee</th>
                                     <th class="px-4 py-3 text-left text-sm font-medium">Department</th>
                                     <th class="px-4 py-3 text-left text-sm font-medium">Designation</th>
                                     <th class="px-4 py-3 text-right text-sm font-medium">Actions</th>
@@ -122,14 +122,14 @@ const closeModal = () => {
                                     :key="employee.id"
                                     class="border-b last:border-0 hover:bg-muted/30"
                                 >
+                                    <td class="px-4 py-3 text-sm">
+                                        {{ employee.employee_id || '-' }}
+                                    </td>
                                     <td class="px-4 py-3">
                                         <div>
                                             <div class="font-medium">{{ employee.name }}</div>
                                             <div class="text-sm text-muted-foreground">{{ employee.email }}</div>
                                         </div>
-                                    </td>
-                                    <td class="px-4 py-3 text-sm">
-                                        {{ employee.employee_id || '-' }}
                                     </td>
                                     <td class="px-4 py-3 text-sm">
                                         {{ employee.department?.name || '-' }}

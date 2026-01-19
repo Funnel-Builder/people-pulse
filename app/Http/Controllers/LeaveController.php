@@ -134,9 +134,13 @@ class LeaveController extends Controller
     {
         $user = $request->user();
         $pendingLeaves = $this->leaveService->getCoverRequestsForUser($user);
+        $historyLeaves = $this->leaveService->getCoverRequestHistory($user);
+        $stats = $this->leaveService->getCoverRequestStats($user, $historyLeaves);
 
         return Inertia::render('leaves/Requests', [
             'pendingLeaves' => $pendingLeaves,
+            'historyLeaves' => $historyLeaves,
+            'stats' => $stats,
             'pageTitle' => 'Cover Requests',
             'pageDescription' => 'Leave applications where you are the designated cover person',
         ]);
@@ -155,9 +159,13 @@ class LeaveController extends Controller
         }
 
         $pendingLeaves = $this->leaveService->getManagerAdminApprovals($user);
+        $historyLeaves = $this->leaveService->getApprovalHistory($user);
+        $stats = $this->leaveService->getApprovalStats($user, $historyLeaves);
 
         return Inertia::render('leaves/Requests', [
             'pendingLeaves' => $pendingLeaves,
+            'historyLeaves' => $historyLeaves,
+            'stats' => $stats,
             'pageTitle' => 'Leave Approvals',
             'pageDescription' => 'Leave applications pending your approval',
         ]);

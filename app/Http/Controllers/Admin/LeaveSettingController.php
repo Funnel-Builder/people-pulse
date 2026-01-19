@@ -24,7 +24,8 @@ class LeaveSettingController extends Controller
 
         $employees = User::select(['id', 'name', 'email', 'employee_id', 'department_id', 'designation'])
             ->with('department:id,name')
-            ->orderBy('name')
+            ->orderBy('joining_date', 'asc')
+            ->orderBy('employee_id', 'asc')
             ->get();
 
         $leaveTypes = LeaveType::active()->get();
@@ -90,7 +91,7 @@ class LeaveSettingController extends Controller
 
         foreach ($validated['balances'] as $balanceData) {
             $isAttendanceBased = $balanceData['accrual_type'] === 'attendance';
-            
+
             UserLeaveBalance::updateOrCreate(
                 [
                     'user_id' => $user->id,
