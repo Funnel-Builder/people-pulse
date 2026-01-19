@@ -296,7 +296,7 @@ const formatDate = (dateString: string) => {
 
 const getLocation = (attendance: Attendance | null | undefined) => {
     if (attendance && (attendance.status === 'present' || attendance.clock_in)) {
-        return 'Office';
+        return 'At Office';
     }
     return 'Not Defined';
 };
