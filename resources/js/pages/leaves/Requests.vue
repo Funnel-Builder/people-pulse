@@ -205,8 +205,18 @@ const getHistoryBadgeVariant = (status: string | undefined) => {
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold">{{ viewMode === 'history' ? 'Request History' : pageTitle }}</h1>
-                    <p class="text-muted-foreground">{{ viewMode === 'history' ? 'View all your past cover request actions' : pageDescription }}</p>
+                    <h1 class="text-2xl font-bold">
+                        {{ viewMode === 'history' 
+                            ? (pageTitle === 'Cover Requests' ? 'Past Cover Requests' : 'Past Leave Approvals') 
+                            : pageTitle 
+                        }}
+                    </h1>
+                    <p class="text-muted-foreground">
+                        {{ viewMode === 'history' 
+                            ? (pageTitle === 'Cover Requests' ? 'View all your past cover request actions' : 'View all your past leave approvals actions') 
+                            : pageDescription 
+                        }}
+                    </p>
                 </div>
                 <!-- Toggle View Button -->
                 <Button variant="outline" @click="toggleView" class="gap-2">
