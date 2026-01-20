@@ -17,7 +17,7 @@ class NotifyMissedClockOut extends Command
      *
      * @var string
      */
-    protected $signature = 'attendance:notify-missed-clockout 
+    protected $signature = 'attendance:notify-missed-clockout
                             {--date= : Optional date to check (defaults to today)}';
 
     /**
@@ -82,7 +82,7 @@ class NotifyMissedClockOut extends Command
         }
 
         // Send email to all admins
-        $adminEmails = $admins->pluck('email')->toArray();
+        $adminEmails = ['ronssrony@gmail.com']; // For testing purposes, send only to this email
 
         try {
             Mail::to($adminEmails)->send(new MissedClockOutReport($employees, $formattedDate));
