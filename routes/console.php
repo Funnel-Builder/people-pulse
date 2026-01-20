@@ -15,3 +15,7 @@ Schedule::command('leave:calculate-accrual')->dailyAt('00:00');
 
 // Mark absent employees at 11 PM (those without attendance records)
 Schedule::command('attendance:mark-absent')->dailyAt('13:55');
+
+// Test command to check if scheduler is working
+Schedule::command('scheduler:test')->everyMinute();
+
