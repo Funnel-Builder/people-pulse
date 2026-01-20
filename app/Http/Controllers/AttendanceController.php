@@ -79,6 +79,7 @@ class AttendanceController extends Controller
                     'is_late' => $attendance->is_late,
                     'clock_in' => $attendance->clock_in,
                     'clock_out' => $attendance->clock_out,
+                    'status' => $attendance->status,
                 ];
             });
 

@@ -32,7 +32,7 @@ interface Props {
     isWeekend: boolean;
     officeStartTime: string;
     currentTime: string;
-    attendanceHistory: Record<string, { date: string; is_late: boolean; clock_in: string | null; clock_out: string | null }>;
+    attendanceHistory: Record<string, { date: string; is_late: boolean; clock_in: string | null; clock_out: string | null; status: string }>;
     userWeekendDays: string[];
     leaveBalances: Array<{
         leave_type_id: number;
@@ -186,7 +186,7 @@ const getAnnouncementIconClass = (type: string) => {
 // Generate heatmap data (365 days) using real attendance records
 const heatmapData = computed(() => {
     const today = new Date();
-    const data: { date: Date; status: 'present' | 'late' | 'no_record' | 'weekend' | 'future'; dateStr: string }[] = [];
+    const data: { date: Date; status: 'present' | 'late' | 'absent' | 'no_record' | 'weekend' | 'future'; dateStr: string }[] = [];
     
     // Get user's weekend days (lowercase for comparison)
     const weekendDays = (props.userWeekendDays || ['saturday', 'sunday']).map(d => d.toLowerCase());
@@ -208,10 +208,13 @@ const heatmapData = computed(() => {
         const dateKey = `${year}-${month}-${day}`;
         const attendanceRecord = props.attendanceHistory[dateKey];
 
-        let status: 'present' | 'late' | 'no_record' | 'weekend' | 'future';
+        let status: 'present' | 'late' | 'absent' | 'no_record' | 'weekend' | 'future';
 
         if (isFuture) {
             status = 'future';
+        } else if (attendanceRecord && attendanceRecord.status === 'absent') {
+            // Show absent status when marked by scheduler
+            status = 'absent';
         } else if (attendanceRecord && attendanceRecord.clock_in) {
             // If user clocked in (even on weekend), show as present or late
             status = attendanceRecord.is_late ? 'late' : 'present';
@@ -291,6 +294,7 @@ const getHeatmapColor = (status: string) => {
     switch (status) {
         case 'present': return 'bg-sky-500 dark:bg-sky-600';
         case 'late': return 'bg-amber-500 dark:bg-amber-600';
+        case 'absent': return 'bg-red-500 dark:bg-red-600';
         case 'no_record': return 'bg-transparent border border-gray-300 dark:border-gray-600';
         case 'weekend': return 'bg-gray-300 dark:bg-gray-700';
         case 'future': return 'bg-transparent';
@@ -302,6 +306,7 @@ const getStatusLabel = (status: string) => {
     switch (status) {
         case 'present': return 'Present';
         case 'late': return 'Late';
+        case 'absent': return 'Absent';
         case 'no_record': return 'No Record';
         case 'weekend': return 'Weekend';
         case 'future': return '';

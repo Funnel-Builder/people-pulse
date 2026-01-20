@@ -8,6 +8,7 @@ use App\Models\LeaveDate;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class MarkAbsentEmployees extends Command
 {
@@ -31,13 +32,14 @@ class MarkAbsentEmployees extends Command
      */
     public function handle(): int
     {
-        $date = $this->option('date') 
+        $date = $this->option('date')
             ? Carbon::parse($this->option('date'))->format('Y-m-d')
             : now()->format('Y-m-d');
 
         $dayName = Carbon::parse($date)->format('l'); // e.g., "Friday", "Saturday"
 
         $this->info("Checking attendance for {$date} ({$dayName})...");
+        Log::info("[Attendance Scheduler] Starting mark-absent process for {$date} ({$dayName})");
 
         // Get all active employees (exclude admins if needed, adjust as necessary)
         $employees = User::where('role', '!=', 'admin')
@@ -50,6 +52,7 @@ class MarkAbsentEmployees extends Command
 
         if ($employees->isEmpty()) {
             $this->warn('No employees found.');
+            Log::warning("[Attendance Scheduler] No employees found for {$date}");
             return self::SUCCESS;
         }
 
@@ -57,6 +60,10 @@ class MarkAbsentEmployees extends Command
         $skippedExisting = 0;
         $skippedWeekend = 0;
         $skippedLeave = 0;
+
+        $absentList = [];
+        $presentList = [];
+        $onLeaveList = [];
 
         foreach ($employees as $employee) {
             // 1. Check if it's a weekend for this employee
@@ -68,6 +75,7 @@ class MarkAbsentEmployees extends Command
             // 2. Check if employee has approved leave for this date
             if ($this->hasApprovedLeave($employee->id, $date)) {
                 $this->line("  Skipped (on leave): {$employee->name}");
+                $onLeaveList[] = "{$employee->name} ({$employee->employee_id})";
                 $skippedLeave++;
                 continue;
             }
@@ -75,9 +83,10 @@ class MarkAbsentEmployees extends Command
             // 3. Check if attendance record already exists
             $existingRecord = Attendance::where('user_id', $employee->id)
                 ->whereDate('date', $date)
-                ->exists();
+                ->first();
 
             if ($existingRecord) {
+                $presentList[] = "{$employee->name} ({$employee->employee_id})";
                 $skippedExisting++;
                 continue;
             }
@@ -98,6 +107,7 @@ class MarkAbsentEmployees extends Command
             ]);
 
             $this->line("  Marked absent: {$employee->name} ({$employee->employee_id})");
+            $absentList[] = "{$employee->name} ({$employee->employee_id})";
             $marked++;
         }
 
@@ -106,6 +116,21 @@ class MarkAbsentEmployees extends Command
         $this->info("  - Skipped (already recorded): {$skippedExisting}");
         $this->info("  - Skipped (weekend): {$skippedWeekend}");
         $this->info("  - Skipped (on leave): {$skippedLeave}");
+
+        // Log comprehensive summary
+        Log::info("[Attendance Scheduler] Completed for {$date}", [
+            'date' => $date,
+            'summary' => [
+                'total_employees' => $employees->count(),
+                'marked_absent' => $marked,
+                'present' => $skippedExisting,
+                'on_leave' => $skippedLeave,
+                'weekend' => $skippedWeekend,
+            ],
+            'absent_employees' => $absentList,
+            'present_employees' => $presentList,
+            'on_leave_employees' => $onLeaveList,
+        ]);
 
         return self::SUCCESS;
     }

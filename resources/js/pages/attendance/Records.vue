@@ -494,7 +494,8 @@ const hasActiveFilters = computed(() => {
                                     <td class="px-4 py-3">{{ formatTime(attendance.clock_out) }}</td>
                                     <td class="px-4 py-3">{{ formatMinutesToHours(attendance.net_minutes) }}</td>
                                     <td class="px-4 py-3">
-                                        <Badge v-if="attendance.is_late" variant="destructive" class="text-xs">Late</Badge>
+                                        <Badge v-if="attendance.status === 'absent'" variant="destructive" class="text-xs">Absent</Badge>
+                                        <Badge v-else-if="attendance.is_late" variant="destructive" class="text-xs bg-amber-500 hover:bg-amber-600 border-amber-500">Late</Badge>
                                         <Badge v-else variant="outline" class="text-xs">On Time</Badge>
                                     </td>
                                     <td class="px-4 py-3">
