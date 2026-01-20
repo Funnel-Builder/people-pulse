@@ -100,6 +100,7 @@ const formattedDate = computed(() => {
 });
 
 const currentStatus = computed(() => {
+    if (props.todayAttendance?.status === 'absent') return 'absent';
     if (props.todayAttendance?.clock_in && !props.todayAttendance?.clock_out) return 'working';
     if (props.todayAttendance?.clock_out) return 'clocked_out';
     if (props.isWeekend) return 'weekend';
@@ -348,7 +349,11 @@ const getStatusLabel = (status: string) => {
 
 
                             <div>
-                                <div v-if="isWeekend" class="text-sm text-muted-foreground">
+                                <div v-if="currentStatus === 'absent'" class="text-sm text-red-600 dark:text-red-400 flex items-center gap-2 justify-center">
+                                    <span class="h-2 w-2 rounded-full bg-red-500"></span>
+                                    Marked Absent
+                                </div>
+                                <div v-else-if="isWeekend" class="text-sm text-muted-foreground">
                                     Weekend
                                 </div>
                                 <div v-else-if="currentStatus === 'working'" class="text-sm text-green-600 dark:text-green-400 flex items-center gap-2 justify-center">
@@ -399,10 +404,11 @@ const getStatusLabel = (status: string) => {
                                 :class="{
                                     'border-green-500 text-green-600 bg-green-50 dark:bg-green-900/20': !todayAttendance?.is_late && todayAttendance?.clock_in,
                                     'border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-900/20': todayAttendance?.is_late,
+                                    'border-red-500 text-red-600 bg-red-50 dark:bg-red-900/20': todayAttendance?.status === 'absent',
                                 }"
                                 class="text-xs"
                             >
-                                {{ todayAttendance?.is_late ? 'Late' : (todayAttendance?.clock_in ? 'On Time' : 'Not Marked') }}
+                                {{ todayAttendance?.status === 'absent' ? 'Absent' : (todayAttendance?.is_late ? 'Late' : (todayAttendance?.clock_in ? 'On Time' : 'Not Marked')) }}
                             </Badge>
                         </div>
                     </CardContent>

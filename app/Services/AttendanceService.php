@@ -157,6 +157,11 @@ class AttendanceService
                     $lateThreshold = $officeStartTime->copy()->addMinutes($graceMinutes);
                     $data['is_late'] = Carbon::parse($data['clock_in'])->greaterThan($lateThreshold);
                 }
+
+                // If clock_in is being added and status is 'absent', change to 'present'
+                if (isset($data['clock_in']) && $data['clock_in'] && $attendance->status === 'absent') {
+                    $data['status'] = 'present';
+                }
             }
 
             $attendance->update($data);
