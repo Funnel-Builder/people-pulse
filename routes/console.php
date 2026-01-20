@@ -14,6 +14,7 @@ Artisan::command('inspire', function () {
 Schedule::command('leave:calculate-accrual')->dailyAt('00:00');
 
 // Mark absent employees at 11 PM (those without attendance records)
-Schedule::command('attendance:mark-absent')->dailyAt('16:30');
+Schedule::command('attendance:mark-absent')->dailyAt('23:30');
 
-
+// Notify admins about employees who missed clock-out at 11:30 PM
+Schedule::command('attendance:notify-missed-clockout')->dailyAt('18:30');
