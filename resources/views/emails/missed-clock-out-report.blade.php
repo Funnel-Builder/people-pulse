@@ -19,7 +19,7 @@
                     <tr>
                         <td
                             style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 32px 40px; text-align: center;">
-                            <img src="{{ asset('logos/logo-icon-peoplepulse-white-mode.png') }}" alt="PeoplePulse"
+                            <img src="{{ asset('logos/logo-icon-peoplepulse-dark-mode.png') }}" alt="PeoplePulse"
                                 style="height: 40px; margin-bottom: 16px;">
                             <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">Missed Clock-Out
                                 Report</h1>
@@ -84,7 +84,7 @@
                                                 <td
                                                     style="padding: 14px 16px; font-size: 14px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">
                                                     <span
-                                                        style="background-color: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;">
+                                                        style="background-color: #f1f5f9; color: #334155; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;">
                                                         {{ $employee['clock_in'] }}
                                                     </span>
                                                 </td>
