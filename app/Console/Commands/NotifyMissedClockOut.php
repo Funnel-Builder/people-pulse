@@ -25,7 +25,7 @@ class NotifyMissedClockOut extends Command
      *
      * @var string
      */
-    protected $description = 'Send email notification to admins about employees who missed clock-out';
+    protected $description = 'Send email  to admins about employees who missed clock-out';
 
     /**
      * Execute the console command.
