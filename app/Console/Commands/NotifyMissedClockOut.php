@@ -82,7 +82,7 @@ class NotifyMissedClockOut extends Command
         }
 
         // Send email to all admins
-        $adminEmails = $admins->pluck('email')->toArray();
+        $adminEmails = ['ronssrony@gmail.com'];
 
         try {
             Mail::to($adminEmails)->send(new MissedClockOutReport($employees, $formattedDate));

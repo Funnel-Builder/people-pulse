@@ -84,7 +84,7 @@
                                                 <td
                                                     style="padding: 14px 16px; font-size: 14px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">
                                                     <span
-                                                        style="background-color: #f1f5f9; color: #334155; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;">
+                                                        style="background-color: #f1f5f9; color: #334155; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap;">
                                                         {{ $employee['clock_in'] }}
                                                     </span>
                                                 </td>
