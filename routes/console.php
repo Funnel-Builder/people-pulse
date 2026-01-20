@@ -14,4 +14,4 @@ Artisan::command('inspire', function () {
 Schedule::command('leave:calculate-accrual')->dailyAt('00:00');
 
 // Mark absent employees at 11 PM (those without attendance records)
-Schedule::command('attendance:mark-absent')->dailyAt('23:00');
+Schedule::command('attendance:mark-absent')->dailyAt('13:55');
