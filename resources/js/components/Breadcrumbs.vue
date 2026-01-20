@@ -23,7 +23,7 @@ defineProps<{
     <Breadcrumb>
         <BreadcrumbList>
             <template v-for="(item, index) in breadcrumbs" :key="index">
-                <BreadcrumbItem>
+                <BreadcrumbItem :class="{ 'hidden md:inline-flex': index !== breadcrumbs.length - 1 }">
                     <template v-if="index === breadcrumbs.length - 1">
                         <BreadcrumbPage>{{ item.title }}</BreadcrumbPage>
                     </template>
@@ -35,7 +35,7 @@ defineProps<{
                         </BreadcrumbLink>
                     </template>
                 </BreadcrumbItem>
-                <BreadcrumbSeparator v-if="index !== breadcrumbs.length - 1" />
+                <BreadcrumbSeparator v-if="index !== breadcrumbs.length - 1" class="hidden md:block" />
             </template>
         </BreadcrumbList>
     </Breadcrumb>

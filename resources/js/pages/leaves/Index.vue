@@ -258,8 +258,8 @@ const isHolidayModalOpen = ref(false);
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight text-foreground">Leave Management</h1>
-                    <p class="text-muted-foreground">Plan your time off and monitor availability.</p>
+                    <h1 class="text-2xl font-bold tracking-tight text-foreground">My Leaves</h1>
+                    <p class="text-muted-foreground">Plan our time off</p>
                 </div>
                 <Button @click="router.visit('/leaves/apply')" class="shadow-sm">
                     <CalendarPlus class="mr-2 h-4 w-4" />
