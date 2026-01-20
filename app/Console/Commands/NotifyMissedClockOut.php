@@ -25,7 +25,7 @@ class NotifyMissedClockOut extends Command
      *
      * @var string
      */
-    protected $description = 'Send email  to admins about employees who missed clock-out';
+    protected $description = 'Send email notification to admins about employees who missed clock-out';
 
     /**
      * Execute the console command.
@@ -82,7 +82,7 @@ class NotifyMissedClockOut extends Command
         }
 
         // Send email to all admins
-        $adminEmails = ['ronssrony@gmail.com']; // For testing purposes, send only to this email
+        $adminEmails = $admins->pluck('email')->toArray();
 
         try {
             Mail::to($adminEmails)->send(new MissedClockOutReport($employees, $formattedDate));
