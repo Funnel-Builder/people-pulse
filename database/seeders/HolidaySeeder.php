@@ -13,13 +13,8 @@ class HolidaySeeder extends Seeder
     public function run(): void
     {
         $holidays = [
+
             // February
-            [
-                'name' => 'International Mother Language Day',
-                'date' => '2026-02-21',
-                'type' => 'national',
-                'is_recurring' => true,
-            ],
             [
                 'name' => 'Shab-E-Barat',
                 'date' => '2026-02-04',
@@ -28,106 +23,122 @@ class HolidaySeeder extends Seeder
                 'description' => 'Depends on moon sighting',
             ],
             [
+                'name' => 'International Mother Language Day',
+                'date' => '2026-02-21',
+                'type' => 'national',
+                'is_recurring' => true,
+            ],
+
+            // March
+            [
                 'name' => 'Shab-E-Kadr',
-                'date' => '2026-02-17',
+                'date' => '2026-03-17',
                 'type' => 'religious',
                 'is_recurring' => false,
+                'description' => 'Depends on moon sighting',
             ],
             [
                 'name' => 'Jumatul Bida',
-                'date' => '2026-02-20',
+                'date' => '2026-03-20',
                 'type' => 'religious',
                 'is_recurring' => false,
             ],
             [
                 'name' => 'Eid-Ul-Fitr',
-                'date' => '2026-02-21',
+                'date' => '2026-03-21',
+                'type' => 'national',
+                'is_recurring' => false,
+                'description' => 'Depends on moon sighting',
+            ],
+            [
+                'name' => 'Eid-Ul-Fitr',
+                'date' => '2026-03-22',
                 'type' => 'national',
                 'is_recurring' => false,
             ],
             [
                 'name' => 'Eid-Ul-Fitr',
-                'date' => '2026-02-22',
-                'type' => 'national',
-                'is_recurring' => false,
-            ],
-            [
-                'name' => 'Eid-Ul-Fitr',
-                'date' => '2026-02-23',
+                'date' => '2026-03-23',
                 'type' => 'national',
                 'is_recurring' => false,
             ],
             [
                 'name' => 'Independence Day',
-                'date' => '2026-02-26',
+                'date' => '2026-03-26',
                 'type' => 'national',
                 'is_recurring' => true,
             ],
-            // March (User said "01 Mar - May Day", assuming May 1st)
+
+            // April
+            [
+                'name' => 'Pohela Boishak',
+                'date' => '2026-04-14',
+                'type' => 'national',
+                'is_recurring' => true,
+            ],
+
+            // May
             [
                 'name' => 'May Day',
                 'date' => '2026-05-01',
                 'type' => 'national',
                 'is_recurring' => true,
             ],
-            // April
+
+            // June (Eid-Ul-Azha holidays)
             [
-                'name' => 'Pohela Boishakh',
-                'date' => '2026-04-14',
+                'name' => 'Eid-Ul-Azha',
+                'date' => '2026-05-26',
+                'type' => 'national',
+                'is_recurring' => false,
+                'description' => 'Depends on moon sighting',
+            ],
+            [
+                'name' => 'Eid-Ul-Azha',
+                'date' => '2026-05-27',
+                'type' => 'national',
+                'is_recurring' => false,
+            ],
+            [
+                'name' => 'Eid-Ul-Azha',
+                'date' => '2026-05-28',
+                'type' => 'national',
+                'is_recurring' => false,
+            ],
+            [
+                'name' => 'Eid-Ul-Azha',
+                'date' => '2026-05-29',
+                'type' => 'national',
+                'is_recurring' => false,
+            ],
+            [
+                'name' => 'Eid-Ul-Azha',
+                'date' => '2026-05-30',
+                'type' => 'national',
+                'is_recurring' => false,
+            ],
+            [
+                'name' => 'Eid-Ul-Azha',
+                'date' => '2026-05-31',
+                'type' => 'national',
+                'is_recurring' => false,
+            ],
+
+            // August
+            [
+                'name' => 'National Mass Uprising Day',
+                'date' => '2026-08-05',
                 'type' => 'national',
                 'is_recurring' => true,
             ],
-            // May
-            [
-                'name' => 'National Mass Uprising Day',
-                'date' => '2026-05-05',
-                'type' => 'national',
-                'is_recurring' => false, // Not sure if recurring
-            ],
             [
                 'name' => 'Eid-E-Miladun Nabi',
-                'date' => '2026-05-26',
+                'date' => '2026-08-26',
                 'type' => 'religious',
                 'is_recurring' => false,
                 'description' => 'Depends on moon sighting',
             ],
-            // June
-            [
-                'name' => 'Eid-Ul-Azha',
-                'date' => '2026-06-26',
-                'type' => 'national',
-                'is_recurring' => false,
-            ],
-            [
-                'name' => 'Eid-Ul-Azha',
-                'date' => '2026-06-27',
-                'type' => 'national',
-                'is_recurring' => false,
-            ],
-            [
-                'name' => 'Eid-Ul-Azha',
-                'date' => '2026-06-28',
-                'type' => 'national',
-                'is_recurring' => false,
-            ],
-            [
-                'name' => 'Eid-Ul-Azha',
-                'date' => '2026-06-29',
-                'type' => 'national',
-                'is_recurring' => false,
-            ],
-            [
-                'name' => 'Eid-Ul-Azha',
-                'date' => '2026-06-30',
-                'type' => 'national',
-                'is_recurring' => false,
-            ],
-            [
-                'name' => 'Eid-Ul-Azha', // Corrected from 31 Jun
-                'date' => '2026-07-01',
-                'type' => 'national',
-                'is_recurring' => false,
-            ],
+
             // October
             [
                 'name' => 'Durga Puja',
@@ -136,6 +147,7 @@ class HolidaySeeder extends Seeder
                 'is_recurring' => false,
                 'description' => 'Depends on moon sighting',
             ],
+
             // December
             [
                 'name' => 'Victory Day',
@@ -143,8 +155,8 @@ class HolidaySeeder extends Seeder
                 'type' => 'national',
                 'is_recurring' => true,
             ],
-        ];
 
+        ];
         foreach ($holidays as $holiday) {
             \App\Models\Holiday::create($holiday);
         }
