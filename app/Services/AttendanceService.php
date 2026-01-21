@@ -300,12 +300,17 @@ class AttendanceService
 
         $attendances = $query->get();
 
+        // Calculate total net minutes (already excludes break time)
+        $totalNetMinutes = (int) $attendances->sum('net_minutes');
+        $count = $attendances->count();
+
         return [
-            'total_days' => $attendances->count(),
+            'total_days' => $count,
             'late_days' => $attendances->where('is_late', true)->count(),
-            'total_net_hours' => round($attendances->sum('net_minutes') / 60, 2),
-            'average_net_hours' => $attendances->count() > 0
-                ? round($attendances->avg('net_minutes') / 60, 2)
+            // Return integer hours for display
+            'total_net_hours' => (int) floor($totalNetMinutes / 60),
+            'average_net_hours' => $count > 0
+                ? (int) floor(($totalNetMinutes / $count) / 60)
                 : 0,
         ];
     }
