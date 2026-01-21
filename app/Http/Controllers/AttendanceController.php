@@ -59,9 +59,9 @@ class AttendanceController extends Controller
                 'leave_type_id' => $leaveType->id,
                 'leave_type_name' => $leaveType->name,
                 'leave_type_code' => $leaveType->code,
-                'balance' => $balance?->balance ?? 0,
-                'used' => $balance?->used ?? 0,
-                'available' => $balance?->available ?? 0,
+                'balance' => (int) ($balance?->balance ?? 0),
+                'used' => (int) ($balance?->used ?? 0),
+                'available' => (int) ($balance?->available ?? 0),
             ];
         });
 
