@@ -23,12 +23,13 @@ class AttendanceService
         $officeStartTime = $this->getOfficeStartTime($today);
         $graceMinutes = Setting::get('attendance.late_grace_minutes', 15);
         $lateThreshold = $officeStartTime->copy()->addMinutes($graceMinutes);
+
         $isLate = $now->greaterThan($lateThreshold);
 
-        // Calculate late minutes (from grace threshold)
+        // Calculate late minutes from the END of grace period (not from office start)
         $lateMinutes = 0;
         if ($isLate) {
-            $lateMinutes = max(0, $lateThreshold->diffInMinutes($now));
+            $lateMinutes = (int) max(0, $lateThreshold->diffInMinutes($now, false));
         }
 
         // Check if already clocked in today
