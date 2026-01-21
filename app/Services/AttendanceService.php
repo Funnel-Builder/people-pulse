@@ -82,16 +82,19 @@ class AttendanceService
             throw new \Exception('You have already clocked out today.');
         }
 
-        // Calculate hours
+        // Calculate hours - ensure we get positive integer values
         $clockIn = $attendance->clock_in;
-        $grossMinutes = $clockIn->diffInMinutes($now);
-        $netMinutes = max(0, $grossMinutes - $attendance->break_minutes);
+
+        // Use absolute difference and ensure we're comparing in the same timezone
+        // Carbon diffInMinutes can return negative if clock_in is after now
+        $grossMinutes = (int) max(0, $clockIn->diffInMinutes($now, false));
+        $netMinutes = (int) max(0, $grossMinutes - $attendance->break_minutes);
 
         // Calculate early exit minutes
         $officeEndTime = $this->getOfficeEndTime($today);
         $earlyExitMinutes = 0;
         if ($now->lessThan($officeEndTime)) {
-            $earlyExitMinutes = abs($officeEndTime->diffInMinutes($now, false));
+            $earlyExitMinutes = (int) abs($officeEndTime->diffInMinutes($now, false));
         }
 
         $attendance->update([
@@ -136,26 +139,37 @@ class AttendanceService
 
             // If clock_in or clock_out changed, recalculate hours
             if (isset($data['clock_in']) || isset($data['clock_out'])) {
-                $clockIn = isset($data['clock_in'])
-                    ? Carbon::parse($data['clock_in'])
+                // Parse times with explicit app timezone to ensure consistency
+                $appTimezone = config('app.timezone');
+
+                $clockIn = isset($data['clock_in']) && $data['clock_in']
+                    ? Carbon::parse($data['clock_in'], $appTimezone)
                     : $attendance->clock_in;
-                $clockOut = isset($data['clock_out'])
-                    ? Carbon::parse($data['clock_out'])
+                $clockOut = isset($data['clock_out']) && $data['clock_out']
+                    ? Carbon::parse($data['clock_out'], $appTimezone)
                     : $attendance->clock_out;
 
+                // Update data with properly parsed Carbon instances
+                if (isset($data['clock_in']) && $data['clock_in']) {
+                    $data['clock_in'] = Carbon::parse($data['clock_in'], $appTimezone);
+                }
+                if (isset($data['clock_out']) && $data['clock_out']) {
+                    $data['clock_out'] = Carbon::parse($data['clock_out'], $appTimezone);
+                }
+
                 if ($clockIn && $clockOut) {
-                    $grossMinutes = $clockIn->diffInMinutes($clockOut);
+                    $grossMinutes = (int) max(0, $clockIn->diffInMinutes($clockOut, false));
                     $breakMinutes = $data['break_minutes'] ?? $attendance->break_minutes;
                     $data['gross_minutes'] = $grossMinutes;
-                    $data['net_minutes'] = max(0, $grossMinutes - $breakMinutes);
+                    $data['net_minutes'] = (int) max(0, $grossMinutes - $breakMinutes);
                 }
 
                 // Recalculate is_late if clock_in changed and is_late is not provided
-                if (isset($data['clock_in']) && !array_key_exists('is_late', $data)) {
+                if (isset($data['clock_in']) && $data['clock_in'] && !array_key_exists('is_late', $data)) {
                     $officeStartTime = $this->getOfficeStartTime(Carbon::parse($attendance->date));
                     $graceMinutes = Setting::get('attendance.late_grace_minutes', 15);
                     $lateThreshold = $officeStartTime->copy()->addMinutes($graceMinutes);
-                    $data['is_late'] = Carbon::parse($data['clock_in'])->greaterThan($lateThreshold);
+                    $data['is_late'] = $clockIn->greaterThan($lateThreshold);
                 }
 
                 // If clock_in is being added and status is 'absent', change to 'present'

@@ -37,6 +37,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import DateRangePicker from '@/components/ui/date-range-picker/DateRangePicker.vue';
 import TimeInput from '@/components/ui/time-picker/TimeInput.vue';
 import type { User } from '@/types';
+import { toLocalDateString, toLocalTimeString, formatTimeDisplay, formatDateDisplay, formatMinutesToHours as formatMinutes, combineDateAndTime } from '@/utils/date';
 
 
 interface Department {
@@ -172,17 +173,9 @@ watch(() => localFilters.value.employee, () => applyFilters());
 const openOverrideModal = (attendance: Attendance) => {
     selectedAttendance.value = attendance;
     
-    // Extract local HH:mm from the ISO/datetime strings
-    const getLocalTime = (dateStr: string | null) => {
-        if (!dateStr) return '';
-        const date = new Date(dateStr);
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        return `${hours}:${minutes}`;
-    };
-
-    overrideForm.clock_in = getLocalTime(attendance.clock_in);
-    overrideForm.clock_out = getLocalTime(attendance.clock_out);
+    // Use centralized utility to extract local time
+    overrideForm.clock_in = attendance.clock_in ? toLocalTimeString(attendance.clock_in) : '';
+    overrideForm.clock_out = attendance.clock_out ? toLocalTimeString(attendance.clock_out) : '';
     overrideForm.break_minutes = attendance.break_minutes;
     overrideForm.is_late = attendance.is_late;
     showOverrideModal.value = true;
@@ -192,29 +185,11 @@ const submitOverride = () => {
     if (!selectedAttendance.value) return;
 
     overrideForm.transform((data) => {
-        const combineDateAndTime = (timeStr: string) => {
+        const buildDateTime = (timeStr: string) => {
             if (!timeStr || !selectedAttendance.value?.date) return null;
-            // Create date object from the attendance date and selected time
-            // We need to be careful to set it in local time
-            const [hours, minutes] = timeStr.split(':').map(Number);
-            const date = new Date(selectedAttendance.value.date); // date is YYYY-MM-DD
-            // If date string is YYYY-MM-DD, new Date() might treat as UTC or Local depending on browser.
-            // Usually YYYY-MM-DD is parsed as UTC.
-            // But we want to construct a specific local time.
-            
-            // Safer way:
-            // Safer way:
             try {
-                // We want to send the "face value" of the time selected by the user.
-                // Since the backend seems to interpret the received string as-is (or sensitive to local),
-                // we should send a formatted string like "YYYY-MM-DD HH:mm:ss" corresponding to the user's selection.
-                
-                const datePart = selectedAttendance.value.date.substring(0, 10); // YYYY-MM-DD
-                const h = hours.toString().padStart(2, '0');
-                const m = minutes.toString().padStart(2, '0');
-                
-                // Construct format: YYYY-MM-DD HH:mm:00
-                return `${datePart} ${h}:${m}:00`;
+                // Use centralized utility for proper timezone handling
+                return combineDateAndTime(selectedAttendance.value.date, timeStr);
             } catch (e) {
                 console.error('Error constructing date:', e);
                 return null;
@@ -223,8 +198,8 @@ const submitOverride = () => {
 
         return {
             ...data,
-            clock_in: combineDateAndTime(data.clock_in),
-            clock_out: combineDateAndTime(data.clock_out),
+            clock_in: buildDateTime(data.clock_in),
+            clock_out: buildDateTime(data.clock_out),
         };
     }).patch(`/attendance/${selectedAttendance.value.id}/override`, {
         preserveScroll: true,
@@ -272,28 +247,10 @@ const openTeamModal = (type: 'all' | 'present' | 'absent' | 'late') => {
     isTeamModalOpen.value = true;
 };
 
-const formatTime = (dateString: string | null) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-};
-
-const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-    });
-};
-
-const formatMinutesToHours = (minutes: number | null) => {
-    if (minutes === null) return '-';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
-};
+// Use centralized date utilities
+const formatTime = (dateString: string | null) => formatTimeDisplay(dateString) || '-';
+const formatDate = (dateString: string) => formatDateDisplay(dateString);
+const formatMinutesToHours = (minutes: number | null) => formatMinutes(minutes);
 
 const hasActiveFilters = computed(() => {
     return localFilters.value.start_date || 
