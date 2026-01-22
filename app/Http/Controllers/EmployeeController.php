@@ -204,4 +204,57 @@ class EmployeeController extends Controller
 
         return redirect()->route('employees.index')->with('success', 'Employee deleted successfully!');
     }
+
+    /**
+     * Separate (schedule for deactivation) an employee.
+     */
+    public function separate(Request $request, User $employee): RedirectResponse
+    {
+        if (!$request->user()->isAdmin()) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        // Prevent admin from separating themselves
+        if ($request->user()->id === $employee->id) {
+            return redirect()->route('employees.edit', $employee)->with('error', 'You cannot separate yourself!');
+        }
+
+        $validated = $request->validate([
+            'closing_date' => ['required', 'date'],
+        ]);
+
+        $closingDate = \Carbon\Carbon::parse($validated['closing_date'])->startOfDay();
+        $today = \Carbon\Carbon::today();
+
+        // If closing date is today or in the past, immediately deactivate
+        if ($closingDate->lte($today)) {
+            $employee->update([
+                'closing_date' => $validated['closing_date'],
+                'is_active' => false,
+            ]);
+
+            Log::info('Employee separated immediately', [
+                'employee_id' => $employee->id,
+                'employee_name' => $employee->name,
+                'closing_date' => $validated['closing_date'],
+                'separated_by' => $request->user()->id,
+            ]);
+
+            return redirect()->route('employees.edit', $employee)->with('success', 'Employee has been separated successfully.');
+        }
+
+        // Future date - schedule separation
+        $employee->update([
+            'closing_date' => $validated['closing_date'],
+        ]);
+
+        Log::info('Employee separation scheduled', [
+            'employee_id' => $employee->id,
+            'employee_name' => $employee->name,
+            'closing_date' => $validated['closing_date'],
+            'separated_by' => $request->user()->id,
+        ]);
+
+        return redirect()->route('employees.edit', $employee)->with('success', 'Employee separation scheduled successfully. The employee will be deactivated after ' . $validated['closing_date'] . '.');
+    }
 }

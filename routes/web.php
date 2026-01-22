@@ -83,6 +83,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // EMPLOYEE MANAGEMENT (Admin only)
     // =====================================================
     Route::resource('employees', \App\Http\Controllers\EmployeeController::class)->except(['show']);
+    Route::post('employees/{employee}/separate', [\App\Http\Controllers\EmployeeController::class, 'separate'])->name('employees.separate');
 
     // =====================================================
     // SETTINGS (Admin only)

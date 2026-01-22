@@ -40,6 +40,7 @@ class User extends Authenticatable
         'fathers_name',
         'mothers_name',
         'graduated_institution',
+        'is_active',
     ];
 
     /**
@@ -65,7 +66,13 @@ class User extends Authenticatable
             'weekend_days' => 'array',
             'joining_date' => 'date',
             'closing_date' => 'date',
+            'is_active' => 'boolean',
         ];
+    }
+
+    public function isActive(): bool
+    {
+        return $this->is_active ?? true;
     }
 
     public function isAdmin(): bool

@@ -4,10 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import type { BreadcrumbItem } from '@/types';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, useForm, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
-import { ChevronDown, ChevronUp } from 'lucide-vue-next';
+import { ChevronDown, ChevronUp, UserMinus, AlertTriangle, Loader2 } from 'lucide-vue-next';
 
 interface SubDepartment {
     id: number;
@@ -41,6 +49,7 @@ interface Employee {
     fathers_name?: string | null;
     mothers_name?: string | null;
     graduated_institution?: string | null;
+    is_active?: boolean;
 }
 
 interface Props {
@@ -52,6 +61,7 @@ const props = defineProps<Props>();
 
 const isEditMode = computed(() => !!props.employee);
 const isPersonalInfoOpen = ref(false);
+const showSeparationModal = ref(false);
 
 const breadcrumbs = computed<BreadcrumbItem[]>(() => [
     { title: 'Dashboard', href: '/dashboard' },
@@ -75,13 +85,17 @@ const form = useForm({
     // Personal Information
     nid_number: props.employee?.nid_number || '',
     joining_date: props.employee?.joining_date || '',
-    closing_date: props.employee?.closing_date || '',
     permanent_address: props.employee?.permanent_address || '',
     present_address: props.employee?.present_address || '',
     nationality: props.employee?.nationality || '',
     fathers_name: props.employee?.fathers_name || '',
     mothers_name: props.employee?.mothers_name || '',
     graduated_institution: props.employee?.graduated_institution || '',
+});
+
+// Separation form
+const separationForm = useForm({
+    closing_date: '',
 });
 
 const weekendOptions = [
@@ -98,6 +112,37 @@ const availableSubDepartments = computed(() => {
     return selectedDepartment.value?.sub_departments || [];
 });
 
+// Format joining date for display
+const formattedJoiningDate = computed(() => {
+    if (!props.employee?.joining_date) return null;
+    const date = new Date(props.employee.joining_date);
+    return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+});
+
+// Check if employee is already scheduled for separation
+const hasClosingDate = computed(() => !!props.employee?.closing_date);
+
+// Format closing date for display
+const formattedClosingDate = computed(() => {
+    if (!props.employee?.closing_date) return null;
+    const date = new Date(props.employee.closing_date);
+    return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+});
+
+// Get today's date for min date in date picker
+const todayDate = computed(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+});
+
 const submit = () => {
     form.weekend_days = selectedWeekendDays.value;
 
@@ -110,6 +155,26 @@ const submit = () => {
             preserveScroll: true,
         });
     }
+};
+
+const openSeparationModal = () => {
+    separationForm.reset();
+    separationForm.closing_date = '';
+    showSeparationModal.value = true;
+};
+
+const closeSeparationModal = () => {
+    showSeparationModal.value = false;
+    separationForm.reset();
+};
+
+const submitSeparation = () => {
+    separationForm.post(`/employees/${props.employee!.id}/separate`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            closeSeparationModal();
+        },
+    });
 };
 
 // Watch department changes and reset sub_department if not available
@@ -240,15 +305,6 @@ watch(() => form.department_id, (newDeptId, oldDeptId) => {
                                     v-model="form.joining_date"
                                 />
                                 <p v-if="form.errors.joining_date" class="text-sm text-destructive">{{ form.errors.joining_date }}</p>
-                            </div>
-                            <div class="space-y-2">
-                                <Label for="closing_date">Closing Date</Label>
-                                <Input
-                                    id="closing_date"
-                                    type="date"
-                                    v-model="form.closing_date"
-                                />
-                                <p v-if="form.errors.closing_date" class="text-sm text-destructive">{{ form.errors.closing_date }}</p>
                             </div>
                             <div class="space-y-2">
                                 <Label for="fathers_name">Father's Name</Label>
@@ -412,17 +468,92 @@ watch(() => form.department_id, (newDeptId, oldDeptId) => {
                         </CardContent>
                     </Card>
 
+                    <!-- Separation Status Card (only in edit mode when already scheduled) -->
+                    <Card v-if="isEditMode && hasClosingDate" class="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
+                        <CardContent class="pt-6">
+                            <p class="text-sm text-amber-700 dark:text-amber-400">
+                                <strong>{{ employee?.name }}</strong> is separated on <strong>{{ formattedClosingDate }}</strong>.
+                            </p>
+                            <p class="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                                They will be deactivated and unable to log in after this date.
+                            </p>
+                        </CardContent>
+                    </Card>
+
                     <!-- Actions -->
-                    <div class="flex items-center gap-4">
-                        <Button type="submit" :disabled="form.processing">
-                            {{ isEditMode ? 'Update Employee' : 'Create Employee' }}
-                        </Button>
-                        <Button type="button" variant="outline" as-child>
-                            <a href="/employees">Cancel</a>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <Button type="submit" :disabled="form.processing">
+                                {{ isEditMode ? 'Update Employee' : 'Create Employee' }}
+                            </Button>
+                            <Button type="button" variant="outline" as-child>
+                                <a href="/employees">Cancel</a>
+                            </Button>
+                        </div>
+                        
+                        <!-- Separate Employee Button (only in edit mode) -->
+                        <Button 
+                            v-if="isEditMode && !hasClosingDate"
+                            type="button" 
+                            variant="destructive"
+                            @click="openSeparationModal"
+                        >
+                            <UserMinus class="mr-2 h-4 w-4" />
+                            Separate Employee
                         </Button>
                     </div>
                 </div>
             </form>
         </div>
+
+        <!-- Separation Modal -->
+        <Dialog :open="showSeparationModal" @update:open="closeSeparationModal">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <UserMinus class="h-5 w-5 text-destructive" />
+                        Separate Employee
+                    </DialogTitle>
+                    <DialogDescription>
+                        The employee will be deactivated and unable to log in after the closing date.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <form @submit.prevent="submitSeparation">
+                    <div class="py-4">
+                        <div class="space-y-2">
+                            <Label for="separation_closing_date">Closing Date <span class="text-destructive">*</span></Label>
+                            <Input
+                                id="separation_closing_date"
+                                type="date"
+                                v-model="separationForm.closing_date"
+                                :min="todayDate"
+                                required
+                            />
+                            <p class="text-xs text-muted-foreground">
+                                The employee will be able to work until this date. Deactivation occurs the following day.
+                            </p>
+                            <p v-if="separationForm.errors.closing_date" class="text-sm text-destructive">
+                                {{ separationForm.errors.closing_date }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button type="button" variant="outline" @click="closeSeparationModal">
+                            Cancel
+                        </Button>
+                        <Button 
+                            type="submit" 
+                            variant="destructive"
+                            :disabled="separationForm.processing || !separationForm.closing_date"
+                        >
+                            <Loader2 v-if="separationForm.processing" class="mr-2 h-4 w-4 animate-spin" />
+                            {{ separationForm.processing ? 'Scheduling...' : 'Confirm Separation' }}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

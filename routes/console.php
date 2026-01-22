@@ -18,3 +18,6 @@ Schedule::command('attendance:mark-absent')->dailyAt('23:30');
 
 // Notify admins about employees who missed clock-out at 11:30 PM
 Schedule::command('attendance:notify-missed-clockout')->dailyAt('18:30');
+
+// Deactivate employees whose closing date has passed (runs at 00:01)
+Schedule::command('employees:deactivate-separated')->dailyAt('00:01');
