@@ -43,10 +43,15 @@ interface Employee {
     managedSubDepartments?: SubDepartment[];
     joining_date?: string;
     created_at: string;
+    is_active: boolean;
 }
 
 interface Props {
     employees: PaginatedData<Employee>;
+    filters: {
+        status: string;
+        search: string;
+    }
 }
 
 const props = defineProps<Props>();
@@ -59,20 +64,24 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Employee Management', href: '/employees' },
 ];
 
-// Search functionality
-const searchQuery = ref('');
+const searchQuery = ref(props.filters.search);
+const filterStatus = ref(props.filters.status);
 
-const filteredEmployees = computed(() => {
-    if (!searchQuery.value) return props.employees.data;
-    const query = searchQuery.value.toLowerCase();
-    return props.employees.data.filter(emp => 
-        emp.name.toLowerCase().includes(query) ||
-        emp.email.toLowerCase().includes(query) ||
-        emp.employee_id?.toLowerCase().includes(query) ||
-        emp.department?.name?.toLowerCase().includes(query) ||
-        emp.designation?.toLowerCase().includes(query)
-    );
-});
+const search = () => {
+    router.get('/employees', {
+        search: searchQuery.value,
+        status: filterStatus.value,
+    }, {
+        preserveState: true,
+        replace: true,
+    });
+};
+
+const setFilterStatus = (status: string) => {
+    filterStatus.value = status;
+    search();
+};
+
 
 const formatJoiningDate = (dateStr: string | undefined) => {
     if (!dateStr) return '';
@@ -154,19 +163,36 @@ const columns = [
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <!-- Search -->
-                    <div class="mb-4">
-                        <div class="relative">
+                    <!-- Search and Filters -->
+                    <div class="mb-4 flex items-center justify-between gap-4">
+                        <div class="w-1/3 relative">
                             <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input 
                                 v-model="searchQuery"
-                                placeholder="Search by name, email, ID, department..."
+                                placeholder="Search by name, email, ID..."
                                 class="pl-10"
+                                @input="search"
                             />
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <Button 
+                                variant="outline"
+                                :class="{ 'bg-primary text-primary-foreground': filterStatus === 'current' }"
+                                @click="setFilterStatus('current')"
+                            >
+                                Current
+                            </Button>
+                            <Button 
+                                variant="outline"
+                                :class="{ 'bg-primary text-primary-foreground': filterStatus === 'separated' }"
+                                @click="setFilterStatus('separated')"
+                            >
+                                Separated
+                            </Button>
                         </div>
                     </div>
 
-                    <DataTable :columns="columns" :data="filteredEmployees">
+                    <DataTable :columns="columns" :data="employees.data">
                         <!-- Custom Slots -->
                         <template #cell-employee="{ row }">
                             <div>

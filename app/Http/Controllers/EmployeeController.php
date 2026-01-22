@@ -24,18 +24,32 @@ class EmployeeController extends Controller
             abort(403, 'Unauthorized access.');
         }
 
+        $filters = $request->only(['search', 'status']);
+        $status = $request->input('status', 'current');
+
         $employees = User::with(['department:id,name', 'subDepartment:id,name'])
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('employee_id', 'like', "%{$search}%");
+                });
+            })
+            ->when($status, function ($query, $status) {
+                if ($status === 'current') {
+                    $query->where('is_active', true);
+                } elseif ($status === 'separated') {
+                    $query->where('is_active', false);
+                }
+            })
             ->orderBy('joining_date', 'asc')
             ->orderBy('employee_id', 'asc')
-            ->paginate(30);
-
-        $departments = Department::active()->get(['id', 'name']);
-        $subDepartments = SubDepartment::active()->with('department:id,name')->get(['id', 'name', 'department_id']);
+            ->paginate(30)
+            ->withQueryString();
 
         return Inertia::render('employees/Index', [
             'employees' => $employees,
-            'departments' => $departments,
-            'subDepartments' => $subDepartments,
+            'filters' => array_merge(['status' => $status], $filters),
         ]);
     }
 

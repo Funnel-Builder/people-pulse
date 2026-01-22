@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
     Dialog,
     DialogContent,
@@ -13,9 +14,13 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import type { BreadcrumbItem } from '@/types';
-import { Head, useForm, router } from '@inertiajs/vue3';
+import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
-import { ChevronDown, ChevronUp, UserMinus, AlertTriangle, Loader2 } from 'lucide-vue-next';
+import { ChevronDown, ChevronUp, UserMinus, AlertTriangle, Loader2, Calendar as CalendarIcon, CheckCircle, Ban } from 'lucide-vue-next';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface SubDepartment {
     id: number;
@@ -58,6 +63,9 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const page = usePage();
+const flash = computed(() => page.props.flash as { success?: string; error?: string });
 
 const isEditMode = computed(() => !!props.employee);
 const isPersonalInfoOpen = ref(false);
@@ -137,12 +145,6 @@ const formattedClosingDate = computed(() => {
     });
 });
 
-// Get today's date for min date in date picker
-const todayDate = computed(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-});
-
 const submit = () => {
     form.weekend_days = selectedWeekendDays.value;
 
@@ -186,6 +188,34 @@ watch(() => form.department_id, (newDeptId, oldDeptId) => {
         }
     }
 });
+
+const employeeStatusBanner = computed(() => {
+    if (!props.employee) return null;
+
+    if (props.employee.is_active === false) {
+        return {
+            message: 'This employee is separated.',
+            variant: 'destructive',
+            icon: Ban,
+        };
+    }
+
+    if (props.employee.closing_date && props.employee.is_active === true) {
+        const closingDate = new Date(props.employee.closing_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (closingDate > today) {
+            return {
+                message: `This employee is on notice period until ${format(closingDate, 'PPP')}.`,
+                variant: 'warning',
+                icon: AlertTriangle,
+            };
+        }
+    }
+
+    return null;
+});
 </script>
 
 <template>
@@ -193,6 +223,30 @@ watch(() => form.department_id, (newDeptId, oldDeptId) => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex flex-col gap-6 p-4 md:p-6">
+            <!-- Flash Message -->
+            <Alert v-if="flash.success" class="border-green-500 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
+                <CheckCircle class="h-4 w-4" />
+                <AlertDescription>{{ flash.success }}</AlertDescription>
+            </Alert>
+            <Alert v-if="flash.error" variant="destructive">
+                <AlertTriangle class="h-4 w-4" />
+                <AlertDescription>{{ flash.error }}</AlertDescription>
+            </Alert>
+
+            <!-- Employee Status Banner -->
+            <Alert
+                v-if="employeeStatusBanner"
+                :variant="employeeStatusBanner.variant"
+                class="flex items-center justify-between"
+            >
+                <div class="flex items-center gap-2">
+                    <component :is="employeeStatusBanner.icon" class="h-4 w-4" />
+                    <AlertDescription class="font-medium">
+                        {{ employeeStatusBanner.message }}
+                    </AlertDescription>
+                </div>
+            </Alert>
+
             <!-- Header -->
             <div>
                 <h1 class="text-2xl font-bold">{{ isEditMode ? 'Edit Employee' : 'Create Employee' }}</h1>
@@ -523,15 +577,25 @@ watch(() => form.department_id, (newDeptId, oldDeptId) => {
                     <div class="py-4">
                         <div class="space-y-2">
                             <Label for="separation_closing_date">Closing Date <span class="text-destructive">*</span></Label>
-                            <Input
-                                id="separation_closing_date"
-                                type="date"
-                                v-model="separationForm.closing_date"
-                                :min="todayDate"
-                                required
-                            />
+                            <Popover>
+                                <PopoverTrigger as-child>
+                                    <Button
+                                        variant="outline"
+                                        :class="cn(
+                                            'w-full justify-start text-left font-normal',
+                                            !separationForm.closing_date && 'text-muted-foreground'
+                                        )"
+                                    >
+                                        <CalendarIcon class="mr-2 h-4 w-4" />
+                                        <span>{{ separationForm.closing_date ? format(new Date(separationForm.closing_date), 'PPP') : 'Pick a date' }}</span>
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent class="w-auto p-0">
+                                    <Calendar v-model="separationForm.closing_date" />
+                                </PopoverContent>
+                            </Popover>
                             <p class="text-xs text-muted-foreground">
-                                The employee will be able to work until this date. Deactivation occurs the following day.
+                                If a past date is selected, the employee will be separated immediately.
                             </p>
                             <p v-if="separationForm.errors.closing_date" class="text-sm text-destructive">
                                 {{ separationForm.errors.closing_date }}
