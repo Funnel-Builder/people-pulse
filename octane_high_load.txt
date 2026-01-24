@@ -1,0 +1,43 @@
+This is ApacheBench, Version 2.3 <$Revision: 1903618 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient)
+
+
+Server Software:        FrankenPHP
+Server Hostname:        127.0.0.1
+Server Port:            8002
+
+Document Path:          /
+Document Length:        270 bytes
+
+Concurrency Level:      1000
+Time taken for tests:   9.210 seconds
+Complete requests:      5000
+Failed requests:        0
+Non-2xx responses:      5000
+Total transferred:      7260000 bytes
+HTML transferred:       1350000 bytes
+Requests per second:    542.87 [#/sec] (mean)
+Time per request:       1842.055 [ms] (mean)
+Time per request:       1.842 [ms] (mean, across all concurrent requests)
+Transfer rate:          769.78 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0   10  19.0      0      56
+Processing:    39 1653 418.8   1816    1997
+Waiting:       39 1652 418.9   1815    1997
+Total:         85 1663 404.1   1818    2042
+
+Percentage of the requests served within a certain time (ms)
+  50%   1818
+  66%   1852
+  75%   1863
+  80%   1869
+  90%   1886
+  95%   1899
+  98%   1915
+  99%   1945
+ 100%   2042 (longest request)
