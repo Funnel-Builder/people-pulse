@@ -44,6 +44,7 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
         $pendingCoverRequests = 0;
         $pendingLeaveApprovals = 0;
+        $pendingCertificateApprovals = 0;
 
         if ($user) {
             $user->load(['department:id,name', 'subDepartment:id,name']);
@@ -52,6 +53,10 @@ class HandleInertiaRequests extends Middleware
             $leaveService = app(\App\Services\LeaveService::class);
             $pendingCoverRequests = $leaveService->getCoverRequestCount($user);
             $pendingLeaveApprovals = $leaveService->getLeaveApprovalCount($user);
+
+            // Get pending certificate approval count
+            $certificateService = app(\App\Services\CertificateService::class);
+            $pendingCertificateApprovals = $certificateService->getApprovalCount($user);
         }
 
         return [
@@ -62,6 +67,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $user,
                 'pendingCoverRequests' => $pendingCoverRequests,
                 'pendingLeaveApprovals' => $pendingLeaveApprovals,
+                'pendingCertificateApprovals' => $pendingCertificateApprovals,
             ],
             'sidebarOpen' => !$request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [

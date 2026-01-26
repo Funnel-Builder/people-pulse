@@ -68,6 +68,33 @@ const mainNavItems = computed<NavItem[]>(() => {
         children: leaveChildren,
     });
 
+    // Services Group (all users can request, managers/admins can approve)
+    const servicesChildren: NavItem[] = [
+        {
+            title: 'Employee Certificate',
+            href: '/services/certificate',
+            icon: ClipboardList,
+        },
+    ];
+
+    // Certificate Approvals - only for managers and admins
+    if (user.value?.role === 'manager' || user.value?.role === 'admin') {
+        servicesChildren.push({
+            title: 'Approvals',
+            href: '/services/certificate/approvals',
+            icon: ClipboardList,
+            badge: page.props.auth?.pendingCertificateApprovals || 0,
+        });
+    }
+
+    items.push({
+        title: 'Services',
+        href: '#',
+        icon: Shield,
+        isGroup: true,
+        children: servicesChildren,
+    });
+
     // Workforce Group (Manager only - Team Attendance)
     if (user.value?.role === 'manager') {
         items.push({

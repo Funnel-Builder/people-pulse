@@ -98,6 +98,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // =====================================================
+    // SERVICES MODULE
+    // =====================================================
+    Route::prefix('services')->name('services.')->group(function () {
+        // Employee Certificate
+        Route::get('/certificate', [\App\Http\Controllers\CertificateController::class, 'index'])->name('certificate');
+        Route::post('/certificate', [\App\Http\Controllers\CertificateController::class, 'store'])->name('certificate.store');
+        Route::get('/certificate/approvals', [\App\Http\Controllers\CertificateController::class, 'approvals'])->name('certificate.approvals');
+        Route::get('/certificate/{certificateRequest}/review', [\App\Http\Controllers\CertificateController::class, 'review'])->name('certificate.review');
+        Route::post('/certificate/{certificateRequest}/issue', [\App\Http\Controllers\CertificateController::class, 'issue'])->name('certificate.issue');
+        Route::post('/certificate/{certificateRequest}/reject', [\App\Http\Controllers\CertificateController::class, 'reject'])->name('certificate.reject');
+        Route::get('/certificate/{certificateRequest}/download', [\App\Http\Controllers\CertificateController::class, 'download'])->name('certificate.download');
+        Route::get('/certificate/{certificateRequest}/preview', [\App\Http\Controllers\CertificateController::class, 'preview'])->name('certificate.preview');
+        Route::post('/certificate/{certificateRequest}/email', [\App\Http\Controllers\CertificateController::class, 'email'])->name('certificate.email');
+    });
+
+    // =====================================================
     // ANNOUNCEMENTS (Admin/Manager)
     // =====================================================
     Route::prefix('announcements')->name('announcements.')->group(function () {
