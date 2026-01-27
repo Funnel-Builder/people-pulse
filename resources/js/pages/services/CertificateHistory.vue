@@ -23,16 +23,14 @@ import {
     PaginationPrev,
 } from '@/components/ui/pagination';
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { FileText, Clock, AlertTriangle, CheckCircle, Download, XCircle } from 'lucide-vue-next';
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { FileText, Clock, AlertTriangle, CheckCircle, Download, XCircle, AlertCircle, Loader2 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import type { BreadcrumbItem } from '@/types';
 
@@ -124,20 +122,28 @@ const downloadCertificate = (requestId: number) => {
 };
 
 const requestToCancel = ref<number | null>(null);
+const cancelModalOpen = ref(false);
+const isCancelling = ref(false);
 
-const confirmCancel = (requestId: number) => {
+const openCancelModal = (requestId: number) => {
     requestToCancel.value = requestId;
+    cancelModalOpen.value = true;
+};
+
+const closeCancelModal = () => {
+    cancelModalOpen.value = false;
+    requestToCancel.value = null;
+    isCancelling.value = false;
 };
 
 const handleCancel = () => {
-    if (requestToCancel.value) {
-        router.post(`/services/certificate/${requestToCancel.value}/cancel`, {}, {
-            preserveScroll: true,
-            onFinish: () => {
-                requestToCancel.value = null;
-            },
-        });
-    }
+    if (!requestToCancel.value) return;
+
+    isCancelling.value = true;
+    router.post(`/services/certificate/${requestToCancel.value}/cancel`, {}, {
+        preserveScroll: true,
+        onFinish: () => closeCancelModal(),
+    });
 };
 </script>
 
@@ -214,7 +220,7 @@ const handleCancel = () => {
                                                 'opacity-50 cursor-not-allowed': request.status !== 'pending'
                                             }"
                                             :disabled="request.status !== 'pending'"
-                                            @click="confirmCancel(request.id)"
+                                            @click="openCancelModal(request.id)"
                                         >
                                             <XCircle class="h-3.5 w-3.5" />
                                             Cancel
@@ -258,21 +264,28 @@ const handleCancel = () => {
             </Card>
         </div>
 
-        <AlertDialog :open="!!requestToCancel" @update:open="val => !val && (requestToCancel = null)">
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Cancel Request</AlertDialogTitle>
-                    <AlertDialogDescription>
+        <Dialog v-model:open="cancelModalOpen">
+            <DialogContent class="sm:max-w-[425px]">
+                <DialogHeader>
+                    <div class="mx-auto bg-red-100 h-12 w-12 rounded-full flex items-center justify-center mb-4">
+                        <AlertCircle class="h-6 w-6 text-red-600" />
+                    </div>
+                    <DialogTitle class="text-center">Cancel Request</DialogTitle>
+                    <DialogDescription class="text-center">
                         Are you sure you want to cancel this certificate request? This action cannot be undone.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel @click="requestToCancel = null">Cancel</AlertDialogCancel>
-                    <AlertDialogAction class="bg-red-500 hover:bg-red-600" @click="handleCancel">
-                        Yes, Cancel Request
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+                    </DialogDescription>
+                </DialogHeader>
+
+                <DialogFooter class="flex flex-col sm:flex-row gap-2 mt-4">
+                    <Button variant="outline" @click="closeCancelModal" :disabled="isCancelling" class="w-full sm:w-auto mt-2 sm:mt-0">
+                        Nevermind
+                    </Button>
+                    <Button variant="destructive" @click="handleCancel" :disabled="isCancelling" class="w-full sm:w-auto">
+                        <Loader2 v-if="isCancelling" class="mr-2 h-4 w-4 animate-spin" />
+                        Yes, Cancel
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, useForm, usePage, router } from '@inertiajs/vue3';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { FileText, Clock, CheckCircle, XCircle, AlertCircle, History, Check, X } from 'lucide-vue-next';
+import { FileText, Clock, CheckCircle, XCircle, AlertCircle, History, Check, X, Mail, Download, Plus, Loader2 } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
 import type { BreadcrumbItem } from '@/types';
 
@@ -50,9 +50,25 @@ interface CertificateRequest {
     issued_at: string | null;
 }
 
+interface ActiveRequest {
+    id: number;
+    ref_id: string;
+    status: string;
+    created_at: string;
+}
+
+interface IssuedCertificate {
+    id: number;
+    ref_id: string;
+    status: string;
+    issued_at: string;
+}
+
 interface Props {
     purposes: Record<string, string>;
     employeeInfo: EmployeeInfo;
+    activeRequest: ActiveRequest | null;
+    latestIssuedCertificate: IssuedCertificate | null;
 }
 
 const props = defineProps<Props>();
@@ -152,26 +168,272 @@ const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
     }
     return props.purposes[purpose] || purpose;
 };
+
+const downloadCertificate = (id: number) => {
+    window.open(`/services/certificate/${id}/download`, '_blank');
+};
+
+// Email Button Logic
+const emailStatus = ref<'idle' | 'sending' | 'success' | 'error'>('idle');
+
+const sendEmail = (id: number) => {
+    if (emailStatus.value !== 'idle') return;
+
+    emailStatus.value = 'sending';
+
+    router.post(`/services/certificate/${id}/email`, { recipient: 'self' }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            emailStatus.value = 'success';
+            setTimeout(() => {
+                emailStatus.value = 'idle';
+            }, 3000);
+        },
+        onError: () => {
+            emailStatus.value = 'error';
+            setTimeout(() => {
+                emailStatus.value = 'idle';
+            }, 3000);
+        },
+    });
+};
 </script>
 
 <template>
-    <Head title="Request Employment Certificate" />
+    <Head title="Employment Certificate" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-4 md:p-6 max-w-6xl mx-auto">
             <!-- Header -->
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 class="text-2xl font-bold">Request for Employment Certificate</h1>
-                    <p class="text-muted-foreground mt-1">Submit a request to receive your official employment certificate</p>
+                    <h1 class="text-2xl font-bold">Employment Certificate</h1>
+                    <p class="text-xs md:text-sm text-muted-foreground mt-1">Submit a request to receive your official employment certificate</p>
                 </div>
-                <Button variant="outline" class="gap-2" @click="$inertia.visit('/services/certificate/history')">
+                <!-- Show both buttons when viewing issued certificate -->
+                <div v-if="props.latestIssuedCertificate && !props.activeRequest" class="flex items-center gap-2 w-full md:w-auto">
+                    <Button class="gap-2 flex-1 md:flex-none" @click="$inertia.visit('/services/certificate?new=1')">
+                        <Plus class="h-4 w-4" />
+                        New Request
+                    </Button>
+                    <Button variant="outline" class="gap-2 flex-1 md:flex-none" @click="$inertia.visit('/services/certificate/history')">
+                        <History class="h-4 w-4" />
+                        History
+                    </Button>
+                </div>
+                <Button v-else variant="outline" class="gap-2 w-full md:w-auto" @click="$inertia.visit('/services/certificate/history')">
                     <History class="h-4 w-4" />
                     History
                 </Button>
             </div>
 
             <div class="grid gap-6 lg:grid-cols-[1fr_400px]">
+                <!-- Issued Certificate Display -->
+                <template v-if="props.latestIssuedCertificate && !props.activeRequest">
+                    <div class="lg:col-span-2">
+                        <Card class="border-border/50 shadow-sm">
+                            <CardHeader class="md:hidden">
+                                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div class="space-y-1">
+                                        <CardTitle class="text-lg">Certificate Issued</CardTitle>
+                                        <CardDescription>
+                                            Issued on {{ formatDate(props.latestIssuedCertificate.issued_at) }}
+                                        </CardDescription>
+                                    </div>
+                                    <Badge variant="outline" class="w-fit bg-green-50 text-green-700 border-green-200">
+                                        <CheckCircle class="w-3 h-3 mr-1" />
+                                        Active
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                            <CardContent class="p-0">
+                                <!-- Desktop View: Certificate Preview Iframe -->
+                                <div class="hidden md:block">
+                                    <div class="bg-muted/50 p-6">
+                                        <div class="bg-white shadow-lg rounded-lg overflow-hidden mx-auto h-[480px]" style="max-width: 680px;">
+                                            <iframe
+                                                :src="`/services/certificate/${props.latestIssuedCertificate.id}/preview`"
+                                                class="w-full h-full"
+                                                frameborder="0"
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Desktop Action Buttons -->
+                                    <div class="flex items-center justify-center gap-4 py-4 border-t border-border/50">
+                                        <Button
+                                            variant="outline"
+                                            class="gap-2 min-w-[140px] transition-all duration-300"
+                                            :class="{
+                                                'bg-green-50 text-green-600 border-green-200 hover:bg-green-100': emailStatus === 'success',
+                                                'bg-red-50 text-red-600 border-red-200 hover:bg-red-100': emailStatus === 'error'
+                                            }"
+                                            @click="sendEmail(props.latestIssuedCertificate.id)"
+                                            :disabled="emailStatus !== 'idle'"
+                                        >
+                                            <template v-if="emailStatus === 'idle'">
+                                                <Mail class="h-4 w-4" />
+                                                Send to Email
+                                            </template>
+                                            <template v-else-if="emailStatus === 'sending'">
+                                                <Loader2 class="h-4 w-4 animate-spin" />
+                                                Sending...
+                                            </template>
+                                            <template v-else-if="emailStatus === 'success'">
+                                                <Check class="h-4 w-4" />
+                                                Sent!
+                                            </template>
+                                            <template v-else-if="emailStatus === 'error'">
+                                                <XCircle class="h-4 w-4" />
+                                                Failed
+                                            </template>
+                                        </Button>
+                                        <Button
+                                            class="gap-2"
+                                            @click="downloadCertificate(props.latestIssuedCertificate.id)"
+                                        >
+                                            <Download class="h-4 w-4" />
+                                            Download PDF
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <!-- Mobile View: Simplified Details -->
+                                <div class="block md:hidden p-4">
+                                    <div class="rounded-lg bg-muted/50 p-4 border border-border/50">
+                                        <div class="space-y-4">
+                                            <div class="space-y-1">
+                                                <p class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Employee Name</p>
+                                                <p class="font-medium text-lg">{{ props.employeeInfo.name }}</p>
+                                            </div>
+                                            <div class="space-y-1">
+                                                <p class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Reference ID</p>
+                                                <p class="font-mono text-lg">{{ props.latestIssuedCertificate.ref_id }}</p>
+                                            </div>
+                                            <div class="space-y-1">
+                                                <p class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Issued Date</p>
+                                                <p class="font-medium">{{ formatDate(props.latestIssuedCertificate.issued_at) }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Mobile Action Buttons -->
+                                    <div class="flex flex-col gap-3 mt-6">
+                                        <Button
+                                            variant="outline"
+                                            class="w-full gap-2 transition-all duration-300"
+                                            :class="{
+                                                'bg-green-50 text-green-600 border-green-200 hover:bg-green-100': emailStatus === 'success',
+                                                'bg-red-50 text-red-600 border-red-200 hover:bg-red-100': emailStatus === 'error'
+                                            }"
+                                            @click="sendEmail(props.latestIssuedCertificate.id)"
+                                            :disabled="emailStatus !== 'idle'"
+                                        >
+                                            <template v-if="emailStatus === 'idle'">
+                                                <Mail class="h-4 w-4" />
+                                                Send to Email
+                                            </template>
+                                            <template v-else-if="emailStatus === 'sending'">
+                                                <Loader2 class="h-4 w-4 animate-spin" />
+                                                Sending...
+                                            </template>
+                                            <template v-else-if="emailStatus === 'success'">
+                                                <Check class="h-4 w-4" />
+                                                Sent!
+                                            </template>
+                                            <template v-else-if="emailStatus === 'error'">
+                                                <XCircle class="h-4 w-4" />
+                                                Failed
+                                            </template>
+                                        </Button>
+                                        <Button
+                                            class="w-full gap-2"
+                                            @click="downloadCertificate(props.latestIssuedCertificate.id)"
+                                        >
+                                            <Download class="h-4 w-4" />
+                                            Download PDF
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </template>
+
+                <!-- Active Request Status Tracker -->
+                <template v-else-if="props.activeRequest">
+                    <div class="lg:col-span-2">
+                        <Card class="border-border/50 shadow-sm">
+                            <CardHeader class="pb-4">
+                                <CardTitle class="text-lg font-semibold">Request Status</CardTitle>
+                                <CardDescription>
+                                    Your certificate request <span class="font-medium text-foreground">{{ props.activeRequest.ref_id }}</span> is being processed
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <!-- Status Tracker -->
+                                <div class="flex items-center justify-between py-8 px-4">
+                                    <!-- Step 1: Submitted -->
+                                    <div class="flex flex-col items-center gap-2">
+                                        <div class="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                                            <CheckCircle class="h-6 w-6 text-green-500" />
+                                        </div>
+                                        <span class="text-sm font-semibold text-green-500">SUBMITTED</span>
+                                        <span class="text-xs text-muted-foreground">{{ formatDate(props.activeRequest.created_at) }}</span>
+                                    </div>
+
+                                    <!-- Connector 1 -->
+                                    <div class="flex-1 h-1 mx-2" :class="props.activeRequest.status === 'pending' ? 'bg-primary' : 'bg-muted'" />
+
+                                    <!-- Step 2: Manager Review -->
+                                    <div class="flex flex-col items-center gap-2">
+                                        <div class="w-12 h-12 rounded-full flex items-center justify-center"
+                                            :class="props.activeRequest.status === 'pending' ? 'bg-primary' : (props.activeRequest.status === 'authorized' ? 'bg-green-500/20' : 'bg-muted')">
+                                            <Clock v-if="props.activeRequest.status === 'pending'" class="h-6 w-6 text-white" />
+                                            <CheckCircle v-else-if="props.activeRequest.status === 'authorized'" class="h-6 w-6 text-green-500" />
+                                            <Clock v-else class="h-6 w-6 text-muted-foreground" />
+                                        </div>
+                                        <span class="text-sm font-semibold" :class="props.activeRequest.status === 'pending' ? 'text-primary' : (props.activeRequest.status === 'authorized' ? 'text-green-500' : 'text-muted-foreground')">MANAGER REVIEW</span>
+                                        <span class="text-xs text-muted-foreground">{{ props.activeRequest.status === 'pending' ? 'In Progress' : (props.activeRequest.status === 'authorized' ? 'Approved' : 'Waiting') }}</span>
+                                    </div>
+
+                                    <!-- Connector 2 -->
+                                    <div class="flex-1 h-1 mx-2" :class="props.activeRequest.status === 'authorized' ? 'bg-primary' : 'bg-muted'" />
+
+                                    <!-- Step 3: HR Review -->
+                                    <div class="flex flex-col items-center gap-2">
+                                        <div class="w-12 h-12 rounded-full flex items-center justify-center"
+                                            :class="props.activeRequest.status === 'authorized' ? 'bg-primary' : 'bg-muted'">
+                                            <Clock v-if="props.activeRequest.status === 'authorized'" class="h-6 w-6 text-white" />
+                                            <FileText v-else class="h-6 w-6 text-muted-foreground" />
+                                        </div>
+                                        <span class="text-sm font-semibold" :class="props.activeRequest.status === 'authorized' ? 'text-primary' : 'text-muted-foreground'">HR REVIEW</span>
+                                        <span class="text-xs text-muted-foreground">{{ props.activeRequest.status === 'authorized' ? 'In Progress' : 'Pending' }}</span>
+                                    </div>
+
+                                    <!-- Connector 3 -->
+                                    <div class="flex-1 h-1 mx-2 bg-muted" />
+
+                                    <!-- Step 4: Issued -->
+                                    <div class="flex flex-col items-center gap-2">
+                                        <div class="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                                            <FileText class="h-6 w-6 text-muted-foreground" />
+                                        </div>
+                                        <span class="text-sm font-semibold text-muted-foreground">ISSUED</span>
+                                        <span class="text-xs text-muted-foreground">Waiting</span>
+                                    </div>
+                                </div>
+
+                                <div class="text-center mt-4">
+                                    <p class="text-sm text-muted-foreground">You will be notified once your certificate is ready for download.</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </template>
+
+                <!-- Normal Form View -->
+                <template v-else>
                 <!-- Left Column: Request Form -->
                 <div class="space-y-6">
                     <!-- Request Form Card -->
@@ -360,6 +622,7 @@ const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
                         </CardContent>
                     </Card>
                 </div>
+                </template>
             </div>
         </div>
     </AppLayout>

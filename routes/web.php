@@ -110,6 +110,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/certificate/{certificateRequest}/issue', [\App\Http\Controllers\CertificateController::class, 'issue'])->name('certificate.issue');
         Route::post('/certificate/{certificateRequest}/reject', [\App\Http\Controllers\CertificateController::class, 'reject'])->name('certificate.reject');
         Route::post('/certificate/{certificateRequest}/cancel', [\App\Http\Controllers\CertificateController::class, 'cancel'])->name('certificate.cancel');
+        Route::post('/certificate/{certificateRequest}/authorize', [\App\Http\Controllers\CertificateController::class, 'authorizeRequest'])->name('certificate.authorize');
         Route::get('/certificate/{certificateRequest}/download', [\App\Http\Controllers\CertificateController::class, 'download'])->name('certificate.download');
         Route::get('/certificate/{certificateRequest}/preview', [\App\Http\Controllers\CertificateController::class, 'preview'])->name('certificate.preview');
         Route::post('/certificate/{certificateRequest}/email', [\App\Http\Controllers\CertificateController::class, 'email'])->name('certificate.email');

@@ -22,10 +22,30 @@ class CertificateController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
+        $forceNew = $request->query('new') == '1';
+
+        // Check for existing pending or authorized request
+        $activeRequest = CertificateRequest::where('user_id', $user->id)
+            ->whereIn('status', [
+                CertificateRequest::STATUS_PENDING,
+                CertificateRequest::STATUS_AUTHORIZED,
+            ])
+            ->first();
+
+        // Get latest issued certificate (if no active request and not forcing new)
+        $latestIssuedCertificate = null;
+        if (!$activeRequest && !$forceNew) {
+            $latestIssuedCertificate = CertificateRequest::where('user_id', $user->id)
+                ->where('status', CertificateRequest::STATUS_ISSUED)
+                ->latest('issued_at')
+                ->first();
+        }
 
         return Inertia::render('services/CertificateRequest', [
             'purposes' => config('services_module.certificate_purposes', []),
             'employeeInfo' => $this->certificateService->getEmployeeInfo($user),
+            'activeRequest' => $activeRequest,
+            'latestIssuedCertificate' => $latestIssuedCertificate,
         ]);
     }
 
@@ -46,6 +66,26 @@ class CertificateController extends Controller
 
         return redirect()->route('services.certificate')
             ->with('success', 'Certificate request submitted successfully.');
+    }
+
+    /**
+     * Cancel a certificate request.
+     */
+    public function cancel(Request $request, CertificateRequest $certificateRequest)
+    {
+        $user = $request->user();
+
+        if ($certificateRequest->user_id !== $user->id) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        if ($certificateRequest->status !== 'pending') {
+            abort(400, 'Only pending requests can be cancelled.');
+        }
+
+        $certificateRequest->update(['status' => 'cancelled']);
+
+        return back()->with('success', 'Certificate request cancelled successfully.');
     }
 
     /**
@@ -76,6 +116,7 @@ class CertificateController extends Controller
 
         return Inertia::render('services/CertificateApprovals', [
             'requests' => $pendingRequests,
+            'userRole' => $user->role,
         ]);
     }
 
@@ -102,19 +143,39 @@ class CertificateController extends Controller
     }
 
     /**
-     * Issue the certificate.
+     * Authorize the certificate request (Manager action).
+     */
+    public function authorizeRequest(Request $request, CertificateRequest $certificateRequest)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        if (!$certificateRequest->isPending()) {
+            abort(400, 'Request cannot be authorized.');
+        }
+
+        $this->certificateService->authorizeRequest($certificateRequest, $user);
+
+        return redirect()->route('services.certificate.approvals')
+            ->with('success', 'Certificate request authorized and sent to admin.');
+    }
+
+    /**
+     * Issue the certificate (Admin only).
      */
     public function issue(Request $request, CertificateRequest $certificateRequest)
     {
         $user = $request->user();
 
-        if (!$this->certificateService->canApprove($user, $certificateRequest)) {
-            abort(403, 'Unauthorized access.');
+        if (!$user->isAdmin()) {
+            abort(403, 'Only admins can issue certificates.');
         }
 
         $this->certificateService->issueRequest($certificateRequest, $user);
 
-        // Return back so the modal can appear on the same page
         return back()->with('success', 'Certificate issued successfully.');
     }
 
@@ -146,22 +207,25 @@ class CertificateController extends Controller
     }
 
     /**
-     * Generate PDF for preview (inline display).
+     * Generate HTML preview for embedding.
      */
     public function preview(Request $request, CertificateRequest $certificateRequest)
     {
         $user = $request->user();
 
-        // Allow preview for approvers during review
-        $canPreview = $user->isManager() || $user->isAdmin();
+        // Allow preview for owner (if issued) or approvers
+        $canPreview = ($certificateRequest->user_id === $user->id && $certificateRequest->isIssued())
+            || $user->isManager()
+            || $user->isAdmin();
 
         if (!$canPreview) {
             abort(403, 'Unauthorized access.');
         }
 
-        $pdf = $this->certificateService->generateCertificatePdf($certificateRequest);
+        $data = $this->certificateService->getCertificateData($certificateRequest);
+        $data['isWebPreview'] = true;
 
-        return $pdf->stream("certificate_preview.pdf");
+        return view('pdf.certificate-preview', $data);
     }
 
     /**

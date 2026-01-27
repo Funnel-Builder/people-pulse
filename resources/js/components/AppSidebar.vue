@@ -71,7 +71,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     // Services Group (all users can request, managers/admins can approve)
     const servicesChildren: NavItem[] = [
         {
-            title: 'Employee Certificate',
+            title: 'EC',
             href: '/services/certificate',
             icon: ClipboardList,
         },

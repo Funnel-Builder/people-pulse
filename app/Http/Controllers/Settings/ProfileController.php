@@ -19,9 +19,31 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user()->load(['department', 'subDepartment']);
+
         return Inertia::render('settings/Profile', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'userData' => [
+                'id' => $user->id,
+                'employee_id' => $user->employee_id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'profile_picture' => $user->profile_picture,
+                'department' => $user->department?->name,
+                'sub_department' => $user->subDepartment?->name,
+                'designation' => $user->designation,
+                'role' => $user->role,
+                'joining_date' => $user->joining_date?->format('Y-m-d'),
+                // Editable additional info
+                'nid_number' => $user->nid_number,
+                'nationality' => $user->nationality,
+                'fathers_name' => $user->fathers_name,
+                'mothers_name' => $user->mothers_name,
+                'graduated_institution' => $user->graduated_institution,
+                'permanent_address' => $user->permanent_address,
+                'present_address' => $user->present_address,
+            ],
         ]);
     }
 
@@ -31,12 +53,20 @@ class ProfileController extends Controller
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $user = $request->user();
-        
-        $user->fill($request->safe()->only(['name', 'email']));
 
-        if ($user->isDirty('email')) {
-            $user->email_verified_at = null;
-        }
+        // Update basic info (name only, email is readonly)
+        $user->fill($request->safe()->only(['name']));
+
+        // Update additional info fields
+        $user->fill($request->safe()->only([
+            'nid_number',
+            'nationality',
+            'fathers_name',
+            'mothers_name',
+            'graduated_institution',
+            'permanent_address',
+            'present_address',
+        ]));
 
         // Handle profile picture upload
         if ($request->hasFile('profile_picture')) {

@@ -28,8 +28,8 @@ class CertificateService
 
     /**
      * Get pending certificate requests for approval.
-     * Managers see requests from their department/sub-department.
-     * Admins see all pending requests.
+     * Managers see pending requests from their department/sub-department.
+     * Admins see pending + authorized requests.
      */
     public function getPendingApprovals(User $user): Collection
     {
@@ -37,11 +37,17 @@ class CertificateService
             return collect([]);
         }
 
-        $query = CertificateRequest::with(['user.department', 'user.subDepartment'])
-            ->where('status', CertificateRequest::STATUS_PENDING);
+        $query = CertificateRequest::with(['user.department', 'user.subDepartment']);
 
-        // If manager, filter by managed sub-departments
-        if ($user->isManager() && !$user->isAdmin()) {
+        if ($user->isAdmin()) {
+            // Admins see pending and authorized requests
+            $query->whereIn('status', [
+                CertificateRequest::STATUS_PENDING,
+                CertificateRequest::STATUS_AUTHORIZED,
+            ]);
+        } else {
+            // Managers see only pending requests from their team
+            $query->where('status', CertificateRequest::STATUS_PENDING);
             $managedSubDepartmentIds = $user->getManagedSubDepartmentIds();
 
             if (!empty($managedSubDepartmentIds)) {
@@ -49,7 +55,6 @@ class CertificateService
                     $q->whereIn('sub_department_id', $managedSubDepartmentIds);
                 });
             } else {
-                // Manager without sub-departments - show department-level requests
                 $query->whereHas('user', function ($q) use ($user) {
                     $q->where('department_id', $user->department_id);
                 });
@@ -77,6 +82,20 @@ class CertificateService
         return CertificateRequest::where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->paginate(7);
+    }
+
+    /**
+     * Authorize a certificate request (Manager action).
+     */
+    public function authorizeRequest(CertificateRequest $request, User $authorizer): CertificateRequest
+    {
+        $request->update([
+            'status' => CertificateRequest::STATUS_AUTHORIZED,
+            'authorized_by' => $authorizer->id,
+            'authorized_at' => now(),
+        ]);
+
+        return $request->fresh();
     }
 
     /**
@@ -195,16 +214,35 @@ class CertificateService
     }
 
     /**
+     * Get certificate data for HTML preview.
+     */
+    public function getCertificateData(CertificateRequest $request): array
+    {
+        $request->load(['user.department', 'user.subDepartment', 'issuer']);
+
+        return [
+            'request' => $request,
+            'user' => $request->user,
+            'issueDate' => $request->issued_at ?? now(),
+            'issuer' => config('services_module.issuer'),
+            'company' => config('services_module.company'),
+        ];
+    }
+
+    /**
      * Check if user can approve a request.
      */
     public function canApprove(User $user, CertificateRequest $request): bool
     {
-        if (!$request->isPending()) {
-            return false;
+        // Admin can approve/reject both pending and authorized requests
+        if ($user->isAdmin()) {
+            return $request->status === CertificateRequest::STATUS_PENDING ||
+                $request->status === CertificateRequest::STATUS_AUTHORIZED;
         }
 
-        if ($user->isAdmin()) {
-            return true;
+        // Managers can only approve/reject pending requests
+        if (!$request->isPending()) {
+            return false;
         }
 
         if ($user->isManager()) {

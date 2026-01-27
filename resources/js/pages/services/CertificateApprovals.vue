@@ -1,10 +1,18 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -14,16 +22,14 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import {
-    Pagination,
-    PaginationEllipsis,
-    PaginationFirst,
-    PaginationLast,
-    PaginationList,
-    PaginationListItem,
-    PaginationNext,
-    PaginationPrev,
-} from '@/components/ui/pagination';
-import { FileText, Clock, AlertTriangle, CheckCircle } from 'lucide-vue-next';
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { FileText, Search, AlertCircle, Loader2 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import type { BreadcrumbItem } from '@/types';
 
@@ -56,40 +62,56 @@ interface CertificateRequest {
 
 interface Props {
     requests: CertificateRequest[];
+    userRole: string;
 }
 
 const props = defineProps<Props>();
 
+// Search and filter
+const searchQuery = ref('');
+const statusFilter = ref('all');
+
 // Pagination
 const currentPage = ref(1);
-const itemsPerPage = 5;
+const itemsPerPage = 7;
 
-const totalPages = computed(() => Math.ceil(props.requests.length / itemsPerPage));
+const filteredRequests = computed(() => {
+    let result = props.requests;
+
+    // Apply search
+    if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase();
+        result = result.filter(r =>
+            r.user.name.toLowerCase().includes(query) ||
+            r.user.employee_id.toLowerCase().includes(query) ||
+            r.ref_id.toLowerCase().includes(query)
+        );
+    }
+
+    // Apply status filter
+    if (statusFilter.value !== 'all') {
+        result = result.filter(r => r.status === statusFilter.value);
+    }
+
+    return result;
+});
+
+const totalPages = computed(() => Math.ceil(filteredRequests.value.length / itemsPerPage));
 
 const paginatedRequests = computed(() => {
     const start = (currentPage.value - 1) * itemsPerPage;
     const end = start + itemsPerPage;
-    return props.requests.slice(start, end);
+    return filteredRequests.value.slice(start, end);
 });
 
-const purposes: Record<string, string> = {
-    visa_application: 'Visa Application',
-    bank_loan: 'Bank Loan / Mortgage',
-    apartment_leasing: 'Apartment Leasing',
-    higher_education: 'Higher Education',
-    other: 'Other',
-};
+const isAdmin = computed(() => props.userRole === 'admin');
 
-const getTypeBadgeClass = (purpose: string) => {
-    switch (purpose) {
-        case 'visa_application':
+const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+        case 'pending':
+            return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+        case 'authorized':
             return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-        case 'bank_loan':
-            return 'bg-green-500/20 text-green-400 border-green-500/30';
-        case 'apartment_leasing':
-            return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-        case 'higher_education':
-            return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
         default:
             return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
@@ -110,21 +132,6 @@ const formatDate = (dateStr: string) => {
     };
 };
 
-const isOverdue = (createdAt: string, urgency: string) => {
-    if (urgency !== 'urgent') return false;
-    const created = new Date(createdAt);
-    const now = new Date();
-    const hoursDiff = (now.getTime() - created.getTime()) / (1000 * 60 * 60);
-    return hoursDiff > 24;
-};
-
-const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
-    if (purpose === 'other') {
-        return purposeOther || 'Other';
-    }
-    return purposes[purpose] || purpose;
-};
-
 const getInitials = (name: string) => {
     return name
         .split(' ')
@@ -137,6 +144,35 @@ const getInitials = (name: string) => {
 const goToReview = (requestId: number) => {
     router.get(`/services/certificate/${requestId}/review`);
 };
+
+const authorizeRequest = (requestId: number) => {
+    router.post(`/services/certificate/${requestId}/authorize`);
+};
+
+// Rejection Modal Logic
+const rejectModalOpen = ref(false);
+const requestToReject = ref<number | null>(null);
+const isRejecting = ref(false);
+
+const openRejectModal = (requestId: number) => {
+    requestToReject.value = requestId;
+    rejectModalOpen.value = true;
+};
+
+const closeRejectModal = () => {
+    rejectModalOpen.value = false;
+    requestToReject.value = null;
+    isRejecting.value = false;
+};
+
+const confirmReject = () => {
+    if (!requestToReject.value) return;
+
+    isRejecting.value = true;
+    router.post(`/services/certificate/${requestToReject.value}/reject`, {}, {
+        onFinish: () => closeRejectModal(),
+    });
+};
 </script>
 
 <template>
@@ -147,67 +183,46 @@ const goToReview = (requestId: number) => {
             <!-- Header -->
             <div>
                 <h1 class="text-2xl font-bold">Certificate Approvals</h1>
-                <p class="text-muted-foreground mt-1">Review and issue employee certificate requests</p>
+                <p class="text-muted-foreground mt-1">Review and process employee certificate requests</p>
             </div>
 
-            <!-- Stats Cards -->
-            <div class="grid gap-4 md:grid-cols-3">
-                <Card class="border-border/50">
-                    <CardContent class="pt-6">
-                        <div class="flex items-center gap-4">
-                            <div class="p-3 rounded-full bg-yellow-500/10">
-                                <Clock class="h-6 w-6 text-yellow-500" />
-                            </div>
-                            <div>
-                                <p class="text-2xl font-bold">{{ requests.length }}</p>
-                                <p class="text-sm text-muted-foreground">Pending Requests</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card class="border-border/50">
-                    <CardContent class="pt-6">
-                        <div class="flex items-center gap-4">
-                            <div class="p-3 rounded-full bg-red-500/10">
-                                <AlertTriangle class="h-6 w-6 text-red-500" />
-                            </div>
-                            <div>
-                                <p class="text-2xl font-bold">{{ requests.filter(r => r.urgency === 'urgent').length }}</p>
-                                <p class="text-sm text-muted-foreground">Urgent Requests</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card class="border-border/50">
-                    <CardContent class="pt-6">
-                        <div class="flex items-center gap-4">
-                            <div class="p-3 rounded-full bg-green-500/10">
-                                <CheckCircle class="h-6 w-6 text-green-500" />
-                            </div>
-                            <div>
-                                <p class="text-2xl font-bold">{{ requests.filter(r => isOverdue(r.created_at, r.urgency)).length }}</p>
-                                <p class="text-sm text-muted-foreground">Overdue</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+            <!-- Search and Filter Bar -->
+            <div class="flex flex-col sm:flex-row gap-4">
+                <div class="relative flex-1">
+                    <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        v-model="searchQuery"
+                        placeholder="Search by name, employee ID, or reference..."
+                        class="pl-10"
+                    />
+                </div>
+                <Select v-model="statusFilter">
+                    <SelectTrigger class="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="authorized">Authorized</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
 
             <!-- Requests Table -->
             <Card class="border-border/50 shadow-sm">
-                <CardContent class="p-0">
-                    <div v-if="requests.length === 0" class="text-center py-12 text-muted-foreground">
+                <CardContent class="p-0 min-h-[400px]">
+                    <div v-if="filteredRequests.length === 0" class="text-center py-12 text-muted-foreground">
                         <FileText class="h-12 w-12 mx-auto mb-3 opacity-50" />
-                        <p class="text-lg">No pending requests</p>
-                        <p class="text-sm">All certificate requests have been processed</p>
+                        <p class="text-lg">No requests found</p>
+                        <p class="text-sm">Try adjusting your search or filter criteria</p>
                     </div>
                     <Table v-else>
                         <TableHeader>
                             <TableRow class="hover:bg-transparent border-border/50">
                                 <TableHead class="w-[280px]">Employee</TableHead>
                                 <TableHead class="w-[160px]">Type</TableHead>
+                                <TableHead class="w-[140px]">Status</TableHead>
                                 <TableHead class="w-[160px]">Request Date</TableHead>
-                                <TableHead>Purpose</TableHead>
                                 <TableHead class="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -232,40 +247,48 @@ const goToReview = (requestId: number) => {
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    <Badge :class="['text-xs border', getTypeBadgeClass(request.purpose)]">
-                                        {{ request.purpose === 'visa_application' ? 'Visa' : 
-                                           request.purpose === 'bank_loan' ? 'Bank/Mortgage' :
-                                           request.purpose === 'apartment_leasing' ? 'Apartment' :
-                                           request.purpose === 'higher_education' ? 'Education' : 'Other' }}
+                                    <Badge class="text-xs border bg-primary/10 text-primary border-primary/30">
+                                        EC
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>
+                                    <Badge :class="['text-xs border', getStatusBadgeClass(request.status)]">
+                                        {{ request.status.charAt(0).toUpperCase() + request.status.slice(1) }}
+                                    </Badge>
+                                    <Badge v-if="request.urgency === 'urgent'" variant="destructive" class="text-[10px] px-1.5 py-0 ml-1">
+                                        Urgent
                                     </Badge>
                                 </TableCell>
                                 <TableCell>
                                     <div>
                                         <p class="font-medium">{{ formatDate(request.created_at).date }}</p>
                                         <p class="text-sm text-muted-foreground">{{ formatDate(request.created_at).time }}</p>
-                                        <p v-if="isOverdue(request.created_at, request.urgency)" class="text-xs text-red-500 font-medium mt-1">
-                                            Overdue
-                                        </p>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div class="flex items-center gap-2">
-                                        <span>{{ getPurposeDisplay(request.purpose, request.purpose_other) }}</span>
-                                        <Badge v-if="request.urgency === 'urgent'" variant="destructive" class="text-[10px] px-1.5 py-0">
-                                            !
-                                        </Badge>
                                     </div>
                                 </TableCell>
                                 <TableCell class="text-right">
                                     <div class="flex items-center justify-end gap-2">
+                                        <!-- Cancel/Reject button -->
                                         <Button
+                                            v-if="request.status === 'pending' || request.status === 'authorized'"
                                             variant="outline"
                                             size="sm"
-                                            class="text-xs"
+                                            class="text-xs text-red-500 border-red-500/30 hover:bg-red-500/10"
+                                            @click="openRejectModal(request.id)"
                                         >
-                                            Clarify
+                                            Cancel
                                         </Button>
+                                        <!-- Manager sees Authorize for pending requests -->
                                         <Button
+                                            v-if="!isAdmin && request.status === 'pending'"
+                                            size="sm"
+                                            class="text-xs bg-blue-600 hover:bg-blue-700"
+                                            @click="authorizeRequest(request.id)"
+                                        >
+                                            Authorize
+                                        </Button>
+                                        <!-- Admin sees Approve & Issue for pending/authorized -->
+                                        <Button
+                                            v-if="isAdmin"
                                             size="sm"
                                             class="text-xs bg-primary hover:bg-primary/90"
                                             @click="goToReview(request.id)"
@@ -281,7 +304,7 @@ const goToReview = (requestId: number) => {
                     <!-- Pagination -->
                     <div v-if="totalPages > 1" class="flex items-center justify-between px-6 py-4 border-t border-border/50">
                         <p class="text-sm text-muted-foreground">
-                            Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to {{ Math.min(currentPage * itemsPerPage, requests.length) }} of {{ requests.length }} requests
+                            Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to {{ Math.min(currentPage * itemsPerPage, filteredRequests.length) }} of {{ filteredRequests.length }} requests
                         </p>
                         <div class="flex items-center gap-2">
                             <Button
@@ -317,5 +340,30 @@ const goToReview = (requestId: number) => {
                 </CardContent>
             </Card>
         </div>
+
+        <!-- Rejection Confirmation Modal -->
+        <Dialog v-model:open="rejectModalOpen">
+            <DialogContent class="sm:max-w-[425px]">
+                <DialogHeader>
+                    <div class="mx-auto bg-red-100 h-12 w-12 rounded-full flex items-center justify-center mb-4">
+                        <AlertCircle class="h-6 w-6 text-red-600" />
+                    </div>
+                    <DialogTitle class="text-center">Reject Request</DialogTitle>
+                    <DialogDescription class="text-center">
+                        Are you sure you want to reject this certificate request? This action cannot be undone.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <DialogFooter class="flex flex-col sm:flex-row gap-2 mt-4">
+                    <Button variant="outline" @click="closeRejectModal" :disabled="isRejecting" class="w-full sm:w-auto mt-2 sm:mt-0">
+                        Nevermind
+                    </Button>
+                    <Button variant="destructive" @click="confirmReject" :disabled="isRejecting" class="w-full sm:w-auto">
+                        <Loader2 v-if="isRejecting" class="mr-2 h-4 w-4 animate-spin" />
+                        Yes, Reject
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

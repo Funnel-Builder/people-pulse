@@ -18,6 +18,8 @@ class CertificateRequest extends Model
         'urgency',
         'remarks',
         'status',
+        'authorized_by',
+        'authorized_at',
         'approved_by',
         'approved_at',
         'issued_by',
@@ -27,6 +29,7 @@ class CertificateRequest extends Model
     protected function casts(): array
     {
         return [
+            'authorized_at' => 'datetime',
             'approved_at' => 'datetime',
             'issued_at' => 'datetime',
         ];
@@ -34,6 +37,7 @@ class CertificateRequest extends Model
 
     // Status constants
     const STATUS_PENDING = 'pending';
+    const STATUS_AUTHORIZED = 'authorized';
     const STATUS_APPROVED = 'approved';
     const STATUS_REJECTED = 'rejected';
     const STATUS_ISSUED = 'issued';

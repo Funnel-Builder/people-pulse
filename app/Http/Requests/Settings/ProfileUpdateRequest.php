@@ -17,15 +17,15 @@ class ProfileUpdateRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => [
-                'required',
-                'string',
-                'lowercase',
-                'email',
-                'max:255',
-                Rule::unique(User::class)->ignore($this->user()->id),
-            ],
             'profile_picture' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
+            // Additional info fields (user editable)
+            'nid_number' => ['nullable', 'string', 'max:50'],
+            'nationality' => ['nullable', 'string', 'max:100'],
+            'fathers_name' => ['nullable', 'string', 'max:255'],
+            'mothers_name' => ['nullable', 'string', 'max:255'],
+            'graduated_institution' => ['nullable', 'string', 'max:255'],
+            'permanent_address' => ['nullable', 'string', 'max:500'],
+            'present_address' => ['nullable', 'string', 'max:500'],
         ];
     }
 }

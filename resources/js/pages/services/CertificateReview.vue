@@ -232,11 +232,29 @@ const closeModal = () => {
                 <div class="space-y-6">
                     <Card class="border-border/50 shadow-sm">
                         <CardHeader class="pb-2">
-                            <CardTitle class="text-lg font-semibold flex items-center gap-2">
-                                <FileText class="h-5 w-5 text-primary" />
-                                Certificate Preview
-                            </CardTitle>
-                            <CardDescription>This is how the issued certificate will appear</CardDescription>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <CardTitle class="text-lg font-semibold flex items-center gap-2">
+                                        Certificate Preview
+                                    </CardTitle>
+                                    <CardDescription>This is how the issued certificate will appear</CardDescription>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <Badge variant="outline" class="bg-blue-50 text-blue-700 border-blue-200">
+                                        {{ getPurposeDisplay(request.purpose, request.purpose_other) }}
+                                    </Badge>
+                                    <Badge 
+                                        variant="outline" 
+                                        :class="[
+                                            request.urgency === 'urgent' 
+                                                ? 'bg-red-50 text-red-700 border-red-200' 
+                                                : 'bg-gray-50 text-gray-700 border-gray-200'
+                                        ]"
+                                    >
+                                        {{ request.urgency.charAt(0).toUpperCase() + request.urgency.slice(1) }}
+                                    </Badge>
+                                </div>
+                            </div>
                         </CardHeader>
                         <CardContent class="pt-4">
                             <!-- Certificate Preview (mimicking the PDF look) -->
@@ -295,32 +313,13 @@ const closeModal = () => {
                         </CardContent>
                     </Card>
 
-                    <!-- Request Details -->
-                    <Card class="border-border/50 shadow-sm">
-                        <CardHeader class="pb-2">
-                            <CardTitle class="text-[15px] font-semibold">Request Details</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <p class="text-sm text-muted-foreground">Purpose</p>
-                                    <p class="font-medium">{{ getPurposeDisplay(request.purpose, request.purpose_other) }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-muted-foreground">Urgency</p>
-                                    <p class="font-medium capitalize">{{ request.urgency }}</p>
-                                </div>
-                                <div v-if="request.remarks" class="md:col-span-2">
-                                    <p class="text-sm text-muted-foreground">Remarks</p>
-                                    <p class="font-medium">{{ request.remarks }}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+
+                    <!-- Request Details (Moved to right column) -->
                 </div>
 
                 <!-- Right Column: Verification & Actions -->
                 <div class="space-y-6">
+
                     <!-- Verification Checklist -->
                     <Card class="border-border/50 shadow-sm">
                         <CardHeader class="pb-4">
