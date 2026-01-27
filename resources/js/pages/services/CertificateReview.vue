@@ -14,7 +14,14 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { ArrowLeft, CheckCircle, XCircle, Download, Mail, FileText, Printer, AlertCircle } from 'lucide-vue-next';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ArrowLeft, CheckCircle, XCircle, Download, Mail, FileText, Printer, AlertCircle, Building2, User as UserIcon, AtSign, Check, X, Loader2 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import type { BreadcrumbItem } from '@/types';
 
@@ -38,6 +45,7 @@ interface EmployeeInfo {
     nid_number: string | null;
     joining_date: string | null;
     nationality: string;
+    profile_picture: string | null;
 }
 
 interface CertificateRequest {
@@ -74,7 +82,15 @@ const props = defineProps<Props>();
 
 const showIssuedModal = ref(false);
 const isIssuing = ref(false);
-const emailingTo = ref<string | null>(null);
+const rejectModalOpen = ref(false);
+const isRejecting = ref(false);
+const emailStates = ref<{
+    employee: 'idle' | 'sending' | 'success' | 'error';
+    self: 'idle' | 'sending' | 'success' | 'error';
+}>({
+    employee: 'idle',
+    self: 'idle',
+});
 
 // Verification checklist - auto-check based on data availability
 const verificationChecks = computed(() => [
@@ -128,6 +144,12 @@ const verificationChecks = computed(() => [
     },
 ]);
 
+const hasMissingInfo = computed(() => {
+    return !props.employeeInfo.fathers_name || 
+           !props.employeeInfo.mothers_name || 
+           !props.employeeInfo.nid_number;
+});
+
 const allRequiredChecksPassed = computed(() => {
     return verificationChecks.value
         .filter(c => c.required)
@@ -177,9 +199,19 @@ const issueCertificate = () => {
 };
 
 const rejectRequest = () => {
-    if (confirm('Are you sure you want to reject this request?')) {
-        router.post(`/services/certificate/${props.request.id}/reject`);
-    }
+    rejectModalOpen.value = true;
+};
+
+const closeRejectModal = () => {
+    rejectModalOpen.value = false;
+    isRejecting.value = false;
+};
+
+const confirmReject = () => {
+    isRejecting.value = true;
+    router.post(`/services/certificate/${props.request.id}/reject`, {}, {
+        onFinish: () => closeRejectModal(),
+    });
 };
 
 const downloadCertificate = () => {
@@ -187,16 +219,47 @@ const downloadCertificate = () => {
 };
 
 const emailCertificate = (recipient: 'employee' | 'self') => {
-    emailingTo.value = recipient;
+    emailStates.value[recipient] = 'sending';
+    
     router.post(`/services/certificate/${props.request.id}/email`, {
         recipient,
     }, {
         preserveScroll: true,
         onSuccess: () => {
-            emailingTo.value = null;
+            emailStates.value[recipient] = 'success';
+            setTimeout(() => {
+                emailStates.value[recipient] = 'idle';
+            }, 2000);
         },
         onError: () => {
-            emailingTo.value = null;
+            emailStates.value[recipient] = 'error';
+            setTimeout(() => {
+                emailStates.value[recipient] = 'idle';
+            }, 2000);
+        },
+    });
+};
+
+const getInitials = (name: string) => {
+    return name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+};
+
+const openGmail = () => {
+    const subject = encodeURIComponent(`Regarding Employment Certificate - ${props.request.ref_id}`);
+    const body = encodeURIComponent(`Hello ${props.employeeInfo.name},\n\nRegarding your certificate request...`);
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${props.employeeInfo.email}&su=${subject}&body=${body}`, '_blank');
+};
+
+const sendMissingInfoEmail = () => {
+    router.post(`/services/certificate/${props.request.id}/request-missing-info`, {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            // Optional: You could show a toast here if not handled globally by your flash messages
         },
     });
 };
@@ -359,26 +422,58 @@ const closeModal = () => {
                     </Card>
 
                     <!-- Employee Summary -->
-                    <Card class="border-border/50 shadow-sm">
-                        <CardHeader class="pb-4">
-                            <CardTitle class="text-[15px] font-semibold">Employee Summary</CardTitle>
-                        </CardHeader>
-                        <CardContent class="space-y-3">
-                            <div class="flex justify-between">
-                                <span class="text-sm text-muted-foreground">Name</span>
-                                <span class="text-sm font-medium">{{ employeeInfo.name }}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-sm text-muted-foreground">ID</span>
-                                <span class="text-sm font-medium">{{ employeeInfo.employee_id }}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-sm text-muted-foreground">Department</span>
-                                <span class="text-sm font-medium">{{ employeeInfo.department || 'N/A' }}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-sm text-muted-foreground">Designation</span>
-                                <span class="text-sm font-medium">{{ employeeInfo.designation }}</span>
+                    <!-- Employee Summary -->
+                    <!-- Employee Summary -->
+                    <Card class="border-border/50 shadow-sm overflow-hidden">
+                        <CardContent class="p-6">
+                            <div class="flex items-center gap-5">
+                                <Avatar class="h-14 w-14 border-2 border-background shadow-sm">
+                                    <AvatarImage v-if="employeeInfo.profile_picture" :src="employeeInfo.profile_picture" />
+                                    <AvatarFallback class="bg-primary/10 text-primary text-lg font-semibold">
+                                        {{ getInitials(employeeInfo.name) }}
+                                    </AvatarFallback>
+                                </Avatar>
+                                
+                                <div class="space-y-1">
+                                    <h3 class="font-bold text-lg text-foreground leading-none">{{ employeeInfo.name }}</h3>
+                                    <p class="text-sm text-muted-foreground font-medium">{{ employeeInfo.designation }}</p>
+                                    <div class="flex items-center gap-3 text-xs text-muted-foreground pt-1">
+                                        <div class="flex items-center gap-1.5">
+                                            <UserIcon class="h-3.5 w-3.5" />
+                                            <span class="font-medium text-foreground/80">{{ employeeInfo.employee_id }}</span>
+                                        </div>
+                                        <span class="text-border">•</span>
+                                        <div class="flex items-center gap-1.5">
+                                            <Building2 class="h-3.5 w-3.5" />
+                                            <span>{{ employeeInfo.department || 'N/A' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="ml-auto flex items-center gap-6">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger as-child>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                class="h-9 w-9 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-full"
+                                                title="Send Email"
+                                            >
+                                                <Mail class="h-5 w-5" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem @click="sendMissingInfoEmail" :disabled="!hasMissingInfo">
+                                                <AlertCircle class="mr-2 h-4 w-4 text-orange-500" />
+                                                <span>Request Missing Info</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem @click="openGmail">
+                                                <Mail class="mr-2 h-4 w-4" />
+                                                <span>Custom Message</span>
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
@@ -396,8 +491,8 @@ const closeModal = () => {
                             <span v-else>Issue Certificate</span>
                         </Button>
                         <Button
-                            variant="outline"
-                            class="w-full"
+                            variant="destructive"
+                            class="w-full bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:text-red-700 hover:border-red-300 shadow-sm"
                             @click="rejectRequest"
                         >
                             <XCircle class="h-4 w-4 mr-2" />
@@ -407,6 +502,31 @@ const closeModal = () => {
                 </div>
             </div>
         </div>
+
+        <!-- Rejection Confirmation Modal -->
+        <Dialog v-model:open="rejectModalOpen">
+            <DialogContent class="sm:max-w-[425px]">
+                <DialogHeader>
+                    <div class="mx-auto bg-red-100 h-12 w-12 rounded-full flex items-center justify-center mb-4">
+                        <AlertCircle class="h-6 w-6 text-red-600" />
+                    </div>
+                    <DialogTitle class="text-center">Reject Request</DialogTitle>
+                    <DialogDescription class="text-center">
+                        Are you sure you want to reject this certificate request? This action cannot be undone.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <DialogFooter class="flex flex-col sm:flex-row gap-2 mt-4">
+                    <Button variant="outline" @click="closeRejectModal" :disabled="isRejecting" class="w-full sm:w-auto mt-2 sm:mt-0">
+                        Nevermind
+                    </Button>
+                    <Button variant="destructive" @click="confirmReject" :disabled="isRejecting" class="w-full sm:w-auto">
+                        <Loader2 v-if="isRejecting" class="mr-2 h-4 w-4 animate-spin" />
+                        Yes, Reject
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
         <!-- Issued Modal -->
         <Dialog :open="showIssuedModal" @update:open="(v) => !v && closeModal()">
@@ -422,41 +542,68 @@ const closeModal = () => {
                 </DialogHeader>
 
                 <div class="py-4">
-                    <div class="bg-muted/50 rounded-lg p-4 text-center">
-                        <FileText class="h-16 w-16 mx-auto mb-3 text-primary" />
-                        <p class="font-medium">Employment Certificate</p>
+                    <div class="bg-muted/30 rounded-lg p-6 text-center border border-border/50">
+                        <FileText class="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+                        <p class="font-medium text-lg text-foreground">Employment Certificate</p>
                         <p class="text-sm text-muted-foreground">{{ request.ref_id }}</p>
-                        <p class="text-sm text-muted-foreground">{{ employeeInfo.name }}</p>
+                        <div class="mt-4 pt-4 border-t border-border/50">
+                            <p class="text-xs uppercase tracking-wide text-muted-foreground mb-1">Issued To</p>
+                            <p class="text-base font-bold text-foreground">{{ employeeInfo.name }}</p>
+                        </div>
                     </div>
                 </div>
 
-                <DialogFooter class="flex-col sm:flex-row gap-2">
+                <DialogFooter class="flex-col sm:flex-row gap-3">
                     <Button
-                        variant="outline"
+                        :variant="emailStates.employee === 'idle' ? 'outline' : (emailStates.employee === 'success' ? 'default' : 'destructive')"
                         @click="emailCertificate('employee')"
-                        :disabled="emailingTo !== null"
-                        class="flex-1"
+                        :disabled="emailStates.employee === 'sending'"
+                        class="flex-1 transition-all duration-300"
+                        :class="emailStates.employee === 'success' ? 'bg-green-600 hover:bg-green-700 text-white border-transparent' : ''"
                     >
-                        <Mail class="h-4 w-4 mr-2" />
-                        <span v-if="emailingTo === 'employee'">Sending...</span>
-                        <span v-else>Email to Employee</span>
+                        <template v-if="emailStates.employee === 'sending'">
+                           <span class="animate-spin mr-2">⏳</span> Sending...
+                        </template>
+                        <template v-else-if="emailStates.employee === 'success'">
+                            <Check class="h-4 w-4 mr-2" /> Sent
+                        </template>
+                        <template v-else-if="emailStates.employee === 'error'">
+                             <X class="h-4 w-4 mr-2" /> Failed
+                        </template>
+                        <template v-else>
+                            <Mail class="h-4 w-4 mr-2" />
+                            Email to Employee
+                        </template>
                     </Button>
+
                     <Button
-                        variant="outline"
+                        :variant="emailStates.self === 'idle' ? 'outline' : (emailStates.self === 'success' ? 'default' : 'destructive')"
                         @click="emailCertificate('self')"
-                        :disabled="emailingTo !== null"
-                        class="flex-1"
+                        :disabled="emailStates.self === 'sending'"
+                        class="flex-1 transition-all duration-300"
+                        :class="emailStates.self === 'success' ? 'bg-green-600 hover:bg-green-700 text-white border-transparent' : ''"
                     >
-                        <Mail class="h-4 w-4 mr-2" />
-                        <span v-if="emailingTo === 'self'">Sending...</span>
-                        <span v-else>Email to Me</span>
+                        <template v-if="emailStates.self === 'sending'">
+                           <span class="animate-spin mr-2">⏳</span> Sending...
+                        </template>
+                        <template v-else-if="emailStates.self === 'success'">
+                            <Check class="h-4 w-4 mr-2" /> Sent
+                        </template>
+                         <template v-else-if="emailStates.self === 'error'">
+                             <X class="h-4 w-4 mr-2" /> Failed
+                        </template>
+                        <template v-else>
+                            <AtSign class="h-4 w-4 mr-2" />
+                            Email to Me
+                        </template>
                     </Button>
+                    
                     <Button
                         @click="downloadCertificate"
                         class="flex-1"
                     >
                         <Download class="h-4 w-4 mr-2" />
-                        Download PDF
+                        Download
                     </Button>
                 </DialogFooter>
             </DialogContent>

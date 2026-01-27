@@ -300,6 +300,7 @@ class CertificateService
             'nid_number' => $user->nid_number,
             'joining_date' => $user->joining_date?->format('F d, Y'),
             'nationality' => $user->nationality ?? 'Bangladeshi',
+            'profile_picture' => $user->profile_picture,
         ];
     }
 }

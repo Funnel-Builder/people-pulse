@@ -255,14 +255,15 @@ class CertificateController extends Controller
             : $user->name;
 
         // Send email with PDF attachment
-        Mail::send([], [], function ($message) use ($recipientEmail, $recipientName, $certificateRequest, $pdfContent) {
+        $htmlContent = "
+            <p>Dear {$recipientName},</p>
+            <p>Please find attached your Employment Certificate (Ref: {$certificateRequest->ref_id}).</p>
+            <p>Best regards,<br>People & Operations Team</p>
+        ";
+
+        Mail::html($htmlContent, function ($message) use ($recipientEmail, $recipientName, $certificateRequest, $pdfContent) {
             $message->to($recipientEmail, $recipientName)
                 ->subject('Employment Certificate - ' . $certificateRequest->ref_id)
-                ->html("
-                    <p>Dear {$recipientName},</p>
-                    <p>Please find attached your Employment Certificate (Ref: {$certificateRequest->ref_id}).</p>
-                    <p>Best regards,<br>People & Operations Team</p>
-                ")
                 ->attachData(
                     $pdfContent,
                     'employment_certificate_' . str_replace('/', '_', $certificateRequest->ref_id) . '.pdf',
@@ -288,5 +289,48 @@ class CertificateController extends Controller
 
         return redirect()->route('services.certificate.approvals')
             ->with('success', 'Certificate request rejected.');
+    }
+
+    /**
+     * Request missing information from the employee via email.
+     */
+    public function requestMissingInfo(Request $request, CertificateRequest $certificateRequest)
+    {
+        $user = $request->user();
+
+        if (!$this->certificateService->canView($user, $certificateRequest)) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        $employee = $certificateRequest->user;
+        $missingFields = [];
+
+        if (empty($employee->fathers_name))
+            $missingFields[] = "Father's Name";
+        if (empty($employee->mothers_name))
+            $missingFields[] = "Mother's Name";
+        if (empty($employee->nid_number))
+            $missingFields[] = "NID Number";
+        // Check for address fields if they exist on the model, otherwise generic
+
+        $listItems = count($missingFields) > 0
+            ? implode("<br>", array_map(fn($f) => "[ ] $f", $missingFields))
+            : "[ ] Father's Name<br>[ ] Mother's Name<br>[ ] NID Number<br>[ ] Permanent Address";
+
+        $htmlContent = "
+            <p>Dear {$employee->name},</p>
+            <p>We are currently reviewing your request for an Employment Certificate (Ref: {$certificateRequest->ref_id}). However, we noticed that some information in your profile is incomplete, which is required for us to proceed.</p>
+            <p>Please update the following details in your profile:</p>
+            <div style='background: #f5f5f5; padding: 15px; border-radius: 4px; margin: 15px 0; font-family: monospace;'>{$listItems}</div>
+            <p>Once you have updated this information, please let us know so we can finalize your certificate.</p>
+            <p>Best regards,<br>People & Operations Team</p>
+        ";
+
+        Mail::html($htmlContent, function ($message) use ($employee, $certificateRequest) {
+            $message->to($employee->email, $employee->name)
+                ->subject("Action Required: Missing Information for Certificate Request ({$certificateRequest->ref_id})");
+        });
+
+        return back()->with('success', 'Missing information request sent to employee.');
     }
 }

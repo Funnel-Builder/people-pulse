@@ -114,6 +114,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/certificate/{certificateRequest}/download', [\App\Http\Controllers\CertificateController::class, 'download'])->name('certificate.download');
         Route::get('/certificate/{certificateRequest}/preview', [\App\Http\Controllers\CertificateController::class, 'preview'])->name('certificate.preview');
         Route::post('/certificate/{certificateRequest}/email', [\App\Http\Controllers\CertificateController::class, 'email'])->name('certificate.email');
+        Route::post('/certificate/{certificateRequest}/request-missing-info', [\App\Http\Controllers\CertificateController::class, 'requestMissingInfo'])->name('certificate.request-missing-info');
     });
 
     // =====================================================
