@@ -102,19 +102,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // =====================================================
     Route::prefix('services')->name('services.')->group(function () {
         // Employee Certificate
-        Route::get('/certificate/history', [\App\Http\Controllers\CertificateController::class, 'history'])->name('certificate.history');
-        Route::get('/certificate', [\App\Http\Controllers\CertificateController::class, 'index'])->name('certificate');
-        Route::post('/certificate', [\App\Http\Controllers\CertificateController::class, 'store'])->name('certificate.store');
-        Route::get('/certificate/approvals', [\App\Http\Controllers\CertificateController::class, 'approvals'])->name('certificate.approvals');
-        Route::get('/certificate/{certificateRequest}/review', [\App\Http\Controllers\CertificateController::class, 'review'])->name('certificate.review');
-        Route::post('/certificate/{certificateRequest}/issue', [\App\Http\Controllers\CertificateController::class, 'issue'])->name('certificate.issue');
-        Route::post('/certificate/{certificateRequest}/reject', [\App\Http\Controllers\CertificateController::class, 'reject'])->name('certificate.reject');
-        Route::post('/certificate/{certificateRequest}/cancel', [\App\Http\Controllers\CertificateController::class, 'cancel'])->name('certificate.cancel');
-        Route::post('/certificate/{certificateRequest}/authorize', [\App\Http\Controllers\CertificateController::class, 'authorizeRequest'])->name('certificate.authorize');
-        Route::get('/certificate/{certificateRequest}/download', [\App\Http\Controllers\CertificateController::class, 'download'])->name('certificate.download');
-        Route::get('/certificate/{certificateRequest}/preview', [\App\Http\Controllers\CertificateController::class, 'preview'])->name('certificate.preview');
-        Route::post('/certificate/{certificateRequest}/email', [\App\Http\Controllers\CertificateController::class, 'email'])->name('certificate.email');
-        Route::post('/certificate/{certificateRequest}/request-missing-info', [\App\Http\Controllers\CertificateController::class, 'requestMissingInfo'])->name('certificate.request-missing-info');
+        Route::get('/employment-certificate/history', [\App\Http\Controllers\CertificateController::class, 'history'])->name('certificate.history');
+        Route::get('/employment-certificate', [\App\Http\Controllers\CertificateController::class, 'index'])->name('certificate');
+        Route::post('/employment-certificate', [\App\Http\Controllers\CertificateController::class, 'store'])->name('certificate.store');
+        Route::get('/approvals', [\App\Http\Controllers\CertificateController::class, 'approvals'])->name('certificate.approvals');
+        Route::get('/employment-certificate/{certificateRequest}/review', [\App\Http\Controllers\CertificateController::class, 'review'])->name('certificate.review');
+        Route::post('/employment-certificate/{certificateRequest}/issue', [\App\Http\Controllers\CertificateController::class, 'issue'])->name('certificate.issue');
+        Route::post('/employment-certificate/{certificateRequest}/reject', [\App\Http\Controllers\CertificateController::class, 'reject'])->name('certificate.reject');
+        Route::post('/employment-certificate/{certificateRequest}/cancel', [\App\Http\Controllers\CertificateController::class, 'cancel'])->name('certificate.cancel');
+        Route::post('/employment-certificate/{certificateRequest}/authorize', [\App\Http\Controllers\CertificateController::class, 'authorizeRequest'])->name('certificate.authorize');
+        Route::get('/employment-certificate/{certificateRequest}/download', [\App\Http\Controllers\CertificateController::class, 'download'])->name('certificate.download');
+        Route::get('/employment-certificate/{certificateRequest}/preview', [\App\Http\Controllers\CertificateController::class, 'preview'])->name('certificate.preview');
+        Route::post('/employment-certificate/{certificateRequest}/email', [\App\Http\Controllers\CertificateController::class, 'email'])->name('certificate.email');
+        Route::post('/employment-certificate/{certificateRequest}/request-missing-info', [\App\Http\Controllers\CertificateController::class, 'requestMissingInfo'])->name('certificate.request-missing-info');
     });
 
     // =====================================================

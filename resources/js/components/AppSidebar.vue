@@ -72,7 +72,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     const servicesChildren: NavItem[] = [
         {
             title: 'EC',
-            href: '/services/certificate',
+            href: '/services/employment-certificate',
             icon: ClipboardList,
         },
     ];
@@ -81,7 +81,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     if (user.value?.role === 'manager' || user.value?.role === 'admin') {
         servicesChildren.push({
             title: 'Approvals',
-            href: '/services/certificate/approvals',
+            href: '/services/approvals',
             icon: ClipboardList,
             badge: page.props.auth?.pendingCertificateApprovals || 0,
         });

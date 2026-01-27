@@ -36,7 +36,7 @@ import type { BreadcrumbItem } from '@/types';
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Services', href: '#' },
-    { title: 'Certificate Approvals', href: '/services/certificate/approvals' },
+    { title: 'Certificate Approvals', href: '/services/approvals' },
 ];
 
 interface User {
@@ -60,23 +60,52 @@ interface CertificateRequest {
     created_at: string;
 }
 
+
+
+interface PaginationLink {
+    url: string | null;
+    label: string;
+    active: boolean;
+}
+
+interface PaginatedResponse {
+    data: CertificateRequest[];
+    links: PaginationLink[];
+    from: number;
+    to: number;
+    total: number;
+    last_page: number;
+    current_page: number;
+}
+
 interface Props {
-    requests: CertificateRequest[];
+    requests: PaginatedResponse;
     userRole: string;
+    isHistory: boolean;
 }
 
 const props = defineProps<Props>();
 
-// Search and filter
+// Search and Filters
 const searchQuery = ref('');
-const statusFilter = ref('all');
+// const statusFilter = ref('all'); // Removed as per request
+const typeFilter = ref('all');
 
-// Pagination
-const currentPage = ref(1);
-const itemsPerPage = 7;
+const getFilterLabel = (value: string) => {
+    const map: Record<string, string> = {
+        'all': 'All Types',
+        'EC': 'EC',
+        'RL': 'RL',
+        'VRL': 'VRL',
+        'XC': 'XC',
+    };
+    return map[value] || 'All Types';
+};
 
-const filteredRequests = computed(() => {
-    let result = props.requests;
+// Computed filtered data (from current page only, as it's server-side paginated main list)
+// Note: Ideally filtering should be server-side too, but for type (which isn't in DB yet/mapped), we filter the current page view or assume all are EC for now.
+const filteredRequestsData = computed(() => {
+    let result = props.requests.data;
 
     // Apply search
     if (searchQuery.value) {
@@ -88,21 +117,29 @@ const filteredRequests = computed(() => {
         );
     }
 
-    // Apply status filter
-    if (statusFilter.value !== 'all') {
-        result = result.filter(r => r.status === statusFilter.value);
+    // Apply Type Filter
+    // Currently all are assumed EC, but logic added for future
+    if (typeFilter.value !== 'all') {
+        // Mock filtering logic - since we only have EC for now
+        if (typeFilter.value === 'EC') {
+            // keep all
+        } else {
+            // If selecting other types, show empty for now or filter if property existed
+            result = []; 
+        }
     }
 
     return result;
 });
 
-const totalPages = computed(() => Math.ceil(filteredRequests.value.length / itemsPerPage));
-
-const paginatedRequests = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage;
-    const end = start + itemsPerPage;
-    return filteredRequests.value.slice(start, end);
-});
+const toggleHistory = () => {
+    router.get('/services/approvals', { 
+        history: props.isHistory ? 0 : 1 
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
 
 const isAdmin = computed(() => props.userRole === 'admin');
 
@@ -142,11 +179,11 @@ const getInitials = (name: string) => {
 };
 
 const goToReview = (requestId: number) => {
-    router.get(`/services/certificate/${requestId}/review`);
+    router.get(`/services/employment-certificate/${requestId}/review`);
 };
 
 const authorizeRequest = (requestId: number) => {
-    router.post(`/services/certificate/${requestId}/authorize`);
+    router.post(`/services/employment-certificate/${requestId}/authorize`);
 };
 
 // Rejection Modal Logic
@@ -169,7 +206,7 @@ const confirmReject = () => {
     if (!requestToReject.value) return;
 
     isRejecting.value = true;
-    router.post(`/services/certificate/${requestToReject.value}/reject`, {}, {
+    router.post(`/services/employment-certificate/${requestToReject.value}/reject`, {}, {
         onFinish: () => closeRejectModal(),
     });
 };
@@ -181,37 +218,52 @@ const confirmReject = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-4 md:p-6 max-w-7xl mx-auto">
             <!-- Header -->
-            <div>
-                <h1 class="text-2xl font-bold">Certificate Approvals</h1>
-                <p class="text-muted-foreground mt-1">Review and process employee certificate requests</p>
+            <!-- Header -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold">Certificate Approvals</h1>
+                    <p class="text-muted-foreground mt-1">Review and process employee certificate requests</p>
+                </div>
+                <Button 
+                    variant="outline" 
+                    @click="toggleHistory"
+                    :class="{'bg-primary/10 text-primary border-primary/30': isHistory}"
+                >
+                    <FileText class="w-4 h-4 mr-2" />
+                    {{ isHistory ? 'Back to Pending' : 'View History' }}
+                </Button>
             </div>
 
             <!-- Search and Filter Bar -->
-            <div class="flex flex-col sm:flex-row gap-4">
-                <div class="relative flex-1">
+            <div class="flex flex-col sm:flex-row gap-4 justify-between">
+                 <div class="relative w-full sm:w-[350px]">
                     <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         v-model="searchQuery"
-                        placeholder="Search by name, employee ID, or reference..."
+                        placeholder="Search by name, ID, or reference..."
                         class="pl-10"
                     />
                 </div>
-                <Select v-model="statusFilter">
-                    <SelectTrigger class="w-full sm:w-[180px]">
-                        <SelectValue placeholder="Filter by status" />
+                <Select v-model="typeFilter">
+                    <SelectTrigger class="w-full sm:w-[200px]">
+                        <SelectValue>
+                            {{ getFilterLabel(typeFilter) }}
+                        </SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="authorized">Authorized</SelectItem>
-                    </SelectContent>
-                </Select>
+                        <SelectContent>
+                            <SelectItem value="all">All Types</SelectItem>
+                            <SelectItem value="EC">Employment Certificate (EC)</SelectItem>
+                            <SelectItem value="RL">Release Letter (RL)</SelectItem>
+                            <SelectItem value="VRL">Visa Recommendation Letter (VRL)</SelectItem>
+                            <SelectItem value="XC">Experience Certificate (XC)</SelectItem>
+                        </SelectContent>
+                    </Select>
             </div>
 
             <!-- Requests Table -->
             <Card class="border-border/50 shadow-sm">
                 <CardContent class="p-0 min-h-[400px]">
-                    <div v-if="filteredRequests.length === 0" class="text-center py-12 text-muted-foreground">
+                    <div v-if="filteredRequestsData.length === 0" class="flex flex-col items-center justify-center min-h-[400px] text-muted-foreground">
                         <FileText class="h-12 w-12 mx-auto mb-3 opacity-50" />
                         <p class="text-lg">No requests found</p>
                         <p class="text-sm">Try adjusting your search or filter criteria</p>
@@ -219,19 +271,25 @@ const confirmReject = () => {
                     <Table v-else>
                         <TableHeader>
                             <TableRow class="hover:bg-transparent border-border/50">
-                                <TableHead class="w-[280px]">Employee</TableHead>
+                                <TableHead class="w-[120px]">Employee ID</TableHead>
+                                <TableHead class="w-[250px]">Employee</TableHead>
                                 <TableHead class="w-[160px]">Type</TableHead>
+                                <TableHead class="w-[200px]">Purpose</TableHead>
                                 <TableHead class="w-[140px]">Status</TableHead>
-                                <TableHead class="w-[160px]">Request Date</TableHead>
-                                <TableHead class="text-right">Actions</TableHead>
+                                <TableHead class="w-[160px]">{{ isHistory ? 'Processed Date' : 'Request Date' }}</TableHead>
+                                <TableHead class="text-center" v-if="!isHistory">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             <TableRow
-                                v-for="request in paginatedRequests"
+                                v-for="request in filteredRequestsData"
                                 :key="request.id"
                                 class="border-border/50"
                             >
+
+                                <TableCell>
+                                    <span class="font-medium text-muted-foreground">{{ request.user.employee_id }}</span>
+                                </TableCell>
                                 <TableCell>
                                     <div class="flex items-center gap-3">
                                         <Avatar class="h-10 w-10">
@@ -252,6 +310,11 @@ const confirmReject = () => {
                                     </Badge>
                                 </TableCell>
                                 <TableCell>
+                                    <div class="max-w-[200px] truncate" :title="request.purpose">
+                                        {{ request.purpose }}
+                                    </div>
+                                </TableCell>
+                                <TableCell>
                                     <Badge :class="['text-xs border', getStatusBadgeClass(request.status)]">
                                         {{ request.status.charAt(0).toUpperCase() + request.status.slice(1) }}
                                     </Badge>
@@ -265,8 +328,8 @@ const confirmReject = () => {
                                         <p class="text-sm text-muted-foreground">{{ formatDate(request.created_at).time }}</p>
                                     </div>
                                 </TableCell>
-                                <TableCell class="text-right">
-                                    <div class="flex items-center justify-end gap-2">
+                                <TableCell class="text-center" v-if="!isHistory">
+                                    <div class="flex items-center justify-center gap-2">
                                         <!-- Cancel/Reject button -->
                                         <Button
                                             v-if="request.status === 'pending' || request.status === 'authorized'"
@@ -301,39 +364,22 @@ const confirmReject = () => {
                         </TableBody>
                     </Table>
 
-                    <!-- Pagination -->
-                    <div v-if="totalPages > 1" class="flex items-center justify-between px-6 py-4 border-t border-border/50">
+                    <!-- Server-side Pagination -->
+                    <div v-if="requests.last_page > 1" class="flex items-center justify-between px-6 py-4 border-t border-border/50">
                         <p class="text-sm text-muted-foreground">
-                            Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to {{ Math.min(currentPage * itemsPerPage, filteredRequests.length) }} of {{ filteredRequests.length }} requests
+                            Showing {{ requests.from }} to {{ requests.to }} of {{ requests.total }} requests
                         </p>
                         <div class="flex items-center gap-2">
-                            <Button
-                                variant="outline"
+                             <Button
+                                v-for="(link, index) in requests.links"
+                                :key="index"
+                                :variant="link.active ? 'default' : 'outline'"
                                 size="sm"
-                                :disabled="currentPage === 1"
-                                @click="currentPage--"
+                                :class="['h-8 min-w-[32px] px-2', { 'pointer-events-none opacity-50': !link.url && link.label !== '...' }]"
+                                :disabled="!link.url"
+                                @click="link.url && router.visit(link.url, { preserveState: true, preserveScroll: true, data: { history: isHistory ? 1 : 0 } })"
                             >
-                                Previous
-                            </Button>
-                            <div class="flex items-center gap-1">
-                                <Button
-                                    v-for="page in totalPages"
-                                    :key="page"
-                                    :variant="currentPage === page ? 'default' : 'outline'"
-                                    size="sm"
-                                    class="w-8 h-8 p-0"
-                                    @click="currentPage = page"
-                                >
-                                    {{ page }}
-                                </Button>
-                            </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                :disabled="currentPage === totalPages"
-                                @click="currentPage++"
-                            >
-                                Next
+                                <span v-html="link.label"></span>
                             </Button>
                         </div>
                     </div>
@@ -356,7 +402,7 @@ const confirmReject = () => {
 
                 <DialogFooter class="flex flex-col sm:flex-row gap-2 mt-4">
                     <Button variant="outline" @click="closeRejectModal" :disabled="isRejecting" class="w-full sm:w-auto mt-2 sm:mt-0">
-                        Nevermind
+                        No
                     </Button>
                     <Button variant="destructive" @click="confirmReject" :disabled="isRejecting" class="w-full sm:w-auto">
                         <Loader2 v-if="isRejecting" class="mr-2 h-4 w-4 animate-spin" />

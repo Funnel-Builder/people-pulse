@@ -28,7 +28,7 @@ import type { BreadcrumbItem } from '@/types';
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Services', href: '#' },
-    { title: 'Certificate Approvals', href: '/services/certificate/approvals' },
+    { title: 'Certificate Approvals', href: '/services/approvals' },
     { title: 'Review', href: '#' },
 ];
 
@@ -180,12 +180,12 @@ const formatCurrentDate = () => {
 };
 
 const goBack = () => {
-    router.get('/services/certificate/approvals');
+    router.get('/services/approvals');
 };
 
 const issueCertificate = () => {
     isIssuing.value = true;
-    router.post(`/services/certificate/${props.request.id}/issue`, {}, {
+    router.post(`/services/employment-certificate/${props.request.id}/issue`, {}, {
         preserveState: true,
         preserveScroll: true,
         onSuccess: () => {
@@ -209,19 +209,19 @@ const closeRejectModal = () => {
 
 const confirmReject = () => {
     isRejecting.value = true;
-    router.post(`/services/certificate/${props.request.id}/reject`, {}, {
+    router.post(`/services/employment-certificate/${props.request.id}/reject`, {}, {
         onFinish: () => closeRejectModal(),
     });
 };
 
 const downloadCertificate = () => {
-    window.open(`/services/certificate/${props.request.id}/download`, '_blank');
+    window.open(`/services/employment-certificate/${props.request.id}/download`, '_blank');
 };
 
 const emailCertificate = (recipient: 'employee' | 'self') => {
     emailStates.value[recipient] = 'sending';
     
-    router.post(`/services/certificate/${props.request.id}/email`, {
+    router.post(`/services/employment-certificate/${props.request.id}/email`, {
         recipient,
     }, {
         preserveScroll: true,
@@ -256,7 +256,7 @@ const openGmail = () => {
 };
 
 const sendMissingInfoEmail = () => {
-    router.post(`/services/certificate/${props.request.id}/request-missing-info`, {}, {
+    router.post(`/services/employment-certificate/${props.request.id}/request-missing-info`, {}, {
         preserveScroll: true,
         onSuccess: () => {
             // Optional: You could show a toast here if not handled globally by your flash messages
@@ -266,7 +266,7 @@ const sendMissingInfoEmail = () => {
 
 const closeModal = () => {
     showIssuedModal.value = false;
-    router.get('/services/certificate/approvals');
+    router.get('/services/approvals');
 };
 </script>
 
@@ -518,7 +518,7 @@ const closeModal = () => {
 
                 <DialogFooter class="flex flex-col sm:flex-row gap-2 mt-4">
                     <Button variant="outline" @click="closeRejectModal" :disabled="isRejecting" class="w-full sm:w-auto mt-2 sm:mt-0">
-                        Nevermind
+                        No
                     </Button>
                     <Button variant="destructive" @click="confirmReject" :disabled="isRejecting" class="w-full sm:w-auto">
                         <Loader2 v-if="isRejecting" class="mr-2 h-4 w-4 animate-spin" />

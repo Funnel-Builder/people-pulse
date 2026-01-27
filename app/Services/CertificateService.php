@@ -31,7 +31,7 @@ class CertificateService
      * Managers see pending requests from their department/sub-department.
      * Admins see pending + authorized requests.
      */
-    public function getPendingApprovals(User $user): Collection
+    public function getPendingApprovals(User $user)
     {
         if (!$user->isManager() && !$user->isAdmin()) {
             return collect([]);
@@ -61,7 +61,32 @@ class CertificateService
             }
         }
 
-        return $query->orderBy('created_at', 'desc')->get();
+        return $query->orderBy('created_at', 'desc')->paginate(10);
+    }
+
+    /**
+     * Get approval history for a user (Manager or Admin).
+     */
+    public function getApprovalHistory(User $user)
+    {
+        $query = CertificateRequest::with(['user.department', 'user.subDepartment', 'issuer']);
+
+        if ($user->isAdmin()) {
+            // Admin sees all processed requests (issued, turned_down, cancelled, rejected)
+            // excluding pending and authorized which are in the main view
+            $query->whereIn('status', [
+                CertificateRequest::STATUS_ISSUED,
+                CertificateRequest::STATUS_REJECTED,
+                CertificateRequest::STATUS_CANCELLED,
+            ]);
+        } else {
+            // Manager sees requests they authorized
+            $query->where('authorized_by', $user->id);
+            // Managers might want to see what happened to requests they authorized, 
+            // even if current status is issued/rejected by admin.
+        }
+
+        return $query->orderBy('updated_at', 'desc')->paginate(10);
     }
 
     /**

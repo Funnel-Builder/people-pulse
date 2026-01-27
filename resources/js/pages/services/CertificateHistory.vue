@@ -12,16 +12,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import {
-    Pagination,
-    PaginationEllipsis,
-    PaginationFirst,
-    PaginationLast,
-    PaginationList,
-    PaginationListItem,
-    PaginationNext,
-    PaginationPrev,
-} from '@/components/ui/pagination';
+
 import {
     Dialog,
     DialogContent,
@@ -37,8 +28,8 @@ import type { BreadcrumbItem } from '@/types';
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Services', href: '#' },
-    { title: 'Employee Certificate', href: '/services/certificate' },
-    { title: 'History', href: '/services/certificate/history' },
+    { title: 'Employee Certificate', href: '/services/employment-certificate' },
+    { title: 'History', href: '/services/employment-certificate/history' },
 ];
 
 interface CertificateRequest {
@@ -118,7 +109,7 @@ const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
 };
 
 const downloadCertificate = (requestId: number) => {
-    window.open(`/services/certificate/${requestId}/download`, '_blank');
+    window.open(`/services/employment-certificate/${requestId}/download`, '_blank');
 };
 
 const requestToCancel = ref<number | null>(null);
@@ -140,7 +131,7 @@ const handleCancel = () => {
     if (!requestToCancel.value) return;
 
     isCancelling.value = true;
-    router.post(`/services/certificate/${requestToCancel.value}/cancel`, {}, {
+    router.post(`/services/employment-certificate/${requestToCancel.value}/cancel`, {}, {
         preserveScroll: true,
         onFinish: () => closeCancelModal(),
     });
@@ -158,7 +149,7 @@ const handleCancel = () => {
                     <h1 class="text-2xl font-bold">Request History</h1>
                     <p class="text-muted-foreground mt-1">View the status of your certificate requests</p>
                 </div>
-                <Button variant="outline" @click="router.visit('/services/certificate')">
+                <Button variant="outline" @click="router.visit('/services/employment-certificate')">
                     Back to Request
                 </Button>
             </div>
@@ -278,7 +269,7 @@ const handleCancel = () => {
 
                 <DialogFooter class="flex flex-col sm:flex-row gap-2 mt-4">
                     <Button variant="outline" @click="closeCancelModal" :disabled="isCancelling" class="w-full sm:w-auto mt-2 sm:mt-0">
-                        Nevermind
+                        No
                     </Button>
                     <Button variant="destructive" @click="handleCancel" :disabled="isCancelling" class="w-full sm:w-auto">
                         <Loader2 v-if="isCancelling" class="mr-2 h-4 w-4 animate-spin" />

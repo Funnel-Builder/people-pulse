@@ -46,6 +46,8 @@ class CertificateController extends Controller
             'employeeInfo' => $this->certificateService->getEmployeeInfo($user),
             'activeRequest' => $activeRequest,
             'latestIssuedCertificate' => $latestIssuedCertificate,
+            'issuerInfo' => config('services_module.issuer'),
+            'companyInfo' => config('services_module.company'),
         ]);
     }
 
@@ -112,11 +114,18 @@ class CertificateController extends Controller
             abort(403, 'Unauthorized access.');
         }
 
-        $pendingRequests = $this->certificateService->getPendingApprovals($user);
+        $isHistory = $request->query('history') == 1;
+
+        if ($isHistory) {
+            $requests = $this->certificateService->getApprovalHistory($user);
+        } else {
+            $requests = $this->certificateService->getPendingApprovals($user);
+        }
 
         return Inertia::render('services/CertificateApprovals', [
-            'requests' => $pendingRequests,
+            'requests' => $requests,
             'userRole' => $user->role,
+            'isHistory' => $isHistory,
         ]);
     }
 

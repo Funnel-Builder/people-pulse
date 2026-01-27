@@ -21,7 +21,7 @@ import type { BreadcrumbItem } from '@/types';
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Services', href: '#' },
-    { title: 'Employee Certificate', href: '/services/certificate' },
+    { title: 'Employee Certificate', href: '/services/employment-certificate' },
 ];
 
 interface EmployeeInfo {
@@ -64,11 +64,24 @@ interface IssuedCertificate {
     issued_at: string;
 }
 
+interface IssuerInfo {
+    name: string;
+    title: string;
+    phone: string;
+}
+
+interface CompanyInfo {
+    name: string;
+    short_name: string;
+}
+
 interface Props {
     purposes: Record<string, string>;
     employeeInfo: EmployeeInfo;
     activeRequest: ActiveRequest | null;
     latestIssuedCertificate: IssuedCertificate | null;
+    issuerInfo: IssuerInfo;
+    companyInfo: CompanyInfo;
 }
 
 const props = defineProps<Props>();
@@ -131,7 +144,7 @@ const form = useForm({
 
 
 const submitRequest = () => {
-    form.post('/services/certificate', {
+    form.post('/services/employment-certificate', {
         preserveScroll: true,
         onSuccess: () => {
             form.reset();
@@ -162,6 +175,14 @@ const formatDate = (dateStr: string) => {
     });
 };
 
+const formatCurrentDate = () => {
+    return new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: '2-digit',
+    });
+};
+
 const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
     if (purpose === 'other') {
         return purposeOther || 'Other';
@@ -170,7 +191,7 @@ const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
 };
 
 const downloadCertificate = (id: number) => {
-    window.open(`/services/certificate/${id}/download`, '_blank');
+    window.open(`/services/employment-certificate/${id}/download`, '_blank');
 };
 
 // Email Button Logic
@@ -181,7 +202,7 @@ const sendEmail = (id: number) => {
 
     emailStatus.value = 'sending';
 
-    router.post(`/services/certificate/${id}/email`, { recipient: 'self' }, {
+    router.post(`/services/employment-certificate/${id}/email`, { recipient: 'self' }, {
         preserveScroll: true,
         onSuccess: () => {
             emailStatus.value = 'success';
@@ -212,16 +233,16 @@ const sendEmail = (id: number) => {
                 </div>
                 <!-- Show both buttons when viewing issued certificate -->
                 <div v-if="props.latestIssuedCertificate && !props.activeRequest" class="flex items-center gap-2 w-full md:w-auto">
-                    <Button class="gap-2 flex-1 md:flex-none" @click="$inertia.visit('/services/certificate?new=1')">
+                    <Button class="gap-2 flex-1 md:flex-none" @click="$inertia.visit('/services/employment-certificate?new=1')">
                         <Plus class="h-4 w-4" />
                         New Request
                     </Button>
-                    <Button variant="outline" class="gap-2 flex-1 md:flex-none" @click="$inertia.visit('/services/certificate/history')">
+                    <Button variant="outline" class="gap-2 flex-1 md:flex-none" @click="$inertia.visit('/services/employment-certificate/history')">
                         <History class="h-4 w-4" />
                         History
                     </Button>
                 </div>
-                <Button v-else variant="outline" class="gap-2 w-full md:w-auto" @click="$inertia.visit('/services/certificate/history')">
+                <Button v-else variant="outline" class="gap-2 w-full md:w-auto" @click="$inertia.visit('/services/employment-certificate/history')">
                     <History class="h-4 w-4" />
                     History
                 </Button>
@@ -247,15 +268,59 @@ const sendEmail = (id: number) => {
                                 </div>
                             </CardHeader>
                             <CardContent class="p-0">
-                                <!-- Desktop View: Certificate Preview Iframe -->
+                                <!-- Desktop View: Certificate HTML Preview -->
                                 <div class="hidden md:block">
                                     <div class="bg-muted/50 p-6">
-                                        <div class="bg-white shadow-lg rounded-lg overflow-hidden mx-auto h-[480px]" style="max-width: 680px;">
-                                            <iframe
-                                                :src="`/services/certificate/${props.latestIssuedCertificate.id}/preview`"
-                                                class="w-full h-full"
-                                                frameborder="0"
-                                            />
+                                        <!-- HTML Certificate Preview -->
+                                        <div class="bg-white text-black rounded-lg p-8 shadow-inner border mx-auto text-left" style="max-width: 680px;">
+                                            <!-- Header -->
+                                            <div class="flex justify-between items-start mb-8">
+                                                <p class="text-sm">Ref: {{ props.latestIssuedCertificate.ref_id }}</p>
+                                                <p class="text-sm">Date: {{ formatCurrentDate() }}</p>
+                                            </div>
+
+                                            <!-- Title -->
+                                            <h2 class="text-center text-xl font-bold underline mb-8">
+                                                EMPLOYMENT CERTIFICATE
+                                            </h2>
+
+                                            <!-- Salutation -->
+                                            <p class="font-semibold mb-4">To Whom It May Concern,</p>
+
+                                            <!-- Body -->
+                                            <p class="text-justify leading-relaxed mb-4">
+                                                To Whom It May Concern, This is to certify that Mr. 
+                                                <span>{{ props.employeeInfo.name || '[Name]' }}</span>
+                                                (ID: <span>{{ props.employeeInfo.employee_id || '[ID]' }}</span>), 
+                                                son of <span>{{ props.employeeInfo.fathers_name || "[Father's Name]" }}</span>
+                                                and <span>{{ props.employeeInfo.mothers_name || "[Mother's Name]" }}</span>, 
+                                                National ID Card Number. <span>{{ props.employeeInfo.nid_number || '[NID Number]' }}</span>, 
+                                                has been employed at {{ props.companyInfo?.name || 'Company Name' }} as a permanent employee since 
+                                                <span>{{ props.employeeInfo.joining_date || '[joining date]' }}</span>. 
+                                                Currently he is working in the 
+                                                <span>{{ props.employeeInfo.department || '[Department Name]' }}</span>
+                                                <span> ({{ props.employeeInfo.sub_department || 'Sub-Department Name if applicable' }})</span>
+                                                department as a <span>{{ props.employeeInfo.designation || '[Current Designation]' }}</span>.
+                                            </p>
+
+                                            <p class="text-justify leading-relaxed mb-4">
+                                                This certification is being issued on the date of {{ formatCurrentDate() }}
+                                                upon {{ props.employeeInfo.name?.split(' ')[0] || 'his' }} request and can be used for reference purposes.
+                                            </p>
+
+                                            <p class="text-justify leading-relaxed mb-8">
+                                                I hereby certify that the above-mentioned information is correct and accurate to the best of my knowledge.
+                                            </p>
+
+                                            <!-- Closing -->
+                                            <p class="mb-16">Sincerely,</p>
+
+                                            <!-- Signature -->
+                                            <div class="border-t border-black inline-block pt-2 min-w-[200px]">
+                                                <p class="font-bold">{{ props.issuerInfo?.name || 'Issuer Name' }}</p>
+                                                <p class="text-sm">{{ props.issuerInfo?.title || 'Issuer Title' }}</p>
+                                                <p class="text-sm">Cell: {{ props.issuerInfo?.phone || 'Issuer Phone' }}</p>
+                                            </div>
                                         </div>
                                     </div>
                                     
