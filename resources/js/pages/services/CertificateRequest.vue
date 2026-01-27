@@ -4,6 +4,7 @@ import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -13,7 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { FileText, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-vue-next';
+import { FileText, Clock, CheckCircle, XCircle, AlertCircle, History, Check, X } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
 import type { BreadcrumbItem } from '@/types';
 
@@ -52,11 +53,57 @@ interface CertificateRequest {
 interface Props {
     purposes: Record<string, string>;
     employeeInfo: EmployeeInfo;
-    myRequests: CertificateRequest[];
 }
 
 const props = defineProps<Props>();
 const page = usePage();
+
+const checklistItems = computed(() => [
+    {
+        label: 'Employee name is correct',
+        valid: !!props.employeeInfo.name,
+        required: true,
+    },
+    {
+        label: 'Employee ID is valid',
+        valid: !!props.employeeInfo.employee_id,
+        required: true,
+    },
+    {
+        label: "Father's name is provided",
+        valid: !!props.employeeInfo.fathers_name,
+        required: true,
+    },
+    {
+        label: "Mother's name is provided",
+        valid: !!props.employeeInfo.mothers_name,
+        required: true,
+    },
+    {
+        label: 'NID number is valid',
+        valid: !!props.employeeInfo.nid_number,
+        required: true,
+    },
+    {
+        label: 'Department is assigned',
+        valid: !!props.employeeInfo.department,
+        required: true,
+    },
+    {
+        label: 'Designation is specified',
+        valid: !!props.employeeInfo.designation,
+        required: true,
+    },
+    {
+        label: 'Joining date is recorded',
+        valid: !!props.employeeInfo.joining_date,
+        required: true,
+    },
+]);
+
+const isProfileComplete = computed(() => {
+    return checklistItems.value.every(item => !item.required || item.valid);
+});
 
 const form = useForm({
     purpose: '',
@@ -66,7 +113,6 @@ const form = useForm({
     agreement: false,
 });
 
-const showOtherInput = computed(() => form.purpose === 'other');
 
 const submitRequest = () => {
     form.post('/services/certificate', {
@@ -114,9 +160,15 @@ const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-4 md:p-6 max-w-6xl mx-auto">
             <!-- Header -->
-            <div class="text-center">
-                <h1 class="text-2xl font-bold">Request for Employment Certificate</h1>
-                <p class="text-muted-foreground mt-1">Submit a request to receive your official employment certificate</p>
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold">Request for Employment Certificate</h1>
+                    <p class="text-muted-foreground mt-1">Submit a request to receive your official employment certificate</p>
+                </div>
+                <Button variant="outline" class="gap-2" @click="$inertia.visit('/services/certificate/history')">
+                    <History class="h-4 w-4" />
+                    History
+                </Button>
             </div>
 
             <div class="grid gap-6 lg:grid-cols-[1fr_400px]">
@@ -126,7 +178,6 @@ const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
                     <Card class="border-border/50 shadow-sm">
                         <CardHeader class="pb-4">
                             <CardTitle class="text-lg font-semibold flex items-center gap-2">
-                                <FileText class="h-5 w-5 text-primary" />
                                 New Request
                             </CardTitle>
                             <CardDescription>Fill in the details below to submit your certificate request</CardDescription>
@@ -153,17 +204,6 @@ const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
                                     <p v-if="form.errors.purpose" class="text-sm text-destructive">{{ form.errors.purpose }}</p>
                                 </div>
 
-                                <!-- Other Purpose Input -->
-                                <div v-if="showOtherInput" class="space-y-2">
-                                    <Label for="purpose_other">Specify Purpose</Label>
-                                    <Textarea
-                                        id="purpose_other"
-                                        v-model="form.purpose_other"
-                                        placeholder="E.g. Address to 'Emirates NBD Bank'"
-                                        class="min-h-[80px]"
-                                    />
-                                    <p v-if="form.errors.purpose_other" class="text-sm text-destructive">{{ form.errors.purpose_other }}</p>
-                                </div>
 
                                 <!-- Urgency Level -->
                                 <div class="space-y-2">
@@ -173,7 +213,7 @@ const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
                                             type="button"
                                             :variant="form.urgency === 'normal' ? 'default' : 'outline'"
                                             @click="form.urgency = 'normal'"
-                                            class="flex-1"
+                                            class="h-9 px-6"
                                         >
                                             Normal
                                         </Button>
@@ -181,7 +221,7 @@ const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
                                             type="button"
                                             :variant="form.urgency === 'urgent' ? 'destructive' : 'outline'"
                                             @click="form.urgency = 'urgent'"
-                                            class="flex-1"
+                                            class="h-9 px-6"
                                         >
                                             Urgent
                                         </Button>
@@ -241,74 +281,80 @@ const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
                     </Card>
                 </div>
 
-                <!-- Right Column: Employee Information & Request History -->
+                <!-- Right Column: Verification Checklist -->
                 <div class="space-y-6">
-                    <!-- Employee Information Card -->
                     <Card class="border-border/50 shadow-sm">
                         <CardHeader class="pb-4">
-                            <CardTitle class="text-[15px] font-semibold">Your Information</CardTitle>
-                            <CardDescription>This information will appear on your certificate</CardDescription>
+                            <CardTitle class="text-[15px] font-semibold flex items-center gap-2">
+                                Verification Checklist
+                            </CardTitle>
+                            <CardDescription>Auto-verified based on employee data</CardDescription>
                         </CardHeader>
                         <CardContent class="space-y-4">
-                            <p class="text-sm leading-relaxed">
-                                This is to certify that <strong class="text-foreground">{{ employeeInfo.name }}</strong> 
-                                (ID: <strong class="text-foreground">{{ employeeInfo.employee_id }}</strong>), 
-                                <span v-if="employeeInfo.fathers_name">
-                                    son/daughter of <strong class="text-foreground">{{ employeeInfo.fathers_name }}</strong>
-                                </span>
-                                <span v-if="employeeInfo.mothers_name">
-                                    and <strong class="text-foreground">{{ employeeInfo.mothers_name }}</strong>,
-                                </span>
-                                <span v-if="employeeInfo.nid_number">
-                                    National ID Card Number: <strong class="text-foreground">{{ employeeInfo.nid_number }}</strong>,
-                                </span>
-                                has been employed at <strong class="text-foreground">BD Funnel Builder Limited</strong> as a permanent employee
-                                <span v-if="employeeInfo.joining_date">
-                                    since <strong class="text-foreground">{{ employeeInfo.joining_date }}</strong>
-                                </span>.
-                                Currently working in the 
-                                <strong class="text-foreground">{{ employeeInfo.department || 'N/A' }}</strong>
-                                <span v-if="employeeInfo.sub_department">
-                                    (<strong class="text-foreground">{{ employeeInfo.sub_department }}</strong>)
-                                </span>
-                                department as a <strong class="text-foreground">{{ employeeInfo.designation }}</strong>.
-                            </p>
-                            
-                            <!-- Missing Information Warning -->
-                            <div v-if="!employeeInfo.fathers_name || !employeeInfo.mothers_name || !employeeInfo.nid_number" 
-                                 class="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                                <p class="text-xs text-yellow-500">
-                                    <strong>Note:</strong> Some information is missing from your profile. Please contact HR to update your records for a complete certificate.
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <!-- Request History Card -->
-                    <Card class="border-border/50 shadow-sm">
-                        <CardHeader class="pb-4">
-                            <CardTitle class="text-[15px] font-semibold">Your Requests</CardTitle>
-                            <CardDescription>History of your certificate requests</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div v-if="myRequests.length === 0" class="text-center py-6 text-muted-foreground">
-                                <FileText class="h-10 w-10 mx-auto mb-2 opacity-50" />
-                                <p>No requests yet</p>
-                            </div>
-                            <div v-else class="space-y-3">
+                            <div class="space-y-3">
                                 <div
-                                    v-for="request in myRequests"
-                                    :key="request.id"
-                                    class="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50"
+                                    v-for="(item, index) in checklistItems"
+                                    :key="index"
+                                    class="flex items-center justify-between group"
                                 >
-                                    <div class="space-y-1">
-                                        <p class="text-sm font-medium">{{ request.ref_id }}</p>
-                                        <p class="text-xs text-muted-foreground">{{ getPurposeDisplay(request.purpose, request.purpose_other) }}</p>
-                                        <p class="text-xs text-muted-foreground">{{ formatDate(request.created_at) }}</p>
+                                    <div class="flex items-center gap-3">
+                                        <!-- Status Dot -->
+                                        <div 
+                                            class="h-2.5 w-2.5 rounded-full"
+                                            :class="item.valid ? 'bg-green-500' : 'bg-red-500'"
+                                        ></div>
+                                        
+                                        <span
+                                            class="text-sm transition-colors"
+                                            :class="[
+                                                item.valid ? 'text-foreground' : 'text-muted-foreground',
+                                                item.required && !item.valid ? 'text-destructive font-medium' : ''
+                                            ]"
+                                        >
+                                            {{ item.label }}
+                                            <span v-if="item.required" class="text-destructive ml-0.5">*</span>
+                                        </span>
                                     </div>
-                                    <Badge :class="['text-xs border', getStatusBadgeClass(request.status)]">
-                                        {{ request.status.charAt(0).toUpperCase() + request.status.slice(1) }}
+                                    <Badge
+                                        v-if="!item.valid && item.required"
+                                        variant="outline"
+                                        class="text-[10px] px-1.5 py-0 border-destructive/30 text-destructive bg-destructive/5"
+                                    >
+                                        Missing
                                     </Badge>
+                                </div>
+                            </div>
+
+                            <Separator />
+
+                            <div v-if="!isProfileComplete" class="space-y-3 rounded-md bg-yellow-500/10 p-4 border border-yellow-500/20">
+                                <div class="flex gap-3">
+                                    <AlertCircle class="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
+                                    <div class="space-y-1">
+                                        <p class="text-sm font-medium text-yellow-500">Credientials Missing</p>
+                                        <p class="text-xs text-muted-foreground leading-relaxed">
+                                            Required credentials is needed to get the certificate. Please add this information from your profile setting.
+                                        </p>
+                                    </div>
+                                </div>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    class="w-full bg-background/50 hover:bg-background border-yellow-500/30 hover:border-yellow-500/50 text-yellow-600"
+                                    @click="$inertia.visit('/settings/profile')"
+                                >
+                                    Go to Profile Setting
+                                </Button>
+                            </div>
+                            <div v-else class="rounded-md bg-green-500/10 p-3 border border-green-500/20">
+                                <div class="flex gap-2">
+                                    <CheckCircle class="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                                    <div class="space-y-1">
+                                        <p class="text-xs font-medium text-green-500">Eligible</p>
+                                        <p class="text-xs text-muted-foreground">
+                                            You are eligible to get the certificate.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>

@@ -26,7 +26,6 @@ class CertificateController extends Controller
         return Inertia::render('services/CertificateRequest', [
             'purposes' => config('services_module.certificate_purposes', []),
             'employeeInfo' => $this->certificateService->getEmployeeInfo($user),
-            'myRequests' => $this->certificateService->getUserRequests($user),
         ]);
     }
 
@@ -37,7 +36,7 @@ class CertificateController extends Controller
     {
         $validated = $request->validate([
             'purpose' => 'required|string',
-            'purpose_other' => 'nullable|string|max:255|required_if:purpose,other',
+            'purpose_other' => 'nullable|string|max:255',
             'urgency' => 'required|in:normal,urgent',
             'remarks' => 'nullable|string|max:1000',
             'agreement' => 'required|accepted',
@@ -47,6 +46,19 @@ class CertificateController extends Controller
 
         return redirect()->route('services.certificate')
             ->with('success', 'Certificate request submitted successfully.');
+    }
+
+    /**
+     * Display the user's certificate request history.
+     */
+    public function history(Request $request): Response
+    {
+        $user = $request->user();
+
+        return Inertia::render('services/CertificateHistory', [
+            'requests' => $this->certificateService->getUserRequests($user),
+            'purposes' => config('services_module.certificate_purposes', []),
+        ]);
     }
 
     /**

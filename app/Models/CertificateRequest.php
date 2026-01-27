@@ -37,6 +37,7 @@ class CertificateRequest extends Model
     const STATUS_APPROVED = 'approved';
     const STATUS_REJECTED = 'rejected';
     const STATUS_ISSUED = 'issued';
+    const STATUS_CANCELLED = 'cancelled';
 
     // Purpose constants
     const PURPOSE_VISA_APPLICATION = 'visa_application';

@@ -72,11 +72,11 @@ class CertificateService
     /**
      * Get certificate requests for a specific user.
      */
-    public function getUserRequests(User $user): Collection
+    public function getUserRequests(User $user)
     {
         return CertificateRequest::where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(7);
     }
 
     /**
@@ -119,6 +119,26 @@ class CertificateService
             'status' => CertificateRequest::STATUS_REJECTED,
             'approved_by' => $rejector->id,
             'approved_at' => now(),
+        ]);
+
+        return $request->fresh();
+    }
+
+    /**
+     * Cancel a certificate request.
+     */
+    public function cancelRequest(CertificateRequest $request, User $user): CertificateRequest
+    {
+        if ($request->user_id !== $user->id) {
+            throw new \Exception('Unauthorized action.');
+        }
+
+        if (!$request->isPending()) {
+            throw new \Exception('Cannot cancel a processed request.');
+        }
+
+        $request->update([
+            'status' => CertificateRequest::STATUS_CANCELLED,
         ]);
 
         return $request->fresh();
