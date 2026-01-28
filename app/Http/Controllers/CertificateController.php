@@ -28,7 +28,6 @@ class CertificateController extends Controller
         $activeRequest = CertificateRequest::where('user_id', $user->id)
             ->whereIn('status', [
                 CertificateRequest::STATUS_PENDING,
-                CertificateRequest::STATUS_AUTHORIZED,
             ])
             ->first();
 
@@ -110,7 +109,7 @@ class CertificateController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->isAdmin()) {
+        if (!$user->isAdmin()) {
             abort(403, 'Unauthorized access.');
         }
 
@@ -154,23 +153,7 @@ class CertificateController extends Controller
     /**
      * Authorize the certificate request (Manager action).
      */
-    public function authorizeRequest(Request $request, CertificateRequest $certificateRequest)
-    {
-        $user = $request->user();
-
-        if (!$user->isManager()) {
-            abort(403, 'Unauthorized access.');
-        }
-
-        if (!$certificateRequest->isPending()) {
-            abort(400, 'Request cannot be authorized.');
-        }
-
-        $this->certificateService->authorizeRequest($certificateRequest, $user);
-
-        return redirect()->route('services.certificate.approvals')
-            ->with('success', 'Certificate request authorized and sent to admin.');
-    }
+    // Manager authorization method removed
 
     /**
      * Issue the certificate (Admin only).
@@ -185,6 +168,27 @@ class CertificateController extends Controller
 
         $this->certificateService->issueRequest($certificateRequest, $user);
 
+        // Send plain text email to employee
+        $recipientEmail = $certificateRequest->user->email;
+        $recipientName = $certificateRequest->user->name;
+
+        $htmlContent = "
+            <p>Dear {$recipientName},</p>
+            <p>Your Employment Certificate (Ref: {$certificateRequest->ref_id}) is ready.</p>
+            <p>Please collect it physically from the HR department.</p>
+            <p>Best regards,<br>People & Operations Team</p>
+        ";
+
+        try {
+            Mail::html($htmlContent, function ($message) use ($recipientEmail, $recipientName) {
+                $message->to($recipientEmail, $recipientName)
+                    ->subject('Employment Certificate Ready for Collection');
+            });
+        } catch (\Exception $e) {
+            // Log email error but don't fail the issuance
+            \Log::error('Failed to send certificate readiness email: ' . $e->getMessage());
+        }
+
         return back()->with('success', 'Certificate issued successfully.');
     }
 
@@ -195,10 +199,8 @@ class CertificateController extends Controller
     {
         $user = $request->user();
 
-        // Allow download if user owns the request OR is manager/admin
-        $canDownload = $certificateRequest->user_id === $user->id
-            || $user->isManager()
-            || $user->isAdmin();
+        // Allow download if user is admin
+        $canDownload = $user->isAdmin();
 
         if (!$canDownload) {
             abort(403, 'Unauthorized access.');
@@ -222,9 +224,8 @@ class CertificateController extends Controller
     {
         $user = $request->user();
 
-        // Allow preview for owner (if issued) or approvers
+        // Allow preview for owner (draft view) or admin
         $canPreview = ($certificateRequest->user_id === $user->id && $certificateRequest->isIssued())
-            || $user->isManager()
             || $user->isAdmin();
 
         if (!$canPreview) {
@@ -243,6 +244,10 @@ class CertificateController extends Controller
     public function email(Request $request, CertificateRequest $certificateRequest)
     {
         $user = $request->user();
+
+        if (!$user->isAdmin()) {
+            abort(403, 'Unauthorized access.');
+        }
 
         if (!$certificateRequest->isIssued()) {
             abort(400, 'Certificate has not been issued yet.');

@@ -29,7 +29,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { FileText, Search, AlertCircle, Loader2 } from 'lucide-vue-next';
+import { FileText, Search, AlertCircle, Loader2, Eye, Download } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import type { BreadcrumbItem } from '@/types';
 
@@ -210,6 +210,10 @@ const confirmReject = () => {
         onFinish: () => closeRejectModal(),
     });
 };
+
+const downloadCertificate = (requestId: number) => {
+    window.open(`/services/employment-certificate/${requestId}/download`, '_blank');
+};
 </script>
 
 <template>
@@ -277,7 +281,7 @@ const confirmReject = () => {
                                 <TableHead class="w-[200px]">Purpose</TableHead>
                                 <TableHead class="w-[140px]">Status</TableHead>
                                 <TableHead class="w-[160px]">{{ isHistory ? 'Processed Date' : 'Request Date' }}</TableHead>
-                                <TableHead class="text-center" v-if="!isHistory">Actions</TableHead>
+                                <TableHead class="text-center">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -328,36 +332,62 @@ const confirmReject = () => {
                                         <p class="text-sm text-muted-foreground">{{ formatDate(request.created_at).time }}</p>
                                     </div>
                                 </TableCell>
-                                <TableCell class="text-center" v-if="!isHistory">
+                                <TableCell class="text-center">
                                     <div class="flex items-center justify-center gap-2">
-                                        <!-- Cancel/Reject button -->
-                                        <Button
-                                            v-if="request.status === 'pending' || request.status === 'authorized'"
-                                            variant="outline"
-                                            size="sm"
-                                            class="text-xs text-red-500 border-red-500/30 hover:bg-red-500/10"
-                                            @click="openRejectModal(request.id)"
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <!-- Manager sees Authorize for pending requests -->
-                                        <Button
-                                            v-if="!isAdmin && request.status === 'pending'"
-                                            size="sm"
-                                            class="text-xs bg-blue-600 hover:bg-blue-700"
-                                            @click="authorizeRequest(request.id)"
-                                        >
-                                            Authorize
-                                        </Button>
-                                        <!-- Admin sees Approve & Issue for pending/authorized -->
-                                        <Button
-                                            v-if="isAdmin"
-                                            size="sm"
-                                            class="text-xs bg-primary hover:bg-primary/90"
-                                            @click="goToReview(request.id)"
-                                        >
-                                            Approve & Issue
-                                        </Button>
+                                        <!-- Pending/Authorized View: Action Buttons -->
+                                        <template v-if="!isHistory">
+                                            <!-- Cancel/Reject button -->
+                                            <Button
+                                                v-if="request.status === 'pending' || request.status === 'authorized'"
+                                                variant="outline"
+                                                size="sm"
+                                                class="text-xs text-red-500 border-red-500/30 hover:bg-red-500/10"
+                                                @click="openRejectModal(request.id)"
+                                            >
+                                                Cancel
+                                            </Button>
+                                            <!-- Manager sees Authorize for pending requests -->
+                                            <Button
+                                                v-if="!isAdmin && request.status === 'pending'"
+                                                size="sm"
+                                                class="text-xs bg-blue-600 hover:bg-blue-700"
+                                                @click="authorizeRequest(request.id)"
+                                            >
+                                                Authorize
+                                            </Button>
+                                            <!-- Admin sees Approve & Issue for pending/authorized -->
+                                            <Button
+                                                v-if="isAdmin"
+                                                size="sm"
+                                                class="text-xs bg-primary hover:bg-primary/90"
+                                                @click="goToReview(request.id)"
+                                            >
+                                                Approve & Issue
+                                            </Button>
+                                        </template>
+
+                                        <!-- History View: View/Download Buttons -->
+                                        <template v-else>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                class="h-8 px-3 text-xs"
+                                                :disabled="request.status !== 'issued'"
+                                                @click="goToReview(request.id)"
+                                            >
+                                                View
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                class="h-8 w-8 p-0"
+                                                :disabled="request.status !== 'issued'"
+                                                @click="downloadCertificate(request.id)"
+                                                title="Download PDF"
+                                            >
+                                                <Download class="h-4 w-4" />
+                                            </Button>
+                                        </template>
                                     </div>
                                 </TableCell>
                             </TableRow>

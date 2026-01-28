@@ -216,16 +216,6 @@ const handleCancel = () => {
                                             <XCircle class="h-3.5 w-3.5" />
                                             Cancel
                                         </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            class="h-8 gap-2"
-                                            :disabled="request.status !== 'issued'"
-                                            @click="downloadCertificate(request.id)"
-                                        >
-                                            <Download class="h-3.5 w-3.5" />
-                                            Download
-                                        </Button>
                                     </div>
                                 </TableCell>
                             </TableRow>

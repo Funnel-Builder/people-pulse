@@ -33,33 +33,16 @@ class CertificateService
      */
     public function getPendingApprovals(User $user)
     {
-        if (!$user->isManager() && !$user->isAdmin()) {
+        if (!$user->isAdmin()) {
             return collect([]);
         }
 
         $query = CertificateRequest::with(['user.department', 'user.subDepartment']);
 
-        if ($user->isAdmin()) {
-            // Admins see pending and authorized requests
-            $query->whereIn('status', [
-                CertificateRequest::STATUS_PENDING,
-                CertificateRequest::STATUS_AUTHORIZED,
-            ]);
-        } else {
-            // Managers see only pending requests from their team
-            $query->where('status', CertificateRequest::STATUS_PENDING);
-            $managedSubDepartmentIds = $user->getManagedSubDepartmentIds();
-
-            if (!empty($managedSubDepartmentIds)) {
-                $query->whereHas('user', function ($q) use ($managedSubDepartmentIds) {
-                    $q->whereIn('sub_department_id', $managedSubDepartmentIds);
-                });
-            } else {
-                $query->whereHas('user', function ($q) use ($user) {
-                    $q->where('department_id', $user->department_id);
-                });
-            }
-        }
+        // Admins see pending requests directly
+        $query->whereIn('status', [
+            CertificateRequest::STATUS_PENDING,
+        ]);
 
         return $query->orderBy('created_at', 'desc')->paginate(10);
     }
@@ -73,17 +56,13 @@ class CertificateService
 
         if ($user->isAdmin()) {
             // Admin sees all processed requests (issued, turned_down, cancelled, rejected)
-            // excluding pending and authorized which are in the main view
             $query->whereIn('status', [
                 CertificateRequest::STATUS_ISSUED,
                 CertificateRequest::STATUS_REJECTED,
                 CertificateRequest::STATUS_CANCELLED,
             ]);
         } else {
-            // Manager sees requests they authorized
-            $query->where('authorized_by', $user->id);
-            // Managers might want to see what happened to requests they authorized, 
-            // even if current status is issued/rejected by admin.
+            return collect([]);
         }
 
         return $query->orderBy('updated_at', 'desc')->paginate(10);
@@ -112,16 +91,7 @@ class CertificateService
     /**
      * Authorize a certificate request (Manager action).
      */
-    public function authorizeRequest(CertificateRequest $request, User $authorizer): CertificateRequest
-    {
-        $request->update([
-            'status' => CertificateRequest::STATUS_AUTHORIZED,
-            'authorized_by' => $authorizer->id,
-            'authorized_at' => now(),
-        ]);
-
-        return $request->fresh();
-    }
+    // Manager authorization method removed
 
     /**
      * Approve a certificate request.
@@ -193,28 +163,11 @@ class CertificateService
      */
     public function getApprovalCount(User $user): int
     {
-        if (!$user->isManager() && !$user->isAdmin()) {
+        if (!$user->isAdmin()) {
             return 0;
         }
 
-        $query = CertificateRequest::where('status', CertificateRequest::STATUS_PENDING);
-
-        // If manager, filter by managed sub-departments
-        if ($user->isManager() && !$user->isAdmin()) {
-            $managedSubDepartmentIds = $user->getManagedSubDepartmentIds();
-
-            if (!empty($managedSubDepartmentIds)) {
-                $query->whereHas('user', function ($q) use ($managedSubDepartmentIds) {
-                    $q->whereIn('sub_department_id', $managedSubDepartmentIds);
-                });
-            } else {
-                $query->whereHas('user', function ($q) use ($user) {
-                    $q->where('department_id', $user->department_id);
-                });
-            }
-        }
-
-        return $query->count();
+        return CertificateRequest::where('status', CertificateRequest::STATUS_PENDING)->count();
     }
 
     /**
@@ -259,25 +212,9 @@ class CertificateService
      */
     public function canApprove(User $user, CertificateRequest $request): bool
     {
-        // Admin can approve/reject both pending and authorized requests
+        // Admin can approve/reject pending requests
         if ($user->isAdmin()) {
-            return $request->status === CertificateRequest::STATUS_PENDING ||
-                $request->status === CertificateRequest::STATUS_AUTHORIZED;
-        }
-
-        // Managers can only approve/reject pending requests
-        if (!$request->isPending()) {
-            return false;
-        }
-
-        if ($user->isManager()) {
-            $managedSubDepartmentIds = $user->getManagedSubDepartmentIds();
-
-            if (!empty($managedSubDepartmentIds)) {
-                return in_array($request->user->sub_department_id, $managedSubDepartmentIds);
-            }
-
-            return $request->user->department_id === $user->department_id;
+            return $request->status === CertificateRequest::STATUS_PENDING;
         }
 
         return false;
@@ -292,15 +229,11 @@ class CertificateService
             return true;
         }
 
-        if ($user->isManager()) {
-            $managedSubDepartmentIds = $user->getManagedSubDepartmentIds();
-
-            if (!empty($managedSubDepartmentIds)) {
-                return in_array($request->user->sub_department_id, $managedSubDepartmentIds);
-            }
-
-            return $request->user->department_id === $user->department_id;
+        if ($user->isAdmin()) {
+            return true;
         }
+
+        return $request->user_id === $user->id;
 
         return false;
     }

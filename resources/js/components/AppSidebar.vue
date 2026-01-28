@@ -78,7 +78,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     ];
 
     // Certificate Approvals - only for managers and admins
-    if (user.value?.role === 'manager' || user.value?.role === 'admin') {
+    if (user.value?.role === 'admin') {
         servicesChildren.push({
             title: 'Approvals',
             href: '/services/approvals',

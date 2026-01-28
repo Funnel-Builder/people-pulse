@@ -325,7 +325,7 @@ const sendEmail = (id: number) => {
                                     </div>
                                     
                                     <!-- Desktop Action Buttons -->
-                                    <div class="flex items-center justify-center gap-4 py-4 border-t border-border/50">
+                                    <div v-if="page.props.auth.user.role === 'admin'" class="flex items-center justify-center gap-4 py-4 border-t border-border/50">
                                         <Button
                                             variant="outline"
                                             class="gap-2 min-w-[140px] transition-all duration-300"
@@ -383,7 +383,7 @@ const sendEmail = (id: number) => {
                                     </div>
 
                                     <!-- Mobile Action Buttons -->
-                                    <div class="flex flex-col gap-3 mt-6">
+                                    <div v-if="page.props.auth.user.role === 'admin'" class="flex flex-col gap-3 mt-6">
                                         <Button
                                             variant="outline"
                                             class="w-full gap-2 transition-all duration-300"
@@ -450,34 +450,19 @@ const sendEmail = (id: number) => {
                                     <!-- Connector 1 -->
                                     <div class="flex-1 h-1 mx-2" :class="props.activeRequest.status === 'pending' ? 'bg-primary' : 'bg-muted'" />
 
-                                    <!-- Step 2: Manager Review -->
+                                    <!-- Step 2: Admin Review -->
                                     <div class="flex flex-col items-center gap-2">
                                         <div class="w-12 h-12 rounded-full flex items-center justify-center"
-                                            :class="props.activeRequest.status === 'pending' ? 'bg-primary' : (props.activeRequest.status === 'authorized' ? 'bg-green-500/20' : 'bg-muted')">
+                                            :class="props.activeRequest.status === 'pending' ? 'bg-primary' : (props.activeRequest.status === 'issued' ? 'bg-green-500/20' : 'bg-muted')">
                                             <Clock v-if="props.activeRequest.status === 'pending'" class="h-6 w-6 text-white" />
-                                            <CheckCircle v-else-if="props.activeRequest.status === 'authorized'" class="h-6 w-6 text-green-500" />
-                                            <Clock v-else class="h-6 w-6 text-muted-foreground" />
+                                            <FileText v-else class="h-6 w-6 text-muted-foreground" />
                                         </div>
-                                        <span class="text-sm font-semibold" :class="props.activeRequest.status === 'pending' ? 'text-primary' : (props.activeRequest.status === 'authorized' ? 'text-green-500' : 'text-muted-foreground')">MANAGER REVIEW</span>
-                                        <span class="text-xs text-muted-foreground">{{ props.activeRequest.status === 'pending' ? 'In Progress' : (props.activeRequest.status === 'authorized' ? 'Approved' : 'Waiting') }}</span>
+                                        <span class="text-sm font-semibold" :class="props.activeRequest.status === 'pending' ? 'text-primary' : 'text-muted-foreground'">ADMIN REVIEW</span>
+                                        <span class="text-xs text-muted-foreground">{{ props.activeRequest.status === 'pending' ? 'In Progress' : 'Pending' }}</span>
                                     </div>
 
                                     <!-- Connector 2 -->
-                                    <div class="flex-1 h-1 mx-2" :class="props.activeRequest.status === 'authorized' ? 'bg-primary' : 'bg-muted'" />
-
-                                    <!-- Step 3: HR Review -->
-                                    <div class="flex flex-col items-center gap-2">
-                                        <div class="w-12 h-12 rounded-full flex items-center justify-center"
-                                            :class="props.activeRequest.status === 'authorized' ? 'bg-primary' : 'bg-muted'">
-                                            <Clock v-if="props.activeRequest.status === 'authorized'" class="h-6 w-6 text-white" />
-                                            <FileText v-else class="h-6 w-6 text-muted-foreground" />
-                                        </div>
-                                        <span class="text-sm font-semibold" :class="props.activeRequest.status === 'authorized' ? 'text-primary' : 'text-muted-foreground'">HR REVIEW</span>
-                                        <span class="text-xs text-muted-foreground">{{ props.activeRequest.status === 'authorized' ? 'In Progress' : 'Pending' }}</span>
-                                    </div>
-
-                                    <!-- Connector 3 -->
-                                    <div class="flex-1 h-1 mx-2 bg-muted" />
+                                    <div class="flex-1 h-1 mx-2" :class="props.activeRequest.status === 'issued' ? 'bg-primary' : 'bg-muted'" />
 
                                     <!-- Step 4: Issued -->
                                     <div class="flex flex-col items-center gap-2">

@@ -266,7 +266,6 @@ const sendMissingInfoEmail = () => {
 
 const closeModal = () => {
     showIssuedModal.value = false;
-    router.get('/services/approvals');
 };
 </script>
 
@@ -479,25 +478,38 @@ const closeModal = () => {
                     </Card>
 
                     <!-- Action Buttons -->
+                    <!-- Action Buttons -->
                     <div class="space-y-3">
-                        <Button
-                            class="w-full"
-                            size="lg"
-                            @click="issueCertificate"
-                            :disabled="isIssuing"
-                        >
-                            <CheckCircle class="h-4 w-4 mr-2" />
-                            <span v-if="isIssuing">Issuing...</span>
-                            <span v-else>Issue Certificate</span>
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            class="w-full bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:text-red-700 hover:border-red-300 shadow-sm"
-                            @click="rejectRequest"
-                        >
-                            <XCircle class="h-4 w-4 mr-2" />
-                            Reject Request
-                        </Button>
+                        <template v-if="request.status === 'issued'">
+                            <Button
+                                class="w-full"
+                                size="lg"
+                                @click="downloadCertificate"
+                            >
+                                <Download class="h-4 w-4 mr-2" />
+                                Download Certificate
+                            </Button>
+                        </template>
+                        <template v-else>
+                            <Button
+                                class="w-full"
+                                size="lg"
+                                @click="issueCertificate"
+                                :disabled="isIssuing"
+                            >
+                                <CheckCircle class="h-4 w-4 mr-2" />
+                                <span v-if="isIssuing">Issuing...</span>
+                                <span v-else>Issue Certificate</span>
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                class="w-full bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:text-red-700 hover:border-red-300 shadow-sm"
+                                @click="rejectRequest"
+                            >
+                                <XCircle class="h-4 w-4 mr-2" />
+                                Reject Request
+                            </Button>
+                        </template>
                     </div>
                 </div>
             </div>
@@ -554,27 +566,7 @@ const closeModal = () => {
                 </div>
 
                 <DialogFooter class="flex-col sm:flex-row gap-3">
-                    <Button
-                        :variant="emailStates.employee === 'idle' ? 'outline' : (emailStates.employee === 'success' ? 'default' : 'destructive')"
-                        @click="emailCertificate('employee')"
-                        :disabled="emailStates.employee === 'sending'"
-                        class="flex-1 transition-all duration-300"
-                        :class="emailStates.employee === 'success' ? 'bg-green-600 hover:bg-green-700 text-white border-transparent' : ''"
-                    >
-                        <template v-if="emailStates.employee === 'sending'">
-                           <span class="animate-spin mr-2">⏳</span> Sending...
-                        </template>
-                        <template v-else-if="emailStates.employee === 'success'">
-                            <Check class="h-4 w-4 mr-2" /> Sent
-                        </template>
-                        <template v-else-if="emailStates.employee === 'error'">
-                             <X class="h-4 w-4 mr-2" /> Failed
-                        </template>
-                        <template v-else>
-                            <Mail class="h-4 w-4 mr-2" />
-                            Email to Employee
-                        </template>
-                    </Button>
+
 
                     <Button
                         :variant="emailStates.self === 'idle' ? 'outline' : (emailStates.self === 'success' ? 'default' : 'destructive')"
