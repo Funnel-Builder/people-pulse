@@ -1,8 +1,8 @@
 {
     "inter": {
-        "300": "\/var\/www\/html\/storage\/fonts\/inter_300_00262953e33e79f73a5ac0f4c2c8317c",
-        "normal": "\/var\/www\/html\/storage\/fonts\/inter_normal_f0f727fdd986aaeb5f0d979d5a7e7c44",
-        "500": "\/var\/www\/html\/storage\/fonts\/inter_500_b56174a93f90d955684751d7f2fa033f",
-        "bold": "inter_bold_ab9cd579b383d10c5ff685deb4034208"
+        "300": "\/var\/www\/html\/storage\/fonts\/inter_300_f225e50d2ce569ac8be5ae785cb1102f",
+        "normal": "\/var\/www\/html\/storage\/fonts\/inter_normal_dc4b21af9071580dcbd0eb31d77960b7",
+        "500": "\/var\/www\/html\/storage\/fonts\/inter_500_d3b794ebc15940630eee0c18c958e27f",
+        "bold": "inter_bold_2b0c36f5c4945b0f32711c305c0adc49"
     }
 }

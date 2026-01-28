@@ -8,28 +8,28 @@
     <style>
         @font-face {
             font-family: 'Inter';
-            src: url('{{ storage_path('fonts/Inter-Light.ttf') }}') format('truetype');
+            src: url('{{ public_path('fonts/Inter-Light.ttf') }}') format('truetype');
             font-weight: 300;
             font-style: normal;
         }
 
         @font-face {
             font-family: 'Inter';
-            src: url('{{ storage_path('fonts/Inter-Regular.ttf') }}') format('truetype');
+            src: url('{{ public_path('fonts/Inter-Regular.ttf') }}') format('truetype');
             font-weight: 400;
             font-style: normal;
         }
 
         @font-face {
             font-family: 'Inter';
-            src: url('{{ storage_path('fonts/Inter-Medium.ttf') }}') format('truetype');
+            src: url('{{ public_path('fonts/Inter-Medium.ttf') }}') format('truetype');
             font-weight: 500;
             font-style: normal;
         }
 
         @font-face {
             font-family: 'Inter';
-            src: url('{{ storage_path('fonts/Inter-Bold.ttf') }}') format('truetype');
+            src: url('{{ public_path('fonts/Inter-Bold.ttf') }}') format('truetype');
             font-weight: 700;
             font-style: normal;
         }
