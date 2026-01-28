@@ -35,8 +35,8 @@
         }
 
         @page {
-            margin: 0;
             size: A4;
+            margin: 0;
         }
 
         * {
@@ -48,23 +48,10 @@
         body {
             font-family: 'Inter', sans-serif;
             font-size: 11pt;
-            font-weight: 300;
-            line-height: 1.6;
+            font-weight: 400;
+            line-height: normal;
             color: #000;
-        }
-
-        /* Table-based vertical centering for PDF compatibility */
-        .page-wrapper {
-            display: table;
-            width: 100%;
-            height: 11.69in;
-            /* A4 height */
-        }
-
-        .page-cell {
-            display: table-cell;
-            vertical-align: middle;
-            padding: 0.8in 1in;
+            padding: 2in 1in 1in 1in;
         }
 
         .container {
@@ -73,9 +60,9 @@
 
         .header {
             width: 100%;
-            margin-bottom: 50px;
+            margin-bottom: 40px;
             font-size: 11pt;
-            font-weight: 300;
+            font-weight: 400;
         }
 
         .header-left {
@@ -95,117 +82,117 @@
             font-size: 14pt;
             font-weight: 700;
             text-decoration: underline;
-            margin-bottom: 45px;
+            margin-bottom: 30px;
+            margin-top: 20px;
         }
 
         .salutation {
             font-weight: 700;
             font-size: 11pt;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
 
         .body-text {
             text-align: justify;
-            margin-bottom: 18px;
-            font-weight: 300;
+            margin-bottom: 15px;
+            font-weight: 400;
             font-size: 11pt;
             line-height: normal;
-        }
-
-        /* Bold for injected values */
-        b,
-        strong {
-            font-weight: 700;
         }
 
         .closing {
-            margin-top: 35px;
-            margin-bottom: 80px;
-            font-weight: 300;
+            margin-top: 30px;
+            margin-bottom: 60px;
+            font-weight: 400;
             font-size: 11pt;
         }
 
-        .signature-line {
-            border-top: 1px solid #000;
-            width: 200px;
-            padding-top: 8px;
-            line-height: normal;
+        .signature-container {
+            width: 250px;
+        }
+
+        .signature-underline {
+            border-bottom: 1px solid #000;
+            height: 30px;
+            margin-bottom: 8px;
         }
 
         .signature-name {
             font-weight: 700;
             font-size: 11pt;
+            line-height: normal;
         }
 
-        .signature-title,
-        .signature-phone {
-            white-space: nowrap;
-            font-weight: 300;
+        .signature-title {
+            font-weight: 400;
             font-size: 11pt;
+            line-height: normal;
+        }
+
+        .signature-phone {
+            font-weight: 400;
+            font-size: 11pt;
+            line-height: normal;
         }
     </style>
 </head>
 
 <body>
-    <div class="page-wrapper">
-        <div class="page-cell">
-            <div class="container">
-                <!-- Header -->
-                <div class="header">
-                    <div class="header-left">Ref: {{ $request->ref_id }}</div>
-                    <div class="header-right">Date: {{ $issueDate->format('F d, Y') }}</div>
-                    <div class="clear"></div>
-                </div>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">Ref: {{ $request->ref_id }}</div>
+            <div class="header-right">Date: {{ $issueDate->format('F d, Y') }}</div>
+            <div class="clear"></div>
+        </div>
 
-                <!-- Title -->
-                <div class="title">EMPLOYMENT CERTIFICATE</div>
+        <!-- Title -->
+        <div class="title">EMPLOYMENT CERTIFICATE</div>
 
-                <!-- Salutation -->
-                <p class="salutation">To Whom It May Concern,</p>
+        <!-- Salutation -->
+        <p class="salutation">To Whom It May Concern,</p>
 
-                <!-- Body Paragraph 1 -->
-                @php
-                    $empName = $user->name ? $user->name : "[Name]";
-                    $empId = $user->employee_id ? $user->employee_id : "[ID]";
-                    $fatherName = $user->fathers_name ? $user->fathers_name : "[Father's Name]";
-                    $motherName = $user->mothers_name ? $user->mothers_name : "[Mother's Name]";
-                    $nid = $user->nid_number ? $user->nid_number : "[NID Number]";
-                    $joinDate = $user->joining_date ? $user->joining_date->format('F d, Y') : "[joining date]";
-                    $dept = $user->department ? $user->department->name : "[Department Name]";
-                    $subDept = $user->subDepartment ? "({$user->subDepartment->name})" : "(Sub-Department Name if applicable)";
-                    $designation = $user->designation ? $user->designation : "[Current Designation]";
-                @endphp
+        <!-- Body Paragraph 1 -->
+        @php
+            $empName = $user->name ? $user->name : "[Name]";
+            $empId = $user->employee_id ? $user->employee_id : "[ID]";
+            $fatherName = $user->fathers_name ? $user->fathers_name : "[Father's Name]";
+            $motherName = $user->mothers_name ? $user->mothers_name : "[Mother's Name]";
+            $nid = $user->nid_number ? $user->nid_number : "[NID Number]";
+            $joinDate = $user->joining_date ? $user->joining_date->format('F d, Y') : "[joining date]";
+            $dept = $user->department ? $user->department->name : "[Department Name]";
+            $subDept = $user->subDepartment ? "(" . $user->subDepartment->name . ")" : "(Sub-Department Name if applicable)";
+            $designation = $user->designation ? $user->designation : "[Current Designation]";
+        @endphp
 
-                <!-- Body Paragraph 1 -->
-                <p class="body-text">
-                    To Whom It May Concern, This is to certify that Mr. {{ $empName }} (ID: {{ $empId }}), son of
-                    {{ $fatherName }} and {{ $motherName }}, National ID Card Number. {{ $nid }}, has been
-                    employed at {{ $company['name'] }} as a permanent employee since {{ $joinDate }}. Currently he is
-                    working in the {{ $dept }} {{ $subDept }} department as a {{ $designation }}.
-                </p>
+        <p class="body-text">
+            This is to certify that Mr/Mrs. {{ $empName }} ID {{ $empId }}, son of {{ $fatherName }} and
+            {{ $motherName }}, National ID Card Number. {{ $nid }}, has been employed at {{ $company['name'] }} as a
+            permanent employee since {{ $joinDate }}. Currently he is working in the {{ $dept }} {{ $subDept }}
+            department as a {{ $designation }}.
+        </p>
 
-                <!-- Body Paragraph 2 -->
-                <p class="body-text">
-                    This certification is being issued on the date of {{ $issueDate->format('F d, Y') }} upon his
-                    request and can be used for reference purposes.
-                </p>
+        <!-- Body Paragraph 2 -->
+        <p class="body-text">
+            This certification is being issued on the date of {{ $issueDate->format('F d, Y') }} upon his/her request
+            and
+            can be used for reference purposes.
+        </p>
 
-                <!-- Body Paragraph 3 -->
-                <p class="body-text">
-                    I hereby certify that the above-mentioned information is correct and accurate to the best of my
-                    knowledge.
-                </p>
+        <!-- Body Paragraph 3 -->
+        <p class="body-text">
+            I hereby certify that the above-mentioned information is correct and accurate to the best of my knowledge.
+        </p>
 
-                <!-- Closing -->
-                <p class="closing">Sincerely,</p>
+        <!-- Closing -->
+        <p class="closing">Sincerely,</p>
 
-                <!-- Signature -->
-                <div class="signature-line">
-                    <p class="signature-name">{{ $issuer['name'] }}</p>
-                    <p class="signature-title">{{ $issuer['title'] }}</p>
-                    <p class="signature-phone">Cell: {{ $issuer['phone'] }}</p>
-                </div>
-            </div>
+        <!-- Signature -->
+        <div class="signature-container">
+            <div class="signature-underline"></div>
+            <p class="signature-name">{{ $issuer['name'] }}</p>
+            <p class="signature-title">{{ $issuer['title'] }}</p>
+            <p class="signature-phone">Cell: {{ $issuer['phone'] }}</p>
         </div>
     </div>
 </body>

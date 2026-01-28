@@ -128,7 +128,7 @@
 
             <!-- Body Paragraph 1 -->
             <p class="body-text">
-                To Whom It May Concern, This is to certify that Mr. {{ $empName }} (ID: {{ $empId }}), son of
+                This is to certify that Mr. {{ $empName }} (ID: {{ $empId }}), son of
                 {{ $fatherName }} and {{ $motherName }}, National ID Card Number. {{ $nid }}, has been
                 employed at {{ $company['name'] }} as a permanent employee since {{ $joinDate }}. Currently he is
                 working in the {{ $dept }} {{ $subDept }} department as a {{ $designation }}.
