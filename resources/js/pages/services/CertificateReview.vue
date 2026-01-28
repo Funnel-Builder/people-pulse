@@ -218,6 +218,32 @@ const downloadCertificate = () => {
     window.open(`/services/employment-certificate/${props.request.id}/download`, '_blank');
 };
 
+const printCertificate = () => {
+    const url = `/services/employment-certificate/${props.request.id}/download?view=true`;
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.src = url;
+    
+    document.body.appendChild(iframe);
+    
+    if (iframe.contentWindow) {
+        iframe.contentWindow.onload = () => {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+            // Clean up after print dialog closes (or close enough estimate)
+            // Note: There is no reliable event for "print dialog closed", so we leave it or remove after long timeout
+            setTimeout(() => {
+               document.body.removeChild(iframe); 
+            }, 60000); // 1 minute timeout to ensure it doesn't clutter DOM indefinitely
+        };
+    }
+};
+
 const emailCertificate = (recipient: 'employee' | 'self') => {
     emailStates.value[recipient] = 'sending';
     
@@ -590,6 +616,15 @@ const closeModal = () => {
                         </template>
                     </Button>
                     
+                    <Button
+                        @click="printCertificate"
+                        class="flex-1"
+                        variant="secondary"
+                    >
+                        <Printer class="h-4 w-4 mr-2" />
+                        Print
+                    </Button>
+
                     <Button
                         @click="downloadCertificate"
                         class="flex-1"

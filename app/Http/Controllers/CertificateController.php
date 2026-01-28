@@ -214,6 +214,10 @@ class CertificateController extends Controller
         $filename = "employment_certificate_{$certificateRequest->ref_id}.pdf";
         $filename = str_replace('/', '_', $filename);
 
+        if ($request->has('view')) {
+            return $pdf->stream($filename);
+        }
+
         return $pdf->download($filename);
     }
 

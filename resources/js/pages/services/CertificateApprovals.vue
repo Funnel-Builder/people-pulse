@@ -29,7 +29,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { FileText, Search, AlertCircle, Loader2, Eye, Download } from 'lucide-vue-next';
+import { FileText, Search, AlertCircle, Loader2, Eye, Download, Printer } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import type { BreadcrumbItem } from '@/types';
 
@@ -214,6 +214,30 @@ const confirmReject = () => {
 const downloadCertificate = (requestId: number) => {
     window.open(`/services/employment-certificate/${requestId}/download`, '_blank');
 };
+
+const printCertificate = (requestId: number) => {
+    const url = `/services/employment-certificate/${requestId}/download?view=true`;
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.src = url;
+    
+    document.body.appendChild(iframe);
+    
+    if (iframe.contentWindow) {
+        iframe.contentWindow.onload = () => {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+            setTimeout(() => {
+               document.body.removeChild(iframe); 
+            }, 60000);
+        };
+    }
+};
 </script>
 
 <template>
@@ -386,6 +410,16 @@ const downloadCertificate = (requestId: number) => {
                                                 title="Download PDF"
                                             >
                                                 <Download class="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                class="h-8 w-8 p-0"
+                                                :disabled="request.status !== 'issued'"
+                                                @click="printCertificate(request.id)"
+                                                title="Print"
+                                            >
+                                                <Printer class="h-4 w-4" />
                                             </Button>
                                         </template>
                                     </div>
