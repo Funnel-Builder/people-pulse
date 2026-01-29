@@ -41,12 +41,17 @@ class MarkAbsentEmployees extends Command
         $this->info("Checking attendance for {$date} ({$dayName})...");
         Log::info("[Attendance Scheduler] Starting mark-absent process for {$date} ({$dayName})");
 
-        // Get all active employees (exclude admins if needed, adjust as necessary)
+        // Get all active employees (exclude admins and separated employees)
         $employees = User::where('role', '!=', 'admin')
             ->whereNotNull('joining_date')
             ->where(function ($query) use ($date) {
                 // Only employees who joined before or on this date
                 $query->where('joining_date', '<=', $date);
+            })
+            // Exclude separated employees (is_active = false)
+            ->where(function ($query) {
+                $query->where('is_active', true)
+                    ->orWhereNull('is_active'); // Treat null as active for backward compatibility
             })
             ->get();
 
@@ -59,7 +64,7 @@ class MarkAbsentEmployees extends Command
         $marked = 0;
         $skippedExisting = 0;
         $skippedWeekend = 0;
-        $skippedLeave = 0;
+        $markedLeave = 0;
 
         $absentList = [];
         $presentList = [];
@@ -72,15 +77,7 @@ class MarkAbsentEmployees extends Command
                 continue;
             }
 
-            // 2. Check if employee has approved leave for this date
-            if ($this->hasApprovedLeave($employee->id, $date)) {
-                $this->line("  Skipped (on leave): {$employee->name}");
-                $onLeaveList[] = "{$employee->name} ({$employee->employee_id})";
-                $skippedLeave++;
-                continue;
-            }
-
-            // 3. Check if attendance record already exists
+            // 2. Check if attendance record already exists
             $existingRecord = Attendance::where('user_id', $employee->id)
                 ->whereDate('date', $date)
                 ->first();
@@ -91,7 +88,30 @@ class MarkAbsentEmployees extends Command
                 continue;
             }
 
-            // Create absence record
+            // 3. Check if employee has approved leave for this date
+            if ($this->hasApprovedLeave($employee->id, $date)) {
+                // Create attendance record with status 'leave'
+                Attendance::create([
+                    'user_id' => $employee->id,
+                    'date' => $date,
+                    'status' => 'leave',
+                    'clock_in' => null,
+                    'clock_out' => null,
+                    'gross_minutes' => 0,
+                    'break_minutes' => 0,
+                    'net_minutes' => 0,
+                    'is_late' => false,
+                    'late_minutes' => 0,
+                    'early_exit_minutes' => 0,
+                ]);
+
+                $this->line("  Marked on leave: {$employee->name} ({$employee->employee_id})");
+                $onLeaveList[] = "{$employee->name} ({$employee->employee_id})";
+                $markedLeave++;
+                continue;
+            }
+
+            // 4. Create absence record
             Attendance::create([
                 'user_id' => $employee->id,
                 'date' => $date,
@@ -113,9 +133,9 @@ class MarkAbsentEmployees extends Command
 
         $this->info("Completed:");
         $this->info("  - Marked absent: {$marked}");
+        $this->info("  - Marked on leave: {$markedLeave}");
         $this->info("  - Skipped (already recorded): {$skippedExisting}");
         $this->info("  - Skipped (weekend): {$skippedWeekend}");
-        $this->info("  - Skipped (on leave): {$skippedLeave}");
 
         // Log comprehensive summary
         Log::info("[Attendance Scheduler] Completed for {$date}", [
@@ -123,8 +143,8 @@ class MarkAbsentEmployees extends Command
             'summary' => [
                 'total_employees' => $employees->count(),
                 'marked_absent' => $marked,
+                'marked_leave' => $markedLeave,
                 'present' => $skippedExisting,
-                'on_leave' => $skippedLeave,
                 'weekend' => $skippedWeekend,
             ],
             'absent_employees' => $absentList,
