@@ -2,7 +2,9 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+
 import ClockInButton from '@/components/ClockInButton.vue';
+import ClockInModal from '@/components/ClockInModal.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { type BreadcrumbItem, type Attendance, type AttendanceStats, type User } from '@/types';
 import { Head, router, usePage, Link } from '@inertiajs/vue3';
@@ -142,7 +144,33 @@ const buttonStatus = computed(() => {
     return 'idle';
 });
 
+// Calculate dynamic worked seconds today if clocked in
+const workedSecondsToday = computed(() => {
+    if (props.todayAttendance?.clock_in && !props.todayAttendance?.clock_out) {
+        const start = new Date(props.todayAttendance.clock_in).getTime();
+        const now = currentTime.value.getTime();
+        return Math.floor((now - start) / 1000);
+    }
+    return 0;
+});
+
+const formattedWorkedTimeToday = computed(() => {
+    const seconds = workedSecondsToday.value;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h}h ${m}m`;
+});
+
+const showClockModal = ref(false);
+
 const handleClockAction = () => {
+    if (buttonStatus.value === 'clocked_out') return;
+    console.log('Clock action triggered, showing modal');
+    showClockModal.value = true;
+};
+
+const confirmClockAction = () => {
     if (buttonStatus.value === 'idle') {
         clockIn();
     } else if (buttonStatus.value === 'working') {
@@ -342,8 +370,8 @@ const getStatusLabel = (status: string) => {
             <!-- Bento Grid Layout -->
             <div class="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-8">
 
-                <!-- Clock In/Out Card -->
-                <Card class="lg:col-span-2 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                <!-- Clock In/Out Card (Hidden on Mobile) -->
+                <Card class="hidden md:block lg:col-span-2 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
                     <CardContent class="p-6 h-full flex flex-col justify-center items-center">
                         <div class="text-center space-y-4">
 
@@ -360,10 +388,8 @@ const getStatusLabel = (status: string) => {
                                     <span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
                                     Working
                                 </div>
-                                <div v-else-if="currentStatus === 'clocked_out'" class="text-sm text-muted-foreground">
-                                    Day Complete
-                                </div>
-                                <div v-else class="text-sm text-muted-foreground">
+
+                                <div v-else-if="currentStatus === 'not_clocked_in'" class="text-sm text-muted-foreground">
                                     Ready to Clock In
                                 </div>
                             </div>
@@ -604,5 +630,45 @@ const getStatusLabel = (status: string) => {
 
             </div>
         </div>
+
+
+        <!-- Mobile Floating Clock Button -->
+        <div class="fixed bottom-[4.5rem] left-1/2 -translate-x-1/2 z-40 md:hidden print:hidden">
+            <button
+                @click="handleClockAction"
+                class="relative group flex items-center justify-center px-6 py-3 rounded-full shadow-2xl transition-all duration-300 active:scale-95"
+                :class="{
+                    'bg-blue-600 text-white shadow-blue-500/30': buttonStatus === 'idle',
+                    'bg-amber-500 text-white shadow-amber-500/30': buttonStatus === 'working',
+                    'bg-emerald-600 text-white shadow-emerald-500/30 opacity-90 cursor-default': buttonStatus === 'clocked_out'
+                }"
+            > 
+                <!-- Ripple/Pulse Effect for Idle -->
+                <span v-if="buttonStatus === 'idle'" class="absolute inset-0 rounded-full border-2 border-blue-400 opacity-0 animate-ping pointer-events-none"></span>
+                <span v-if="buttonStatus === 'working'" class="absolute inset-0 rounded-full border-2 border-amber-400 opacity-0 animate-ping pointer-events-none"></span>
+
+                <!-- Content -->
+                <div class="flex items-center gap-2 whitespace-nowrap">
+                    <LogIn v-if="buttonStatus === 'idle'" class="h-5 w-5" />
+                    <LogOut v-else-if="buttonStatus === 'working'" class="h-5 w-5" />
+                    <CheckCircle v-else class="h-5 w-5" />
+                    
+                    <span class="font-semibold text-sm">
+                        {{ buttonStatus === 'idle' ? 'Clock In' : (buttonStatus === 'working' ? 'Clock Out' : 'Day Complete') }}
+                    </span>
+                </div>
+            </button>
+        </div>
+
+        <!-- Clock In Modal -->
+        <ClockInModal 
+            v-model="showClockModal"
+            :status="buttonStatus"
+            :loading="isProcessing"
+            :stats="stats"
+            :worked-today="formattedWorkedTimeToday"
+            @confirm="confirmClockAction"
+        />
+
     </AppLayout>
 </template>

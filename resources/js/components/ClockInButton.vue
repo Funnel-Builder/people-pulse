@@ -73,7 +73,7 @@ const buttonClass = computed(() => {
         <!-- Pulse effect for Idle state -->
         <div
             v-if="status === 'idle' && !loading"
-            class="absolute -inset-1 rounded-lg bg-primary/20 opacity-0 transition-opacity duration-500 group-hover:opacity-100 animate-pulse"
+            class="absolute -inset-1 rounded-lg bg-primary/20 opacity-0 transition-opacity duration-500 group-hover:opacity-100 animate-pulse pointer-events-none"
         ></div>
 
         <Button

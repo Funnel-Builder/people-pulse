@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Mail\LeaveApproved;
 use App\Models\Leave;
 use App\Models\LeaveApproval;
 use App\Models\LeaveDate;
@@ -11,6 +12,8 @@ use App\Models\UserLeaveBalance;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class LeaveService
 {
@@ -139,6 +142,22 @@ class LeaveService
                     $leaveDays = $leave->dates()->count();
                     $balance = UserLeaveBalance::getOrCreate($leave->user_id, $leave->leave_type_id);
                     $balance->deductLeave($leaveDays);
+
+                    // Send approval notification email to the employee
+                    try {
+                        $leave->load(['user', 'leaveType', 'dates']);
+                        Mail::to($leave->user->email)->send(new LeaveApproved($leave));
+                        Log::info('[Leave Approved] Email sent to employee', [
+                            'leave_id' => $leave->id,
+                            'employee' => $leave->user->name,
+                            'email' => $leave->user->email,
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('[Leave Approved] Failed to send email', [
+                            'leave_id' => $leave->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 } else {
                     // Move to next step
                     $leave->update(['current_approval_step' => $leave->current_approval_step + 1]);
