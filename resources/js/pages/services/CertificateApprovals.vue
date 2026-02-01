@@ -57,6 +57,7 @@ interface CertificateRequest {
     purpose_other: string | null;
     urgency: string;
     status: string;
+    type: string;
     created_at: string;
 }
 
@@ -94,12 +95,22 @@ const typeFilter = ref('all');
 const getFilterLabel = (value: string) => {
     const map: Record<string, string> = {
         'all': 'All Types',
-        'EC': 'EC',
-        'RL': 'RL',
-        'VRL': 'VRL',
-        'XC': 'XC',
+        'employment_certificate': 'Employment Certificate (EC)',
+        'release_letter': 'Release Letter (RL)',
+        'visa_recommendation_letter': 'Visa Recommendation Letter (VRL)',
+        'experience_certificate': 'Experience Certificate (XC)',
     };
     return map[value] || 'All Types';
+};
+
+const getTypeCode = (type: string) => {
+    const map: Record<string, string> = {
+        'employment_certificate': 'EC',
+        'release_letter': 'RL',
+        'visa_recommendation_letter': 'VRL',
+        'experience_certificate': 'XC',
+    };
+    return map[type] || 'EC';
 };
 
 // Computed filtered data (from current page only, as it's server-side paginated main list)
@@ -117,16 +128,8 @@ const filteredRequestsData = computed(() => {
         );
     }
 
-    // Apply Type Filter
-    // Currently all are assumed EC, but logic added for future
     if (typeFilter.value !== 'all') {
-        // Mock filtering logic - since we only have EC for now
-        if (typeFilter.value === 'EC') {
-            // keep all
-        } else {
-            // If selecting other types, show empty for now or filter if property existed
-            result = []; 
-        }
+        result = result.filter(r => r.type === typeFilter.value);
     }
 
     return result;
@@ -178,8 +181,15 @@ const getInitials = (name: string) => {
         .slice(0, 2);
 };
 
-const goToReview = (requestId: number) => {
-    router.get(`/services/employment-certificate/${requestId}/review`);
+const goToReview = (request: any) => {
+    const typeToRouteMap: Record<string, string> = {
+        'employment_certificate': 'employment-certificate',
+        'visa_recommendation_letter': 'visa-recommendation-letter',
+        'release_letter': 'release-letter',
+        'experience_certificate': 'experience-certificate',
+    };
+    const routeSlug = typeToRouteMap[request.type] || 'employment-certificate';
+    router.get(`/services/${routeSlug}/${request.id}/review`);
 };
 
 const authorizeRequest = (requestId: number) => {
@@ -280,10 +290,10 @@ const printCertificate = (requestId: number) => {
                     </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Types</SelectItem>
-                            <SelectItem value="EC">Employment Certificate (EC)</SelectItem>
-                            <SelectItem value="RL">Release Letter (RL)</SelectItem>
-                            <SelectItem value="VRL">Visa Recommendation Letter (VRL)</SelectItem>
-                            <SelectItem value="XC">Experience Certificate (XC)</SelectItem>
+                            <SelectItem value="employment_certificate">Employment Certificate (EC)</SelectItem>
+                            <SelectItem value="release_letter">Release Letter (RL)</SelectItem>
+                            <SelectItem value="visa_recommendation_letter">Visa Recommendation Letter (VRL)</SelectItem>
+                            <SelectItem value="experience_certificate">Experience Certificate (XC)</SelectItem>
                         </SelectContent>
                     </Select>
             </div>
@@ -334,7 +344,7 @@ const printCertificate = (requestId: number) => {
                                 </TableCell>
                                 <TableCell>
                                     <Badge class="text-xs border bg-primary/10 text-primary border-primary/30">
-                                        EC
+                                        {{ getTypeCode(request.type) }}
                                     </Badge>
                                 </TableCell>
                                 <TableCell>
@@ -397,7 +407,7 @@ const printCertificate = (requestId: number) => {
                                                 size="sm"
                                                 class="h-8 px-3 text-xs"
                                                 :disabled="request.status !== 'issued'"
-                                                @click="goToReview(request.id)"
+                                                @click="goToReview(request)"
                                             >
                                                 View
                                             </Button>

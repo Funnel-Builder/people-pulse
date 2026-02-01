@@ -52,6 +52,7 @@ interface CertificateRequest {
     id: number;
     ref_id: string;
     user_id: number;
+    type: string;
     purpose: string;
     purpose_other: string | null;
     urgency: string;
@@ -90,6 +91,18 @@ const emailStates = ref<{
 }>({
     employee: 'idle',
     self: 'idle',
+});
+
+// Dynamic Base URL based on certificate type
+const baseUrl = computed(() => {
+    const typeToRouteMap: Record<string, string> = {
+        'employment_certificate': 'employment-certificate',
+        'visa_recommendation_letter': 'visa-recommendation-letter',
+        'release_letter': 'release-letter',
+        'experience_certificate': 'experience-certificate',
+    };
+    const routeSlug = typeToRouteMap[props.request.type] || 'employment-certificate';
+    return `/services/${routeSlug}/${props.request.id}`;
 });
 
 // Verification checklist - auto-check based on data availability
@@ -185,7 +198,7 @@ const goBack = () => {
 
 const issueCertificate = () => {
     isIssuing.value = true;
-    router.post(`/services/employment-certificate/${props.request.id}/issue`, {}, {
+    router.post(`${baseUrl.value}/issue`, {}, {
         preserveState: true,
         preserveScroll: true,
         onSuccess: () => {
@@ -209,17 +222,17 @@ const closeRejectModal = () => {
 
 const confirmReject = () => {
     isRejecting.value = true;
-    router.post(`/services/employment-certificate/${props.request.id}/reject`, {}, {
+    router.post(`${baseUrl.value}/reject`, {}, {
         onFinish: () => closeRejectModal(),
     });
 };
 
 const downloadCertificate = () => {
-    window.open(`/services/employment-certificate/${props.request.id}/download`, '_blank');
+    window.open(`${baseUrl.value}/download`, '_blank');
 };
 
 const printCertificate = () => {
-    const url = `/services/employment-certificate/${props.request.id}/download?view=true`;
+    const url = `${baseUrl.value}/download?view=true`;
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
@@ -235,11 +248,9 @@ const printCertificate = () => {
         iframe.contentWindow.onload = () => {
             iframe.contentWindow?.focus();
             iframe.contentWindow?.print();
-            // Clean up after print dialog closes (or close enough estimate)
-            // Note: There is no reliable event for "print dialog closed", so we leave it or remove after long timeout
             setTimeout(() => {
                document.body.removeChild(iframe); 
-            }, 60000); // 1 minute timeout to ensure it doesn't clutter DOM indefinitely
+            }, 60000); 
         };
     }
 };
@@ -247,7 +258,7 @@ const printCertificate = () => {
 const emailCertificate = (recipient: 'employee' | 'self') => {
     emailStates.value[recipient] = 'sending';
     
-    router.post(`/services/employment-certificate/${props.request.id}/email`, {
+    router.post(`${baseUrl.value}/email`, {
         recipient,
     }, {
         preserveScroll: true,
@@ -282,12 +293,23 @@ const openGmail = () => {
 };
 
 const sendMissingInfoEmail = () => {
-    router.post(`/services/employment-certificate/${props.request.id}/request-missing-info`, {}, {
+    router.post(`${baseUrl.value}/request-missing-info`, {}, {
         preserveScroll: true,
         onSuccess: () => {
             // Optional: You could show a toast here if not handled globally by your flash messages
         },
     });
+};
+
+const certificateTitles: Record<string, string> = {
+    employment_certificate: 'Employment Certificate',
+    visa_recommendation_letter: 'Visa Recommendation Letter',
+    release_letter: 'Release Letter',
+    experience_certificate: 'Experience Certificate',
+};
+
+const getCertificateTitle = (type: string) => {
+    return certificateTitles[type] || 'Certificate';
 };
 
 const closeModal = () => {
@@ -306,7 +328,7 @@ const closeModal = () => {
                     <ArrowLeft class="h-5 w-5" />
                 </Button>
                 <div>
-                    <h1 class="text-2xl font-bold">Review Certificate Request</h1>
+                    <h1 class="text-2xl font-bold">Review {{ getCertificateTitle(request.type) }} Request</h1>
                     <p class="text-muted-foreground">{{ request.ref_id }}</p>
                 </div>
                 <Badge v-if="request.urgency === 'urgent'" variant="destructive" class="ml-2">
@@ -318,14 +340,14 @@ const closeModal = () => {
             <div class="grid gap-6 lg:grid-cols-[1fr_400px]">
                 <!-- Left Column: Certificate Preview -->
                 <div class="space-y-6">
-                    <Card class="border-border/50 shadow-sm">
+                    <Card class="border-border/50 shadow-sm h-full">
                         <CardHeader class="pb-2">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <CardTitle class="text-lg font-semibold flex items-center gap-2">
                                         Certificate Preview
                                     </CardTitle>
-                                    <CardDescription>This is how the issued certificate will appear</CardDescription>
+                                    <CardDescription>This is exactly how the issued certificate will appear</CardDescription>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <Badge variant="outline" class="bg-blue-50 text-blue-700 border-blue-200">
@@ -344,65 +366,15 @@ const closeModal = () => {
                                 </div>
                             </div>
                         </CardHeader>
-                        <CardContent class="pt-4">
-                            <!-- Certificate Preview (mimicking the PDF look) -->
-                            <div class="bg-white text-black rounded-lg p-8 shadow-inner border">
-                                <!-- Header -->
-                                <div class="flex justify-between items-start mb-8">
-                                    <p class="text-sm">Ref: {{ request.ref_id }}</p>
-                                    <p class="text-sm">Date: {{ formatCurrentDate() }}</p>
-                                </div>
-
-                                <!-- Title -->
-                                <h2 class="text-center text-xl font-bold underline mb-8">
-                                    EMPLOYMENT CERTIFICATE
-                                </h2>
-
-                                <!-- Salutation -->
-                                <p class="font-semibold mb-4">To Whom It May Concern,</p>
-
-                                <!-- Body -->
-                                <!-- Body -->
-                                <!-- Body -->
-                                <p class="text-justify leading-relaxed mb-4">
-                                    To Whom It May Concern, This is to certify that Mr. 
-                                    <span>{{ employeeInfo.name || '[Name]' }}</span>
-                                    (ID: <span>{{ employeeInfo.employee_id || '[ID]' }}</span>), 
-                                    son of <span>{{ employeeInfo.fathers_name || "[Father's Name]" }}</span>
-                                    and <span>{{ employeeInfo.mothers_name || "[Mother's Name]" }}</span>, 
-                                    National ID Card Number. <span>{{ employeeInfo.nid_number || '[NID Number]' }}</span>, 
-                                    has been employed at {{ companyInfo.name }} as a permanent employee since 
-                                    <span>{{ employeeInfo.joining_date || '[joining date]' }}</span>. 
-                                    Currently he is working in the 
-                                    <span>{{ employeeInfo.department || '[Department Name]' }}</span>
-                                    <span> ({{ employeeInfo.sub_department || 'Sub-Department Name if applicable' }})</span>
-                                    department as a <span>{{ employeeInfo.designation || '[Current Designation]' }}</span>.
-                                </p>
-
-                                <p class="text-justify leading-relaxed mb-4">
-                                    This certification is being issued on the date of {{ formatCurrentDate() }}
-                                    upon {{ employeeInfo.name?.split(' ')[0] || 'his' }} request and can be used for reference purposes.
-                                </p>
-
-                                <p class="text-justify leading-relaxed mb-8">
-                                    I hereby certify that the above-mentioned information is correct and accurate to the best of my knowledge.
-                                </p>
-
-                                <!-- Closing -->
-                                <p class="mb-16">Sincerely,</p>
-
-                                <!-- Signature -->
-                                <div class="border-t border-black inline-block pt-2 min-w-[200px]">
-                                    <p class="font-bold">{{ issuerInfo.name }}</p>
-                                    <p class="text-sm">{{ issuerInfo.title }}</p>
-                                    <p class="text-sm">Cell: {{ issuerInfo.phone }}</p>
-                                </div>
-                            </div>
+                        <CardContent class="pt-4 h-[800px] p-0 overflow-hidden rounded-b-lg border-t">
+                            <!-- Helper Function for URL -->
+                            <iframe 
+                                :src="`${baseUrl}/preview`" 
+                                class="w-full h-full border-0"
+                                title="Certificate Preview"
+                            ></iframe>
                         </CardContent>
                     </Card>
-
-
-                    <!-- Request Details (Moved to right column) -->
                 </div>
 
                 <!-- Right Column: Verification & Actions -->
@@ -582,7 +554,7 @@ const closeModal = () => {
                 <div class="py-4">
                     <div class="bg-muted/30 rounded-lg p-6 text-center border border-border/50">
                         <FileText class="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-                        <p class="font-medium text-lg text-foreground">Employment Certificate</p>
+                        <p class="font-medium text-lg text-foreground">{{ getCertificateTitle(request.type) }}</p>
                         <p class="text-sm text-muted-foreground">{{ request.ref_id }}</p>
                         <div class="mt-4 pt-4 border-t border-border/50">
                             <p class="text-xs uppercase tracking-wide text-muted-foreground mb-1">Issued To</p>

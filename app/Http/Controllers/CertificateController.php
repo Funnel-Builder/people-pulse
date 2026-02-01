@@ -19,13 +19,14 @@ class CertificateController extends Controller
     /**
      * Display the certificate request form.
      */
-    public function index(Request $request): Response
+    public function index(Request $request, ?string $type = 'employment_certificate'): Response
     {
         $user = $request->user();
         $forceNew = $request->query('new') == '1';
 
         // Check for existing pending or authorized request
         $activeRequest = CertificateRequest::where('user_id', $user->id)
+            ->where('type', $type)
             ->whereIn('status', [
                 CertificateRequest::STATUS_PENDING,
             ])
@@ -35,6 +36,7 @@ class CertificateController extends Controller
         $latestIssuedCertificate = null;
         if (!$activeRequest && !$forceNew) {
             $latestIssuedCertificate = CertificateRequest::where('user_id', $user->id)
+                ->where('type', $type)
                 ->where('status', CertificateRequest::STATUS_ISSUED)
                 ->latest('issued_at')
                 ->first();
@@ -47,6 +49,7 @@ class CertificateController extends Controller
             'latestIssuedCertificate' => $latestIssuedCertificate,
             'issuerInfo' => config('services_module.issuer'),
             'companyInfo' => config('services_module.company'),
+            'currentType' => $type,
         ]);
     }
 
@@ -55,17 +58,47 @@ class CertificateController extends Controller
      */
     public function store(Request $request)
     {
+        $type = $request->input('type', 'employment_certificate');
+        
+        // Purpose is required only for employment_certificate
+        $purposeRule = $type === 'employment_certificate' ? 'required|string' : 'nullable|string';
+        
         $validated = $request->validate([
-            'purpose' => 'required|string',
+            'purpose' => $purposeRule,
+            'type' => 'nullable|string|in:employment_certificate,visa_recommendation_letter,release_letter,experience_certificate',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'passport_number' => 'nullable|string|max:255',
+            'passport_issue_date' => 'nullable|date',
+            'passport_expiry_date' => 'nullable|date|after:passport_issue_date',
+            'passport_issue_place' => 'nullable|string|max:255',
             'purpose_other' => 'nullable|string|max:255',
             'urgency' => 'required|in:normal,urgent',
             'remarks' => 'nullable|string|max:1000',
             'agreement' => 'required|accepted',
         ]);
 
+        // Set default purpose for non-EC types if not provided
+        if (empty($validated['purpose'])) {
+            $defaultPurposes = [
+                'visa_recommendation_letter' => 'visa_application',
+                'release_letter' => 'resignation',
+                'experience_certificate' => 'job_application',
+            ];
+            $validated['purpose'] = $defaultPurposes[$type] ?? 'general';
+        }
+
         $this->certificateService->createRequest($request->user(), $validated);
 
-        return redirect()->route('services.certificate')
+        // Redirect to the correct type-specific route
+        $routeMap = [
+            'employment_certificate' => 'services.certificate',
+            'visa_recommendation_letter' => 'services.certificate.visa',
+            'release_letter' => 'services.certificate.release',
+            'experience_certificate' => 'services.certificate.experience',
+        ];
+
+        return redirect()->route($routeMap[$type] ?? 'services.certificate')
             ->with('success', 'Certificate request submitted successfully.');
     }
 
@@ -92,13 +125,14 @@ class CertificateController extends Controller
     /**
      * Display the user's certificate request history.
      */
-    public function history(Request $request): Response
+    public function history(Request $request, ?string $type = 'employment_certificate'): Response
     {
         $user = $request->user();
 
         return Inertia::render('services/CertificateHistory', [
-            'requests' => $this->certificateService->getUserRequests($user),
+            'requests' => $this->certificateService->getUserRequests($user, $type),
             'purposes' => config('services_module.certificate_purposes', []),
+            'currentType' => $type,
         ]);
     }
 
@@ -211,7 +245,7 @@ class CertificateController extends Controller
         }
 
         $pdf = $this->certificateService->generateCertificatePdf($certificateRequest);
-        $filename = "employment_certificate_{$certificateRequest->ref_id}.pdf";
+        $filename = "{$certificateRequest->type}_{$certificateRequest->ref_id}.pdf";
         $filename = str_replace('/', '_', $filename);
 
         if ($request->has('view')) {
@@ -239,7 +273,14 @@ class CertificateController extends Controller
         $data = $this->certificateService->getCertificateData($certificateRequest);
         $data['isWebPreview'] = true;
 
-        return view('pdf.certificate-preview', $data);
+        $view = match ($certificateRequest->type) {
+            CertificateRequest::TYPE_VISA_RECOMMENDATION => 'pdf.visa-recommendation-letter',
+            CertificateRequest::TYPE_RELEASE_LETTER => 'pdf.release-letter',
+            CertificateRequest::TYPE_EXPERIENCE_CERTIFICATE => 'pdf.experience-certificate',
+            default => 'pdf.certificate', // Retain original for EC
+        };
+
+        return view($view, $data);
     }
 
     /**

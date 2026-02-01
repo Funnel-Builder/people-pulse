@@ -19,6 +19,13 @@ class CertificateService
             'ref_id' => CertificateRequest::generateRefId(),
             'user_id' => $user->id,
             'purpose' => $data['purpose'],
+            'type' => $data['type'] ?? CertificateRequest::TYPE_EMPLOYMENT_CERTIFICATE,
+            'start_date' => $data['start_date'] ?? null,
+            'end_date' => $data['end_date'] ?? null,
+            'passport_number' => $data['passport_number'] ?? null,
+            'passport_issue_date' => $data['passport_issue_date'] ?? null,
+            'passport_expiry_date' => $data['passport_expiry_date'] ?? null,
+            'passport_issue_place' => $data['passport_issue_place'] ?? null,
             'purpose_other' => $data['purpose_other'] ?? null,
             'urgency' => $data['urgency'] ?? 'normal',
             'remarks' => $data['remarks'] ?? null,
@@ -79,12 +86,17 @@ class CertificateService
     }
 
     /**
-     * Get certificate requests for a specific user.
+     * Get certificate requests for a specific user, optionally filtered by type.
      */
-    public function getUserRequests(User $user)
+    public function getUserRequests(User $user, ?string $type = null)
     {
-        return CertificateRequest::where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
+        $query = CertificateRequest::where('user_id', $user->id);
+        
+        if ($type) {
+            $query->where('type', $type);
+        }
+        
+        return $query->orderBy('created_at', 'desc')
             ->paginate(7);
     }
 
@@ -185,7 +197,14 @@ class CertificateService
             'company' => config('services_module.company'),
         ];
 
-        $pdf = Pdf::loadView('pdf.certificate', $data);
+        $view = match ($request->type) {
+            CertificateRequest::TYPE_VISA_RECOMMENDATION => 'pdf.visa-recommendation-letter',
+            CertificateRequest::TYPE_RELEASE_LETTER => 'pdf.release-letter',
+            CertificateRequest::TYPE_EXPERIENCE_CERTIFICATE => 'pdf.experience-certificate',
+            default => 'pdf.certificate',
+        };
+
+        $pdf = Pdf::loadView($view, $data);
         $pdf->setPaper('a4', 'portrait');
 
         return $pdf;
@@ -257,6 +276,7 @@ class CertificateService
             'mothers_name' => $user->mothers_name,
             'nid_number' => $user->nid_number,
             'joining_date' => $user->joining_date?->format('F d, Y'),
+            'closing_date' => $user->closing_date?->format('F d, Y'), // Match format with frontend expectation or ISO? Frontend uses check !!value, so any string is fine. But for display might want ISO or formatted. I'll use same format as joining_date.
             'nationality' => $user->nationality ?? 'Bangladeshi',
             'profile_picture' => $user->profile_picture,
         ];

@@ -71,8 +71,24 @@ const mainNavItems = computed<NavItem[]>(() => {
     // Services Group (all users can request, managers/admins can approve)
     const servicesChildren: NavItem[] = [
         {
-            title: 'EC',
+            title: 'EC - Employment Certificate',
             href: '/services/employment-certificate',
+            icon: ClipboardList,
+            permission: 'view_services' // assuming permission or just visible to all
+        },
+        {
+            title: 'VRL - Visa Recommendation',
+            href: '/services/visa-recommendation-letter',
+            icon: ClipboardList,
+        },
+        {
+            title: 'RL - Release Letter',
+            href: '/services/release-letter',
+            icon: ClipboardList,
+        },
+        {
+            title: 'XC - Experience Certificate',
+            href: '/services/experience-certificate',
             icon: ClipboardList,
         },
     ];

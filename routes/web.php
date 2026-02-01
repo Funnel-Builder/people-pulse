@@ -101,11 +101,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // SERVICES MODULE
     // =====================================================
     Route::prefix('services')->name('services.')->group(function () {
-        // Employee Certificate
-        Route::get('/employment-certificate/history', [\App\Http\Controllers\CertificateController::class, 'history'])->name('certificate.history');
+        // Employee Certificate (Standard)
+        Route::get('/employment-certificate/history', [\App\Http\Controllers\CertificateController::class, 'history'])->defaults('type', 'employment_certificate')->name('certificate.history');
         Route::get('/employment-certificate', [\App\Http\Controllers\CertificateController::class, 'index'])->name('certificate');
         Route::post('/employment-certificate', [\App\Http\Controllers\CertificateController::class, 'store'])->name('certificate.store');
-        Route::get('/approvals', [\App\Http\Controllers\CertificateController::class, 'approvals'])->name('certificate.approvals');
         Route::get('/employment-certificate/{certificateRequest}/review', [\App\Http\Controllers\CertificateController::class, 'review'])->name('certificate.review');
         Route::post('/employment-certificate/{certificateRequest}/issue', [\App\Http\Controllers\CertificateController::class, 'issue'])->name('certificate.issue');
         Route::post('/employment-certificate/{certificateRequest}/reject', [\App\Http\Controllers\CertificateController::class, 'reject'])->name('certificate.reject');
@@ -115,9 +114,51 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/employment-certificate/{certificateRequest}/preview', [\App\Http\Controllers\CertificateController::class, 'preview'])->name('certificate.preview');
         Route::post('/employment-certificate/{certificateRequest}/email', [\App\Http\Controllers\CertificateController::class, 'email'])->name('certificate.email');
         Route::post('/employment-certificate/{certificateRequest}/request-missing-info', [\App\Http\Controllers\CertificateController::class, 'requestMissingInfo'])->name('certificate.request-missing-info');
-    });
 
-    // =====================================================
+        // Visa Recommendation Letter
+        Route::get('/visa-recommendation-letter/history', [\App\Http\Controllers\CertificateController::class, 'history'])->defaults('type', 'visa_recommendation_letter')->name('certificate.visa.history');
+        Route::get('/visa-recommendation-letter', [\App\Http\Controllers\CertificateController::class, 'index'])->defaults('type', 'visa_recommendation_letter')->name('certificate.visa');
+        Route::post('/visa-recommendation-letter', [\App\Http\Controllers\CertificateController::class, 'store'])->name('certificate.visa.store');
+        Route::get('/visa-recommendation-letter/{certificateRequest}/review', [\App\Http\Controllers\CertificateController::class, 'review'])->name('certificate.visa.review');
+        Route::post('/visa-recommendation-letter/{certificateRequest}/issue', [\App\Http\Controllers\CertificateController::class, 'issue'])->name('certificate.visa.issue');
+        Route::post('/visa-recommendation-letter/{certificateRequest}/reject', [\App\Http\Controllers\CertificateController::class, 'reject'])->name('certificate.visa.reject');
+        Route::post('/visa-recommendation-letter/{certificateRequest}/cancel', [\App\Http\Controllers\CertificateController::class, 'cancel'])->name('certificate.visa.cancel');
+        Route::post('/visa-recommendation-letter/{certificateRequest}/authorize', [\App\Http\Controllers\CertificateController::class, 'authorizeRequest'])->name('certificate.visa.authorize');
+        Route::get('/visa-recommendation-letter/{certificateRequest}/download', [\App\Http\Controllers\CertificateController::class, 'download'])->name('certificate.visa.download');
+        Route::get('/visa-recommendation-letter/{certificateRequest}/preview', [\App\Http\Controllers\CertificateController::class, 'preview'])->name('certificate.visa.preview');
+        Route::post('/visa-recommendation-letter/{certificateRequest}/email', [\App\Http\Controllers\CertificateController::class, 'email'])->name('certificate.visa.email');
+        Route::post('/visa-recommendation-letter/{certificateRequest}/request-missing-info', [\App\Http\Controllers\CertificateController::class, 'requestMissingInfo'])->name('certificate.visa.request-missing-info');
+
+        // Release Letter
+        Route::get('/release-letter/history', [\App\Http\Controllers\CertificateController::class, 'history'])->defaults('type', 'release_letter')->name('certificate.release.history');
+        Route::get('/release-letter', [\App\Http\Controllers\CertificateController::class, 'index'])->defaults('type', 'release_letter')->name('certificate.release');
+        Route::post('/release-letter', [\App\Http\Controllers\CertificateController::class, 'store'])->name('certificate.release.store');
+        Route::get('/release-letter/{certificateRequest}/review', [\App\Http\Controllers\CertificateController::class, 'review'])->name('certificate.release.review');
+        Route::post('/release-letter/{certificateRequest}/issue', [\App\Http\Controllers\CertificateController::class, 'issue'])->name('certificate.release.issue');
+        Route::post('/release-letter/{certificateRequest}/reject', [\App\Http\Controllers\CertificateController::class, 'reject'])->name('certificate.release.reject');
+        Route::post('/release-letter/{certificateRequest}/cancel', [\App\Http\Controllers\CertificateController::class, 'cancel'])->name('certificate.release.cancel');
+        Route::post('/release-letter/{certificateRequest}/authorize', [\App\Http\Controllers\CertificateController::class, 'authorizeRequest'])->name('certificate.release.authorize');
+        Route::get('/release-letter/{certificateRequest}/download', [\App\Http\Controllers\CertificateController::class, 'download'])->name('certificate.release.download');
+        Route::get('/release-letter/{certificateRequest}/preview', [\App\Http\Controllers\CertificateController::class, 'preview'])->name('certificate.release.preview');
+        Route::post('/release-letter/{certificateRequest}/email', [\App\Http\Controllers\CertificateController::class, 'email'])->name('certificate.release.email');
+        Route::post('/release-letter/{certificateRequest}/request-missing-info', [\App\Http\Controllers\CertificateController::class, 'requestMissingInfo'])->name('certificate.release.request-missing-info');
+
+        // Experience Certificate
+        Route::get('/experience-certificate/history', [\App\Http\Controllers\CertificateController::class, 'history'])->defaults('type', 'experience_certificate')->name('certificate.experience.history');
+        Route::get('/experience-certificate', [\App\Http\Controllers\CertificateController::class, 'index'])->defaults('type', 'experience_certificate')->name('certificate.experience');
+        Route::post('/experience-certificate', [\App\Http\Controllers\CertificateController::class, 'store'])->name('certificate.experience.store');
+        Route::get('/experience-certificate/{certificateRequest}/review', [\App\Http\Controllers\CertificateController::class, 'review'])->name('certificate.experience.review');
+        Route::post('/experience-certificate/{certificateRequest}/issue', [\App\Http\Controllers\CertificateController::class, 'issue'])->name('certificate.experience.issue');
+        Route::post('/experience-certificate/{certificateRequest}/reject', [\App\Http\Controllers\CertificateController::class, 'reject'])->name('certificate.experience.reject');
+        Route::post('/experience-certificate/{certificateRequest}/cancel', [\App\Http\Controllers\CertificateController::class, 'cancel'])->name('certificate.experience.cancel');
+        Route::post('/experience-certificate/{certificateRequest}/authorize', [\App\Http\Controllers\CertificateController::class, 'authorizeRequest'])->name('certificate.experience.authorize');
+        Route::get('/experience-certificate/{certificateRequest}/download', [\App\Http\Controllers\CertificateController::class, 'download'])->name('certificate.experience.download');
+        Route::get('/experience-certificate/{certificateRequest}/preview', [\App\Http\Controllers\CertificateController::class, 'preview'])->name('certificate.experience.preview');
+        Route::post('/experience-certificate/{certificateRequest}/email', [\App\Http\Controllers\CertificateController::class, 'email'])->name('certificate.experience.email');
+        Route::post('/experience-certificate/{certificateRequest}/request-missing-info', [\App\Http\Controllers\CertificateController::class, 'requestMissingInfo'])->name('certificate.experience.request-missing-info');
+        
+        Route::get('/approvals', [\App\Http\Controllers\CertificateController::class, 'approvals'])->name('certificate.approvals');
+    });
     // ANNOUNCEMENTS (Admin/Manager)
     // =====================================================
     Route::prefix('announcements')->name('announcements.')->group(function () {

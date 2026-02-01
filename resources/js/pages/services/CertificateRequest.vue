@@ -36,6 +36,7 @@ interface EmployeeInfo {
     mothers_name: string | null;
     nid_number: string | null;
     joining_date: string | null;
+    closing_date: string | null; // Added closing_date
     nationality: string;
 }
 
@@ -82,9 +83,12 @@ interface Props {
     latestIssuedCertificate: IssuedCertificate | null;
     issuerInfo: IssuerInfo;
     companyInfo: CompanyInfo;
+    currentType: string;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    currentType: 'employment_certificate',
+});
 const page = usePage();
 
 const checklistItems = computed(() => [
@@ -128,6 +132,11 @@ const checklistItems = computed(() => [
         valid: !!props.employeeInfo.joining_date,
         required: true,
     },
+    {
+        label: 'Resignation date is recorded',
+        valid: !!props.employeeInfo.closing_date,
+        required: ['release_letter', 'experience_certificate'].includes(props.currentType),
+    },
 ]);
 
 const isProfileComplete = computed(() => {
@@ -140,11 +149,36 @@ const form = useForm({
     urgency: 'normal',
     remarks: '',
     agreement: false,
+    type: props.currentType,
+    start_date: '',
+    end_date: '',
+    passport_number: '',
+    passport_issue_date: '',
+    passport_expiry_date: '',
+    passport_issue_place: '',
 });
+
+// Watch for type change (no need to reset purpose on init, just keep type synced)
+watch(() => props.currentType, (newType) => {
+    form.type = newType;
+});
+
+// Dynamic URL helpers based on type
+const getBaseUrl = computed(() => {
+    switch (props.currentType) {
+        case 'visa_recommendation_letter': return '/services/visa-recommendation-letter';
+        case 'release_letter': return '/services/release-letter';
+        case 'experience_certificate': return '/services/experience-certificate';
+        default: return '/services/employment-certificate';
+    }
+});
+
+const getHistoryUrl = computed(() => `${getBaseUrl.value}/history`);
+const getNewRequestUrl = computed(() => `${getBaseUrl.value}?new=1`);
 
 
 const submitRequest = () => {
-    form.post('/services/employment-certificate', {
+    form.post(getBaseUrl.value, {
         preserveScroll: true,
         onSuccess: () => {
             form.reset();
@@ -226,23 +260,29 @@ const sendEmail = (id: number) => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-4 md:p-6 max-w-6xl mx-auto">
             <!-- Header -->
+
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 class="text-2xl font-bold">Employment Certificate</h1>
-                    <p class="text-xs md:text-sm text-muted-foreground mt-1">Submit a request to receive your official employment certificate</p>
+                    <h1 class="text-2xl font-bold">
+                        <span v-if="props.currentType === 'visa_recommendation_letter'">Visa Recommendation Letter</span>
+                        <span v-else-if="props.currentType === 'release_letter'">Release Letter</span>
+                        <span v-else-if="props.currentType === 'experience_certificate'">Experience Certificate</span>
+                        <span v-else>Employment Certificate</span>
+                    </h1>
+                    <p class="text-xs md:text-sm text-muted-foreground mt-1">Submit a request to receive your official document</p>
                 </div>
                 <!-- Show both buttons when viewing issued certificate -->
                 <div v-if="props.latestIssuedCertificate && !props.activeRequest" class="flex items-center gap-2 w-full md:w-auto">
-                    <Button class="gap-2 flex-1 md:flex-none" @click="$inertia.visit('/services/employment-certificate?new=1')">
+                    <Button class="gap-2 flex-1 md:flex-none" @click="$inertia.visit(getNewRequestUrl)">
                         <Plus class="h-4 w-4" />
                         New Request
                     </Button>
-                    <Button variant="outline" class="gap-2 flex-1 md:flex-none" @click="$inertia.visit('/services/employment-certificate/history')">
+                    <Button variant="outline" class="gap-2 flex-1 md:flex-none" @click="$inertia.visit(getHistoryUrl)">
                         <History class="h-4 w-4" />
                         History
                     </Button>
                 </div>
-                <Button v-else variant="outline" class="gap-2 w-full md:w-auto" @click="$inertia.visit('/services/employment-certificate/history')">
+                <Button v-else variant="outline" class="gap-2 w-full md:w-auto" @click="$inertia.visit(getHistoryUrl)">
                     <History class="h-4 w-4" />
                     History
                 </Button>
@@ -496,8 +536,8 @@ const sendEmail = (id: number) => {
                         </CardHeader>
                         <CardContent>
                             <form @submit.prevent="submitRequest" class="space-y-6">
-                                <!-- Purpose of Request -->
-                                <div class="space-y-2">
+                                <!-- Purpose of Request (Only for Employment Certificate) -->
+                                <div class="space-y-2" v-if="props.currentType === 'employment_certificate'">
                                     <Label for="purpose">Purpose of Request</Label>
                                     <Select v-model="form.purpose">
                                         <SelectTrigger id="purpose" class="w-full">
@@ -515,6 +555,48 @@ const sendEmail = (id: number) => {
                                     </Select>
                                     <p v-if="form.errors.purpose" class="text-sm text-destructive">{{ form.errors.purpose }}</p>
                                 </div>
+
+                                <!-- Visa Recommendation Fields -->
+                                <template v-if="props.currentType === 'visa_recommendation_letter'">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="space-y-2">
+                                            <Label>Travel Start Date</Label>
+                                            <input type="date" v-model="form.start_date" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                                            <p v-if="form.errors.start_date" class="text-sm text-destructive">{{ form.errors.start_date }}</p>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <Label>Travel End Date</Label>
+                                            <input type="date" v-model="form.end_date" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                                            <p v-if="form.errors.end_date" class="text-sm text-destructive">{{ form.errors.end_date }}</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-4 border rounded-md p-4 bg-muted/20">
+                                        <h3 class="font-medium text-sm">Passport Details</h3>
+                                        <div class="space-y-2">
+                                            <Label>Passport Number</Label>
+                                            <input type="text" v-model="form.passport_number" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Passport Number">
+                                            <p v-if="form.errors.passport_number" class="text-sm text-destructive">{{ form.errors.passport_number }}</p>
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div class="space-y-2">
+                                                <Label>Issue Date</Label>
+                                                <input type="date" v-model="form.passport_issue_date" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                                                <p v-if="form.errors.passport_issue_date" class="text-sm text-destructive">{{ form.errors.passport_issue_date }}</p>
+                                            </div>
+                                            <div class="space-y-2">
+                                                <Label>Expiry Date</Label>
+                                                <input type="date" v-model="form.passport_expiry_date" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                                                <p v-if="form.errors.passport_expiry_date" class="text-sm text-destructive">{{ form.errors.passport_expiry_date }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <Label>Place of Issue</Label>
+                                            <input type="text" v-model="form.passport_issue_place" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="e.g. Dhaka">
+                                            <p v-if="form.errors.passport_issue_place" class="text-sm text-destructive">{{ form.errors.passport_issue_place }}</p>
+                                        </div>
+                                    </div>
+                                </template>
 
 
                                 <!-- Urgency Level -->

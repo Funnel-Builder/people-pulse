@@ -12,6 +12,13 @@ class CertificateRequest extends Model
 
     protected $fillable = [
         'ref_id',
+        'type',
+        'start_date',
+        'end_date',
+        'passport_number',
+        'passport_issue_date',
+        'passport_expiry_date',
+        'passport_issue_place',
         'user_id',
         'purpose',
         'purpose_other',
@@ -32,6 +39,10 @@ class CertificateRequest extends Model
             'authorized_at' => 'datetime',
             'approved_at' => 'datetime',
             'issued_at' => 'datetime',
+            'start_date' => 'date',
+            'end_date' => 'date',
+            'passport_issue_date' => 'date',
+            'passport_expiry_date' => 'date',
         ];
     }
 
@@ -42,6 +53,12 @@ class CertificateRequest extends Model
     const STATUS_REJECTED = 'rejected';
     const STATUS_ISSUED = 'issued';
     const STATUS_CANCELLED = 'cancelled';
+
+    // Type constants
+    const TYPE_EMPLOYMENT_CERTIFICATE = 'employment_certificate';
+    const TYPE_VISA_RECOMMENDATION = 'visa_recommendation_letter';
+    const TYPE_RELEASE_LETTER = 'release_letter';
+    const TYPE_EXPERIENCE_CERTIFICATE = 'experience_certificate';
 
     // Purpose constants
     const PURPOSE_VISA_APPLICATION = 'visa_application';
