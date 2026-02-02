@@ -6,10 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visa Recommendation Letter - {{ $request->ref_id }}</title>
     <style>
-        @if(isset($isWebPreview) && $isWebPreview)
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        @else
         @font-face {
             font-family: 'Inter';
             src: url('{{ public_path('fonts/Inter-Light.ttf') }}') format('truetype');
@@ -37,7 +33,6 @@
             font-weight: 700;
             font-style: normal;
         }
-        @endif
 
         @page {
             size: A4;
@@ -90,7 +85,8 @@
         .subject {
             font-weight: 700;
             margin-bottom: 20px;
-            font-size: 12pt; /* Sub-heading */
+            font-size: 12pt;
+            /* Sub-heading */
             font-weight: 500;
         }
 
@@ -178,18 +174,21 @@
             $empName = $user->name ? $user->name : "[Name]";
             $designation = $user->designation ? $user->designation : "[Current Designation]";
             $joinDate = $user->joining_date ? $user->joining_date->format('F d, Y') : "[joining date]";
-            
+
             $passportNo = $request->passport_number ?? "(as per passport)";
             $issueDateStr = $request->passport_issue_date ? $request->passport_issue_date->format('F d, Y') : "(as per passport)";
             $expiryDateStr = $request->passport_expiry_date ? $request->passport_expiry_date->format('F d, Y') : "(as per passport)";
             $placeOfIssue = $request->passport_issue_place ?? "(as per passport)";
-            
+
             $travelStart = $request->start_date ? $request->start_date->format('F d, Y') : "[date]";
             $travelEnd = $request->end_date ? $request->end_date->format('F d, Y') : "[to date]";
         @endphp
 
         <p class="body-text">
-            This is to inform you that Mr./Ms. {{ $empName }} is serving as {{ $designation }} at {{ $company['name'] }} as a permanent employee since {{ $joinDate }}. {{ $company['name'] }} is a team of technology enthusiasts that specialize in e-commerce platform design, web design, software development, digital marketing, and branding on the web.
+            This is to inform you that Mr./Ms. {{ $empName }} is serving as {{ $designation }} at {{ $company['name'] }}
+            as a permanent employee since {{ $joinDate }}. {{ $company['name'] }} is a team of technology enthusiasts
+            that specialize in e-commerce platform design, web design, software development, digital marketing, and
+            branding on the web.
         </p>
 
         <p class="body-text">
@@ -204,7 +203,9 @@
         </div>
 
         <p class="body-text">
-            Mr./Ms. {{ $empName }} will be traveling to the Republic of India for the period from {{ $travelStart }} to {{ $travelEnd }}. We have no objection to him/her during the travel period. Any assistance in facilitating his/her travel document and/or visa will be highly appreciated.
+            Mr./Ms. {{ $empName }} will be traveling to the Republic of India for the period from {{ $travelStart }} to
+            {{ $travelEnd }}. We have no objection to him/her during the travel period. Any assistance in facilitating
+            his/her travel document and/or visa will be highly appreciated.
         </p>
 
         <p class="closing">Sincerely,</p>
@@ -217,4 +218,5 @@
         </div>
     </div>
 </body>
+
 </html>

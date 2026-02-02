@@ -6,10 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Experience Certificate - {{ $request->ref_id }}</title>
     <style>
-        @if(isset($isWebPreview) && $isWebPreview)
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        @else
         @font-face {
             font-family: 'Inter';
             src: url('{{ public_path('fonts/Inter-Light.ttf') }}') format('truetype');
@@ -37,7 +33,6 @@
             font-weight: 700;
             font-style: normal;
         }
-        @endif
 
         @page {
             size: A4;
@@ -152,21 +147,28 @@
             $dept = $user->department ? $user->department->name : "[Department Name]";
             $subDept = $user->subDepartment ? "(" . $user->subDepartment->name . ")" : "(Sub-Department Name if applicable)";
             $designation = $user->designation ? $user->designation : "[Current Designation]";
-            
+
             $joinDate = $user->joining_date ? $user->joining_date->format('F d, Y') : "[joining date]";
             $resignDate = $user->closing_date ? $user->closing_date->format('F d, Y') : "[resign date]";
         @endphp
 
         <p class="body-text">
-            This is to certify that {{ $empName }}, son of {{ $fatherName }} and {{ $motherName }}, National ID Card No. {{ $nid }}, worked under the {{ $dept }} {{ $subDept }} at {{ $company['name'] }} as {{ $designation }} from {{ $joinDate }} to {{ $resignDate }}. During these days, he has proved to be a conscientious and hardworking individual.
+            This is to certify that {{ $empName }}, son of {{ $fatherName }} and {{ $motherName }}, National ID Card No.
+            {{ $nid }}, worked under the {{ $dept }} {{ $subDept }} at {{ $company['name'] }} as {{ $designation }} from
+            {{ $joinDate }} to {{ $resignDate }}. During these days, he has proved to be a conscientious and hardworking
+            individual.
         </p>
 
         <p class="body-text">
-            I would like to reflect on his conduct during his stay with us. During his service he has been found sincere, reliable, trustworthy, sociable, pleasant and open to challenges. He has a genial temperament and can efficiently work in a team. All of our team members are pleased with him and feel comfortable in teaming and coordinating with him for the realization of organizational goals and objectives.
+            I would like to reflect on his conduct during his stay with us. During his service he has been found
+            sincere, reliable, trustworthy, sociable, pleasant and open to challenges. He has a genial temperament and
+            can efficiently work in a team. All of our team members are pleased with him and feel comfortable in teaming
+            and coordinating with him for the realization of organizational goals and objectives.
         </p>
 
         <p class="body-text">
-            He has been released from his services as per the rules and conventions of {{ $company['short_name'] ?? $company['name'] }}.
+            He has been released from his services as per the rules and conventions of
+            {{ $company['short_name'] ?? $company['name'] }}.
         </p>
 
         <p class="body-text">
@@ -177,7 +179,7 @@
             <div class="signature-underline"></div>
             <p class="signature-name">{{ $issuer['name'] }}</p>
             <p class="signature-title">{{ $issuer['title'] }}</p>
-            
+
             <div class="signature-contact">
                 <p>Cell: {{ $issuer['phone'] }}</p>
                 <!-- Email placeholder if needed, using issuer name simplified for now or hardcoded if needed -->
@@ -185,4 +187,5 @@
         </div>
     </div>
 </body>
+
 </html>
