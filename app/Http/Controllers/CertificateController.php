@@ -19,9 +19,10 @@ class CertificateController extends Controller
     /**
      * Display the certificate request form.
      */
-    public function index(Request $request, ?string $type = 'employment_certificate'): Response
+    public function index(Request $request): Response
     {
         $user = $request->user();
+        $type = $request->input('type', 'employment_certificate');
         $forceNew = $request->query('new') == '1';
 
         // Check for existing pending or authorized request
@@ -59,10 +60,10 @@ class CertificateController extends Controller
     public function store(Request $request)
     {
         $type = $request->input('type', 'employment_certificate');
-        
+
         // Purpose is required only for employment_certificate
         $purposeRule = $type === 'employment_certificate' ? 'required|string' : 'nullable|string';
-        
+
         $validated = $request->validate([
             'purpose' => $purposeRule,
             'type' => 'nullable|string|in:employment_certificate,visa_recommendation_letter,release_letter,experience_certificate',
@@ -90,15 +91,7 @@ class CertificateController extends Controller
 
         $this->certificateService->createRequest($request->user(), $validated);
 
-        // Redirect to the correct type-specific route
-        $routeMap = [
-            'employment_certificate' => 'services.certificate',
-            'visa_recommendation_letter' => 'services.certificate.visa',
-            'release_letter' => 'services.certificate.release',
-            'experience_certificate' => 'services.certificate.experience',
-        ];
-
-        return redirect()->route($routeMap[$type] ?? 'services.certificate')
+        return redirect()->route('services.certificate', ['type' => $type])
             ->with('success', 'Certificate request submitted successfully.');
     }
 
@@ -125,9 +118,10 @@ class CertificateController extends Controller
     /**
      * Display the user's certificate request history.
      */
-    public function history(Request $request, ?string $type = 'employment_certificate'): Response
+    public function history(Request $request): Response
     {
         $user = $request->user();
+        $type = $request->input('type', 'employment_certificate');
 
         return Inertia::render('services/CertificateHistory', [
             'requests' => $this->certificateService->getUserRequests($user, $type),
@@ -208,15 +202,15 @@ class CertificateController extends Controller
 
         $htmlContent = "
             <p>Dear {$recipientName},</p>
-            <p>Your Employment Certificate (Ref: {$certificateRequest->ref_id}) is ready.</p>
+            <p>Your " . ucwords(str_replace('_', ' ', $certificateRequest->type)) . " (Ref: {$certificateRequest->ref_id}) has been issued.</p>
             <p>Please collect it physically from the HR department.</p>
             <p>Best regards,<br>People & Operations Team</p>
         ";
 
         try {
-            Mail::html($htmlContent, function ($message) use ($recipientEmail, $recipientName) {
+            Mail::html($htmlContent, function ($message) use ($recipientEmail, $recipientName, $certificateRequest) {
                 $message->to($recipientEmail, $recipientName)
-                    ->subject('Employment Certificate Ready for Collection');
+                    ->subject('Certificate Issued: ' . $certificateRequest->ref_id);
             });
         } catch (\Exception $e) {
             // Log email error but don't fail the issuance
@@ -224,113 +218,6 @@ class CertificateController extends Controller
         }
 
         return back()->with('success', 'Certificate issued successfully.');
-    }
-
-    /**
-     * Download the certificate PDF.
-     */
-    public function download(Request $request, CertificateRequest $certificateRequest)
-    {
-        $user = $request->user();
-
-        // Allow download if user is admin
-        $canDownload = $user->isAdmin();
-
-        if (!$canDownload) {
-            abort(403, 'Unauthorized access.');
-        }
-
-        if (!$certificateRequest->isIssued()) {
-            abort(400, 'Certificate has not been issued yet.');
-        }
-
-        $pdf = $this->certificateService->generateCertificatePdf($certificateRequest);
-        $filename = "{$certificateRequest->type}_{$certificateRequest->ref_id}.pdf";
-        $filename = str_replace('/', '_', $filename);
-
-        if ($request->has('view')) {
-            return $pdf->stream($filename);
-        }
-
-        return $pdf->download($filename);
-    }
-
-    /**
-     * Generate HTML preview for embedding.
-     */
-    public function preview(Request $request, CertificateRequest $certificateRequest)
-    {
-        $user = $request->user();
-
-        // Allow preview for owner (draft view) or admin
-        $canPreview = ($certificateRequest->user_id === $user->id && $certificateRequest->isIssued())
-            || $user->isAdmin();
-
-        if (!$canPreview) {
-            abort(403, 'Unauthorized access.');
-        }
-
-        $data = $this->certificateService->getCertificateData($certificateRequest);
-        $data['isWebPreview'] = true;
-
-        $view = match ($certificateRequest->type) {
-            CertificateRequest::TYPE_VISA_RECOMMENDATION => 'pdf.visa-recommendation-letter',
-            CertificateRequest::TYPE_RELEASE_LETTER => 'pdf.release-letter',
-            CertificateRequest::TYPE_EXPERIENCE_CERTIFICATE => 'pdf.experience-certificate',
-            default => 'pdf.certificate', // Retain original for EC
-        };
-
-        return view($view, $data);
-    }
-
-    /**
-     * Email the certificate.
-     */
-    public function email(Request $request, CertificateRequest $certificateRequest)
-    {
-        $user = $request->user();
-
-        if (!$user->isAdmin()) {
-            abort(403, 'Unauthorized access.');
-        }
-
-        if (!$certificateRequest->isIssued()) {
-            abort(400, 'Certificate has not been issued yet.');
-        }
-
-        $validated = $request->validate([
-            'recipient' => 'required|in:employee,self',
-        ]);
-
-        $pdf = $this->certificateService->generateCertificatePdf($certificateRequest);
-        $pdfContent = $pdf->output();
-
-        $recipientEmail = $validated['recipient'] === 'employee'
-            ? $certificateRequest->user->email
-            : $user->email;
-
-        $recipientName = $validated['recipient'] === 'employee'
-            ? $certificateRequest->user->name
-            : $user->name;
-
-        // Send email with PDF attachment
-        $htmlContent = "
-            <p>Dear {$recipientName},</p>
-            <p>Please find attached your Employment Certificate (Ref: {$certificateRequest->ref_id}).</p>
-            <p>Best regards,<br>People & Operations Team</p>
-        ";
-
-        Mail::html($htmlContent, function ($message) use ($recipientEmail, $recipientName, $certificateRequest, $pdfContent) {
-            $message->to($recipientEmail, $recipientName)
-                ->subject('Employment Certificate - ' . $certificateRequest->ref_id)
-                ->attachData(
-                    $pdfContent,
-                    'employment_certificate_' . str_replace('/', '_', $certificateRequest->ref_id) . '.pdf',
-                    ['mime' => 'application/pdf']
-                );
-        });
-
-        return back()->with('success', 'Certificate emailed successfully.');
     }
 
     /**

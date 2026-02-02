@@ -25,11 +25,13 @@ import { FileText, Clock, AlertTriangle, CheckCircle, Download, XCircle, AlertCi
 import { ref, computed } from 'vue';
 import type { BreadcrumbItem } from '@/types';
 
+const props = defineProps<Props>();
+
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Services', href: '#' },
-    { title: 'Employee Certificate', href: '/services/employment-certificate' },
-    { title: 'History', href: '/services/employment-certificate/history' },
+    { title: 'Certificate', href: `/services/certificate?type=${props.currentType}` },
+    { title: 'History', href: '#' },
 ];
 
 interface CertificateRequest {
@@ -63,9 +65,8 @@ interface PaginatedResponse<T> {
 interface Props {
     requests: PaginatedResponse<CertificateRequest>;
     purposes: Record<string, string>;
+    currentType: string;
 }
-
-const props = defineProps<Props>();
 
 // Pagination is now handled server-side via props.requests.data and props.requests.links
 
@@ -108,10 +109,6 @@ const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
     return props.purposes[purpose] || purpose;
 };
 
-const downloadCertificate = (requestId: number) => {
-    window.open(`/services/employment-certificate/${requestId}/download`, '_blank');
-};
-
 const requestToCancel = ref<number | null>(null);
 const cancelModalOpen = ref(false);
 const isCancelling = ref(false);
@@ -131,7 +128,7 @@ const handleCancel = () => {
     if (!requestToCancel.value) return;
 
     isCancelling.value = true;
-    router.post(`/services/employment-certificate/${requestToCancel.value}/cancel`, {}, {
+    router.post(`/services/certificate/${requestToCancel.value}/cancel`, {}, {
         preserveScroll: true,
         onFinish: () => closeCancelModal(),
     });
@@ -149,7 +146,7 @@ const handleCancel = () => {
                     <h1 class="text-2xl font-bold">Request History</h1>
                     <p class="text-muted-foreground mt-1">View the status of your certificate requests</p>
                 </div>
-                <Button variant="outline" @click="router.visit('/services/employment-certificate')">
+                <Button variant="outline" @click="router.visit(`/services/certificate?type=${props.currentType}`)">
                     Back to Request
                 </Button>
             </div>

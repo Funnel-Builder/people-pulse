@@ -159,23 +159,35 @@ const form = useForm({
     passport_issue_place: '',
 });
 
-// Watch for type change (no need to reset purpose on init, just keep type synced)
-watch(() => props.currentType, (newType) => {
-    form.type = newType;
-});
+// Dropdown for certificate types
+const certificateTypes = [
+    { value: 'employment_certificate', label: 'Employment Certificate' },
+    { value: 'visa_recommendation_letter', label: 'Visa Recommendation Letter' },
+    { value: 'release_letter', label: 'Release Letter' },
+    { value: 'experience_certificate', label: 'Experience Certificate' },
+];
 
-// Dynamic URL helpers based on type
-const getBaseUrl = computed(() => {
-    switch (props.currentType) {
-        case 'visa_recommendation_letter': return '/services/visa-recommendation-letter';
-        case 'release_letter': return '/services/release-letter';
-        case 'experience_certificate': return '/services/experience-certificate';
-        default: return '/services/employment-certificate';
+const selectedType = ref(props.currentType);
+
+// Watch for dropdown change to navigate
+watch(selectedType, (newType) => {
+    if (newType !== props.currentType) {
+        router.visit('/services/certificate', {
+            data: { type: newType },
+            preserveState: false,
+        });
     }
 });
 
-const getHistoryUrl = computed(() => `${getBaseUrl.value}/history`);
-const getNewRequestUrl = computed(() => `${getBaseUrl.value}?new=1`);
+// Watch for prop change (e.g. back button)
+watch(() => props.currentType, (newType) => {
+    selectedType.value = newType;
+    form.type = newType;
+});
+
+const getBaseUrl = computed(() => '/services/certificate');
+const getHistoryUrl = computed(() => `${getBaseUrl.value}/history?type=${props.currentType}`);
+const getNewRequestUrl = computed(() => `${getBaseUrl.value}?type=${props.currentType}&new=1`);
 
 
 const submitRequest = () => {
@@ -225,35 +237,6 @@ const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
     return props.purposes[purpose] || purpose;
 };
 
-const downloadCertificate = (id: number) => {
-    window.open(`${getBaseUrl.value}/${id}/download`, '_blank');
-};
-
-// Email Button Logic
-const emailStatus = ref<'idle' | 'sending' | 'success' | 'error'>('idle');
-
-const sendEmail = (id: number) => {
-    if (emailStatus.value !== 'idle') return;
-
-    emailStatus.value = 'sending';
-
-    router.post(`${getBaseUrl.value}/${id}/email`, { recipient: 'self' }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            emailStatus.value = 'success';
-            setTimeout(() => {
-                emailStatus.value = 'idle';
-            }, 3000);
-        },
-        onError: () => {
-            emailStatus.value = 'error';
-            setTimeout(() => {
-                emailStatus.value = 'idle';
-            }, 3000);
-        },
-    });
-};
-
 // Map data for preview components
 // Helper for display name
 const certificateDisplayName = computed(() => {
@@ -272,14 +255,24 @@ const certificateDisplayName = computed(() => {
             <!-- Header -->
 
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 class="text-2xl font-bold">
-                        <span v-if="props.currentType === 'visa_recommendation_letter'">Visa Recommendation Letter</span>
-                        <span v-else-if="props.currentType === 'release_letter'">Release Letter</span>
-                        <span v-else-if="props.currentType === 'experience_certificate'">Experience Certificate</span>
-                        <span v-else>Employment Certificate</span>
-                    </h1>
-                    <p class="text-xs md:text-sm text-muted-foreground mt-1">Submit a request to receive your official document</p>
+                <div class="space-y-4 w-full md:w-auto">
+                    <div class="space-y-1">
+                        <h1 class="text-2xl font-bold">Services</h1>
+                        <p class="text-xs md:text-sm text-muted-foreground">Request, track and manage your certificates</p>
+                    </div>
+                
+                    <div class="w-full md:w-[300px]">
+                        <Select v-model="selectedType">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select certificate type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem v-for="type in certificateTypes" :key="type.value" :value="type.value">
+                                    {{ type.label }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
                 <!-- Show both buttons when viewing issued certificate -->
                 <div v-if="props.latestIssuedCertificate && !props.activeRequest" class="flex items-center gap-2 w-full md:w-auto">
@@ -378,9 +371,7 @@ const certificateDisplayName = computed(() => {
                                     </div>
                                 </div>
 
-                                <div class="text-center mt-4">
-                                    <p class="text-sm text-muted-foreground">You will be notified once your certificate is ready for download.</p>
-                                </div>
+                                    <p class="text-sm text-muted-foreground">You will be notified once your certificate is ready for collection.</p>
                             </CardContent>
                         </Card>
                     </div>

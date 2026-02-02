@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Clock, LayoutGrid, Users, Shield, UserCog, FileBarChart, Settings as SettingsIcon, CalendarDays, ClipboardList, CalendarCog, FolderOpen, BarChart3, Bell } from 'lucide-vue-next';
+import { Clock, LayoutGrid, Users, Shield, UserCog, FileBarChart, Settings as SettingsIcon, CalendarDays, ClipboardList, CalendarCog, FolderOpen, BarChart3, Bell, Network } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
 
@@ -71,29 +71,11 @@ const mainNavItems = computed<NavItem[]>(() => {
     // Services Group (all users can request, managers/admins can approve)
     const servicesChildren: NavItem[] = [
         {
-            title: 'EC',
-            subtitle: 'Employment Certificate',
-            href: '/services/employment-certificate',
+            title: 'Certificate',
+            subtitle: 'Request & Manage',
+            href: '/services/certificate',
             icon: ClipboardList,
-            permission: 'view_services' // assuming permission or just visible to all
-        },
-        {
-            title: 'VRL',
-            subtitle: 'Visa Recommendation Letter',
-            href: '/services/visa-recommendation-letter',
-            icon: ClipboardList,
-        },
-        {
-            title: 'RL',
-            subtitle: 'Release Letter',
-            href: '/services/release-letter',
-            icon: ClipboardList,
-        },
-        {
-            title: 'XC',
-            subtitle: 'Experience Certificate',
-            href: '/services/experience-certificate',
-            icon: ClipboardList,
+            permission: 'view_services'
         },
     ];
 
@@ -184,6 +166,11 @@ const mainNavItems = computed<NavItem[]>(() => {
                 title: 'Leave Settings',
                 href: '/settings/leaves',
                 icon: CalendarCog,
+            },
+            {
+                title: 'Departments',
+                href: '/settings/departments',
+                icon: Network, // Reuse Network icon or import appropriate one
             },
             {
                 title: 'Holidays',

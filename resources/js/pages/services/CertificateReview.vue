@@ -21,14 +21,14 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, CheckCircle, XCircle, Download, Mail, FileText, Printer, AlertCircle, Building2, User as UserIcon, AtSign, Check, X, Loader2 } from 'lucide-vue-next';
+import { ArrowLeft, CheckCircle, XCircle, Mail, FileText, AlertCircle, Building2, User as UserIcon, Calendar, BookOpen, AlertTriangle, Loader2 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Services', href: '#' },
-    { title: 'Certificate Approvals', href: '/services/approvals' },
+    { title: 'Certificate Approvals', href: '/services/certificate/approvals' },
     { title: 'Review', href: '#' },
 ];
 
@@ -59,6 +59,12 @@ interface CertificateRequest {
     status: string;
     remarks: string | null;
     created_at: string;
+    start_date: string | null;
+    end_date: string | null;
+    passport_number: string | null;
+    passport_issue_date: string | null;
+    passport_expiry_date: string | null;
+    passport_issue_place: string | null;
 }
 
 interface IssuerInfo {
@@ -85,25 +91,9 @@ const showIssuedModal = ref(false);
 const isIssuing = ref(false);
 const rejectModalOpen = ref(false);
 const isRejecting = ref(false);
-const emailStates = ref<{
-    employee: 'idle' | 'sending' | 'success' | 'error';
-    self: 'idle' | 'sending' | 'success' | 'error';
-}>({
-    employee: 'idle',
-    self: 'idle',
-});
 
 // Dynamic Base URL based on certificate type
-const baseUrl = computed(() => {
-    const typeToRouteMap: Record<string, string> = {
-        'employment_certificate': 'employment-certificate',
-        'visa_recommendation_letter': 'visa-recommendation-letter',
-        'release_letter': 'release-letter',
-        'experience_certificate': 'experience-certificate',
-    };
-    const routeSlug = typeToRouteMap[props.request.type] || 'employment-certificate';
-    return `/services/${routeSlug}/${props.request.id}`;
-});
+const baseUrl = computed(() => `/services/certificate/${props.request.id}`);
 
 // Verification checklist - auto-check based on data availability
 const verificationChecks = computed(() => [
@@ -184,16 +174,17 @@ const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
     return purposes[purpose] || purpose;
 };
 
-const formatCurrentDate = () => {
-    return new Date().toLocaleDateString('en-US', {
+const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
-        day: '2-digit',
+        day: 'numeric',
     });
 };
 
 const goBack = () => {
-    router.get('/services/approvals');
+    router.visit('/services/approvals');
 };
 
 const issueCertificate = () => {
@@ -224,56 +215,6 @@ const confirmReject = () => {
     isRejecting.value = true;
     router.post(`${baseUrl.value}/reject`, {}, {
         onFinish: () => closeRejectModal(),
-    });
-};
-
-const downloadCertificate = () => {
-    window.open(`${baseUrl.value}/download`, '_blank');
-};
-
-const printCertificate = () => {
-    const url = `${baseUrl.value}/download?view=true`;
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    iframe.src = url;
-    
-    document.body.appendChild(iframe);
-    
-    if (iframe.contentWindow) {
-        iframe.contentWindow.onload = () => {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
-            setTimeout(() => {
-               document.body.removeChild(iframe); 
-            }, 60000); 
-        };
-    }
-};
-
-const emailCertificate = (recipient: 'employee' | 'self') => {
-    emailStates.value[recipient] = 'sending';
-    
-    router.post(`${baseUrl.value}/email`, {
-        recipient,
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            emailStates.value[recipient] = 'success';
-            setTimeout(() => {
-                emailStates.value[recipient] = 'idle';
-            }, 2000);
-        },
-        onError: () => {
-            emailStates.value[recipient] = 'error';
-            setTimeout(() => {
-                emailStates.value[recipient] = 'idle';
-            }, 2000);
-        },
     });
 };
 
@@ -338,41 +279,90 @@ const closeModal = () => {
 
             <!-- Two Column Layout -->
             <div class="grid gap-6 lg:grid-cols-[1fr_400px]">
-                <!-- Left Column: Certificate Preview -->
+                <!-- Left Column: Request Details -->
                 <div class="space-y-6">
                     <Card class="border-border/50 shadow-sm h-full">
                         <CardHeader class="pb-2">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <CardTitle class="text-lg font-semibold flex items-center gap-2">
-                                        Certificate Preview
+                                        Request Details
                                     </CardTitle>
-                                    <CardDescription>This is exactly how the issued certificate will appear</CardDescription>
+                                    <CardDescription>Review the information submitted by the employee</CardDescription>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <Badge variant="outline" class="bg-blue-50 text-blue-700 border-blue-200">
                                         {{ getPurposeDisplay(request.purpose, request.purpose_other) }}
                                     </Badge>
-                                    <Badge 
-                                        variant="outline" 
-                                        :class="[
-                                            request.urgency === 'urgent' 
-                                                ? 'bg-red-50 text-red-700 border-red-200' 
-                                                : 'bg-gray-50 text-gray-700 border-gray-200'
-                                        ]"
-                                    >
-                                        {{ request.urgency.charAt(0).toUpperCase() + request.urgency.slice(1) }}
-                                    </Badge>
                                 </div>
                             </div>
                         </CardHeader>
-                        <CardContent class="pt-4 h-[800px] p-0 overflow-hidden rounded-b-lg border-t">
-                            <!-- Helper Function for URL -->
-                            <iframe 
-                                :src="`${baseUrl}/preview`" 
-                                class="w-full h-full border-0"
-                                title="Certificate Preview"
-                            ></iframe>
+                        <CardContent class="pt-6 space-y-8">
+                            
+                            <!-- Application Information -->
+                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-1">
+                                    <Label class="text-xs text-muted-foreground uppercase tracking-wider">Application Date</Label>
+                                    <div class="flex items-center gap-2 font-medium">
+                                        <Calendar class="h-4 w-4 text-muted-foreground" />
+                                        {{ formatDate(request.created_at) }}
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <Label class="text-xs text-muted-foreground uppercase tracking-wider">Urgency</Label>
+                                    <div class="flex items-center gap-2">
+                                        <AlertTriangle v-if="request.urgency === 'urgent'" class="h-4 w-4 text-red-500" />
+                                        <span class="font-medium capitalize" :class="request.urgency === 'urgent' ? 'text-red-600' : ''">
+                                            {{ request.urgency }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Remarks -->
+                            <div v-if="request.remarks" class="space-y-2">
+                                <Label class="text-xs text-muted-foreground uppercase tracking-wider">Additional Remarks</Label>
+                                <div class="bg-muted/30 p-4 rounded-md text-sm border border-border/50">
+                                    {{ request.remarks }}
+                                </div>
+                            </div>
+
+                            <!-- Visa / Passport Details -->
+                             <template v-if="request.type === 'visa_recommendation_letter'">
+                                <div class="border-t pt-6 mt-6">
+                                    <h3 class="font-semibold text-base mb-4 flex items-center gap-2">
+                                        <BookOpen class="h-4 w-4" />
+                                        Passport & Travel Details
+                                    </h3>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
+                                        <div class="space-y-1">
+                                            <Label class="text-xs text-muted-foreground uppercase tracking-wider">Passport Number</Label>
+                                            <p class="font-medium">{{ request.passport_number || 'N/A' }}</p>
+                                        </div>
+                                        <div class="space-y-1">
+                                            <Label class="text-xs text-muted-foreground uppercase tracking-wider">Place of Issue</Label>
+                                            <p class="font-medium">{{ request.passport_issue_place || 'N/A' }}</p>
+                                        </div>
+                                        <div class="space-y-1">
+                                            <Label class="text-xs text-muted-foreground uppercase tracking-wider">Issue Date</Label>
+                                            <p class="font-medium">{{ formatDate(request.passport_issue_date) }}</p>
+                                        </div>
+                                        <div class="space-y-1">
+                                            <Label class="text-xs text-muted-foreground uppercase tracking-wider">Expiry Date</Label>
+                                            <p class="font-medium">{{ formatDate(request.passport_expiry_date) }}</p>
+                                        </div>
+                                        <div class="space-y-1">
+                                            <Label class="text-xs text-muted-foreground uppercase tracking-wider">Travel Start Date</Label>
+                                            <p class="font-medium">{{ formatDate(request.start_date) }}</p>
+                                        </div>
+                                        <div class="space-y-1">
+                                            <Label class="text-xs text-muted-foreground uppercase tracking-wider">Travel End Date</Label>
+                                            <p class="font-medium">{{ formatDate(request.end_date) }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                             </template>
+
                         </CardContent>
                     </Card>
                 </div>
@@ -418,8 +408,6 @@ const closeModal = () => {
                         </CardContent>
                     </Card>
 
-                    <!-- Employee Summary -->
-                    <!-- Employee Summary -->
                     <!-- Employee Summary -->
                     <Card class="border-border/50 shadow-sm overflow-hidden">
                         <CardContent class="p-6">
@@ -476,17 +464,12 @@ const closeModal = () => {
                     </Card>
 
                     <!-- Action Buttons -->
-                    <!-- Action Buttons -->
                     <div class="space-y-3">
                         <template v-if="request.status === 'issued'">
-                            <Button
-                                class="w-full"
-                                size="lg"
-                                @click="downloadCertificate"
-                            >
-                                <Download class="h-4 w-4 mr-2" />
-                                Download Certificate
-                            </Button>
+                             <div class="w-full bg-green-50 text-green-700 border border-green-200 rounded-md p-3 text-center text-sm font-medium flex items-center justify-center gap-2">
+                                <CheckCircle class="h-4 w-4" />
+                                Certificate Issued
+                            </div>
                         </template>
                         <template v-else>
                             <Button
@@ -540,14 +523,14 @@ const closeModal = () => {
 
         <!-- Issued Modal -->
         <Dialog :open="showIssuedModal" @update:open="(v) => !v && closeModal()">
-            <DialogContent class="sm:max-w-[600px]">
+            <DialogContent class="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle class="flex items-center gap-2">
                         <CheckCircle class="h-5 w-5 text-green-500" />
                         Certificate Issued Successfully
                     </DialogTitle>
                     <DialogDescription>
-                        The certificate has been issued. You can now download or email it.
+                        The certificate has been marked as issued. The employee has been notified.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -563,46 +546,9 @@ const closeModal = () => {
                     </div>
                 </div>
 
-                <DialogFooter class="flex-col sm:flex-row gap-3">
-
-
-                    <Button
-                        :variant="emailStates.self === 'idle' ? 'outline' : (emailStates.self === 'success' ? 'default' : 'destructive')"
-                        @click="emailCertificate('self')"
-                        :disabled="emailStates.self === 'sending'"
-                        class="flex-1 transition-all duration-300"
-                        :class="emailStates.self === 'success' ? 'bg-green-600 hover:bg-green-700 text-white border-transparent' : ''"
-                    >
-                        <template v-if="emailStates.self === 'sending'">
-                           <span class="animate-spin mr-2">⏳</span> Sending...
-                        </template>
-                        <template v-else-if="emailStates.self === 'success'">
-                            <Check class="h-4 w-4 mr-2" /> Sent
-                        </template>
-                         <template v-else-if="emailStates.self === 'error'">
-                             <X class="h-4 w-4 mr-2" /> Failed
-                        </template>
-                        <template v-else>
-                            <AtSign class="h-4 w-4 mr-2" />
-                            Email to Me
-                        </template>
-                    </Button>
-                    
-                    <Button
-                        @click="printCertificate"
-                        class="flex-1"
-                        variant="secondary"
-                    >
-                        <Printer class="h-4 w-4 mr-2" />
-                        Print
-                    </Button>
-
-                    <Button
-                        @click="downloadCertificate"
-                        class="flex-1"
-                    >
-                        <Download class="h-4 w-4 mr-2" />
-                        Download
+                <DialogFooter>
+                    <Button @click="closeModal" class="w-full">
+                        Close
                     </Button>
                 </DialogFooter>
             </DialogContent>

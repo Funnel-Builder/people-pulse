@@ -583,7 +583,8 @@ const employeeStatusBanner = computed(() => {
                         <CardContent>
                             <div class="space-y-4">
                                 <!-- Department list with sub-departments -->
-                                <div v-for="dept in departments" :key="dept.id" class="border rounded-lg p-4">
+                                <div class="flex flex-wrap gap-4">
+                                    <div v-for="dept in departments" :key="dept.id" class="border rounded-lg p-4 w-full">
                                     <div class="flex items-center space-x-3">
                                         <input
                                             type="checkbox"
@@ -615,6 +616,7 @@ const employeeStatusBanner = computed(() => {
                                                 {{ subDept.name }}
                                             </Label>
                                         </div>
+                                    </div>
                                     </div>
                                 </div>
                                 
