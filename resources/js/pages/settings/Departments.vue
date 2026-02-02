@@ -243,7 +243,7 @@ const deleteSubDepartment = (sub: SubDepartment) => {
 
             <!-- Department Drawer -->
             <Sheet v-model:open="isDepartmentDrawerOpen">
-                <SheetContent class="sm:max-w-md">
+                <SheetContent class="sm:max-w-md p-4">
                     <SheetHeader>
                         <SheetTitle>{{ editingDepartment ? 'Edit Department' : 'Add Department' }}</SheetTitle>
                         <SheetDescription>
@@ -270,7 +270,7 @@ const deleteSubDepartment = (sub: SubDepartment) => {
 
             <!-- Sub-Department Drawer -->
             <Sheet v-model:open="isSubDepartmentDrawerOpen">
-                <SheetContent class="sm:max-w-md">
+                <SheetContent class="sm:max-w-md p-4">
                     <SheetHeader>
                         <SheetTitle>{{ editingSubDepartment ? 'Edit Sub-department' : 'Add Sub-department' }}</SheetTitle>
                         <SheetDescription>
