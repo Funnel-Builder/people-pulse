@@ -51,6 +51,7 @@
             font-weight: 400;
             line-height: normal;
             color: #000;
+            background-color: #fff;
             padding: 2in 1in 1in 1in;
         }
 

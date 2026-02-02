@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Attendance, AttendanceFilters, BreadcrumbItem, PaginatedData } from '@/types';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, Link } from '@inertiajs/vue3';
 import { Users, Clock, AlertTriangle, UserCheck, UserX, Download, X } from 'lucide-vue-next';
 import { ref, watch, computed } from 'vue';
 import DateRangePicker from '@/components/ui/date-range-picker/DateRangePicker.vue';
@@ -28,6 +28,7 @@ interface SubDepartment {
     id: number;
     name: string;
 }
+
 interface DepartmentSummary {
     total_employees: number;
     present: number;
@@ -50,7 +51,7 @@ const props = defineProps<Props>();
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Manager Dashboard', href: '/attendance/manager' },
+    { title: 'Attendance Records', href: '/attendance/manager' },
 ];
 
 const localFilters = ref({
@@ -152,13 +153,13 @@ const hasActiveFilters = computed(() => {
 </script>
 
 <template>
-    <Head title="Manager Dashboard" />
+    <Head title="Attendance Records" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex flex-col gap-6 p-4 md:p-6">
             <!-- Header with Filters -->
             <div class="flex flex-col gap-4">
-                <h1 class="text-2xl font-bold">Manager Dashboard</h1>
+                <h1 class="text-2xl font-bold">Attendance Records</h1>
                 <div class="flex flex-wrap gap-2 items-center">
                     <DateRangePicker 
                         :start-date="localFilters.start_date"
@@ -199,51 +200,51 @@ const hasActiveFilters = computed(() => {
             <!-- Today's Summary Cards -->
             <div v-if="departmentSummary" class="grid gap-4 md:grid-cols-4">
                 <Card 
-                    class="cursor-pointer hover:bg-muted/50 transition-colors"
+                    class="cursor-pointer hover:bg-muted/50 transition-colors py-2"
                     @click="openTeamModal('all')"
                 >
-                    <CardHeader class="flex flex-row items-center justify-between pb-2">
-                        <CardDescription>Total Employees</CardDescription>
+                    <CardHeader class="flex flex-row items-center justify-between py-2 px-4">
+                        <CardDescription class="text-xs">Total Employees</CardDescription>
                         <Users class="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent>
-                        <div class="text-3xl font-bold">{{ departmentSummary.total_employees }}</div>
+                    <CardContent class="py-1 px-4">
+                        <div class="text-2xl font-bold">{{ departmentSummary.total_employees }}</div>
                     </CardContent>
                 </Card>
                 <Card 
-                    class="cursor-pointer hover:bg-muted/50 transition-colors"
+                    class="cursor-pointer hover:bg-muted/50 transition-colors py-2"
                     @click="openTeamModal('present')"
                 >
-                    <CardHeader class="flex flex-row items-center justify-between pb-2">
-                        <CardDescription>Present Today</CardDescription>
+                    <CardHeader class="flex flex-row items-center justify-between py-2 px-4">
+                        <CardDescription class="text-xs">Present Today</CardDescription>
                         <UserCheck class="h-4 w-4 text-green-500" />
                     </CardHeader>
-                    <CardContent>
-                        <div class="text-3xl font-bold text-green-600">{{ departmentSummary.present }}</div>
+                    <CardContent class="py-1 px-4">
+                        <div class="text-2xl font-bold text-green-600">{{ departmentSummary.present }}</div>
                     </CardContent>
                 </Card>
                 <Card 
-                    class="cursor-pointer hover:bg-muted/50 transition-colors"
+                    class="cursor-pointer hover:bg-muted/50 transition-colors py-2"
                     @click="openTeamModal('absent')"
                 >
-                    <CardHeader class="flex flex-row items-center justify-between pb-2">
-                        <CardDescription>Absent Today</CardDescription>
+                    <CardHeader class="flex flex-row items-center justify-between py-2 px-4">
+                        <CardDescription class="text-xs">Absent Today</CardDescription>
                         <UserX class="h-4 w-4 text-red-500" />
                     </CardHeader>
-                    <CardContent>
-                        <div class="text-3xl font-bold text-red-600">{{ departmentSummary.absent }}</div>
+                    <CardContent class="py-1 px-4">
+                        <div class="text-2xl font-bold text-red-600">{{ departmentSummary.absent }}</div>
                     </CardContent>
                 </Card>
                 <Card 
-                    class="cursor-pointer hover:bg-muted/50 transition-colors"
+                    class="cursor-pointer hover:bg-muted/50 transition-colors py-2"
                     @click="openTeamModal('late')"
                 >
-                    <CardHeader class="flex flex-row items-center justify-between pb-2">
-                        <CardDescription>Late Today</CardDescription>
+                    <CardHeader class="flex flex-row items-center justify-between py-2 px-4">
+                        <CardDescription class="text-xs">Late Today</CardDescription>
                         <AlertTriangle class="h-4 w-4 text-yellow-500" />
                     </CardHeader>
-                    <CardContent>
-                        <div class="text-3xl font-bold text-yellow-600">{{ departmentSummary.late }}</div>
+                    <CardContent class="py-1 px-4">
+                        <div class="text-2xl font-bold text-yellow-600">{{ departmentSummary.late }}</div>
                     </CardContent>
                 </Card>
             </div>

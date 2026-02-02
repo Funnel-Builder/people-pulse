@@ -56,7 +56,8 @@
             font-weight: 400;
             line-height: normal;
             color: #000;
-            padding: 2in 1in 1in 1in;
+            background-color: #fff;
+            padding: 1.5in 1in 1in 1in;
         }
 
         .container {

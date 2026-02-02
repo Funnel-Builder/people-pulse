@@ -136,9 +136,20 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the explicitly assigned sub-departments from the pivot table.
+     * This is the new relationship for manager responsibilities.
+     */
+    public function managedResponsibilities(): BelongsToMany
+    {
+        return $this->belongsToMany(SubDepartment::class, 'manager_sub_departments', 'user_id', 'sub_department_id');
+    }
+
+    /**
      * Get the sub-departments that this manager manages.
-     * If manager has a sub_department, they manage only that sub_department.
-     * If manager has no sub_department but has a department, they manage all sub_departments in that department.
+     * Priority:
+     * 1. Explicit assignments in the manager_sub_departments pivot table
+     * 2. Fall back: If sub_department_id is set, manage only that sub_department
+     * 3. Fall back: If department_id is set but no sub_department_id, manage all sub_departments in that department
      */
     public function getManagedSubDepartments()
     {
@@ -146,14 +157,20 @@ class User extends Authenticatable
             return collect([]);
         }
 
-        // If manager has a specific sub_department, they manage only that one
-        if ($this->sub_department_id) {
-            return SubDepartment::where('id', $this->sub_department_id)->get();
+        // First, check for explicit assignments in the pivot table
+        $explicitAssignments = $this->managedResponsibilities()->with('department')->get();
+        if ($explicitAssignments->isNotEmpty()) {
+            return $explicitAssignments;
         }
 
-        // If manager has a department but no sub_department, they manage all sub_departments in that department
+        // Fall back: If manager has a specific sub_department, they manage only that one
+        if ($this->sub_department_id) {
+            return SubDepartment::with('department')->where('id', $this->sub_department_id)->get();
+        }
+
+        // Fall back: If manager has a department but no sub_department, they manage all sub_departments in that department
         if ($this->department_id) {
-            return SubDepartment::where('department_id', $this->department_id)->get();
+            return SubDepartment::with('department')->where('department_id', $this->department_id)->get();
         }
 
         return collect([]);
@@ -168,11 +185,11 @@ class User extends Authenticatable
     }
 
     /**
-     * @deprecated This relationship is no longer used. Use getManagedSubDepartments() instead.
+     * Alias for managedResponsibilities() for backward compatibility.
      */
     public function managedSubDepartments(): BelongsToMany
     {
-        return $this->belongsToMany(SubDepartment::class, 'manager_sub_departments');
+        return $this->managedResponsibilities();
     }
 
     /**

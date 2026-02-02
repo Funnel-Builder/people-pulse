@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Clock, LayoutGrid, Users, Shield, UserCog, FileBarChart, Settings as SettingsIcon, UsersRound, CalendarDays, ClipboardList, CalendarCog, FolderOpen, BarChart3, Bell } from 'lucide-vue-next';
+import { Clock, LayoutGrid, Users, Shield, UserCog, FileBarChart, Settings as SettingsIcon, CalendarDays, ClipboardList, CalendarCog, FolderOpen, BarChart3, Bell } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
 
@@ -71,23 +71,27 @@ const mainNavItems = computed<NavItem[]>(() => {
     // Services Group (all users can request, managers/admins can approve)
     const servicesChildren: NavItem[] = [
         {
-            title: 'EC - Employment Certificate',
+            title: 'EC',
+            subtitle: 'Employment Certificate',
             href: '/services/employment-certificate',
             icon: ClipboardList,
             permission: 'view_services' // assuming permission or just visible to all
         },
         {
-            title: 'VRL - Visa Recommendation',
+            title: 'VRL',
+            subtitle: 'Visa Recommendation Letter',
             href: '/services/visa-recommendation-letter',
             icon: ClipboardList,
         },
         {
-            title: 'RL - Release Letter',
+            title: 'RL',
+            subtitle: 'Release Letter',
             href: '/services/release-letter',
             icon: ClipboardList,
         },
         {
-            title: 'XC - Experience Certificate',
+            title: 'XC',
+            subtitle: 'Experience Certificate',
             href: '/services/experience-certificate',
             icon: ClipboardList,
         },
@@ -111,27 +115,20 @@ const mainNavItems = computed<NavItem[]>(() => {
         children: servicesChildren,
     });
 
-    // Workforce Group (Manager only - Team Attendance)
-    if (user.value?.role === 'manager') {
-        items.push({
-            title: 'Workforce',
-            href: '#',
-            icon: Users,
-            isGroup: true,
-            children: [
-                {
-                    title: 'Team Attendance',
-                    href: '/attendance/manager',
-                    icon: UsersRound,
-                },
-            ],
-        });
-    }
-
     // Records Group (Admin/Manager only)
     if (user.value?.role === 'manager' || user.value?.role === 'admin') {
         const recordsChildren: NavItem[] = [];
 
+        // For managers: show their team attendance as Attendance Records
+        if (user.value?.role === 'manager') {
+            recordsChildren.push({
+                title: 'Attendance Records',
+                href: '/attendance/manager',
+                icon: Clock,
+            });
+        }
+
+        // For admins: show all attendance records
         if (user.value?.role === 'admin') {
             recordsChildren.push({
                 title: 'Attendance Records',
