@@ -17,10 +17,10 @@ Schedule::command('leave:calculate-accrual')->dailyAt('00:00');
 Schedule::command('attendance:mark-absent')->dailyAt('10:30');
 
 // Send clock-in reminder at office start time (09:30)
-Schedule::command('attendance:notify-missed-clockin')->dailyAt('09:30');
+Schedule::command('attendance:notify-missed-clockin')->dailyAt('09:40');
 
 // Send clock-out reminder to employees at 17:30
-Schedule::command('attendance:remind-clockout')->dailyAt('18:00');
+Schedule::command('attendance:remind-clockout')->dailyAt('18:10');
 
 // Notify admins about employees who missed clock-out at 18:30
 Schedule::command('attendance:notify-missed-clockout')->dailyAt('18:30');
