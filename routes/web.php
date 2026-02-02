@@ -17,7 +17,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('attendance')->name('attendance.')->group(function () {
         // User views
         Route::get('/', [AttendanceController::class, 'userDashboard'])->name('user');
-        Route::get('/manager', [AttendanceController::class, 'managerDashboard'])->name('manager');
 
         // Clock actions
         Route::post('/clock-in', [AttendanceController::class, 'clockIn'])->name('clock-in');
@@ -156,7 +155,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/experience-certificate/{certificateRequest}/preview', [\App\Http\Controllers\CertificateController::class, 'preview'])->name('certificate.experience.preview');
         Route::post('/experience-certificate/{certificateRequest}/email', [\App\Http\Controllers\CertificateController::class, 'email'])->name('certificate.experience.email');
         Route::post('/experience-certificate/{certificateRequest}/request-missing-info', [\App\Http\Controllers\CertificateController::class, 'requestMissingInfo'])->name('certificate.experience.request-missing-info');
-        
+
         Route::get('/approvals', [\App\Http\Controllers\CertificateController::class, 'approvals'])->name('certificate.approvals');
     });
     // ANNOUNCEMENTS (Admin/Manager)

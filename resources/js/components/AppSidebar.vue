@@ -119,23 +119,12 @@ const mainNavItems = computed<NavItem[]>(() => {
     if (user.value?.role === 'manager' || user.value?.role === 'admin') {
         const recordsChildren: NavItem[] = [];
 
-        // For managers: show their team attendance as Attendance Records
-        if (user.value?.role === 'manager') {
-            recordsChildren.push({
-                title: 'Attendance Records',
-                href: '/attendance/manager',
-                icon: Clock,
-            });
-        }
-
-        // For admins: show all attendance records
-        if (user.value?.role === 'admin') {
-            recordsChildren.push({
-                title: 'Attendance Records',
-                href: '/records/attendance',
-                icon: Clock,
-            });
-        }
+        // Both admin and manager go to the same route
+        recordsChildren.push({
+            title: 'Attendance Records',
+            href: '/records/attendance',
+            icon: Clock,
+        });
 
         recordsChildren.push({
             title: 'Leave Records',

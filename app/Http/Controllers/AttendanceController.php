@@ -220,11 +220,16 @@ class AttendanceController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isAdmin()) {
+        if (!$user->isAdmin() && !$user->isManager()) {
             abort(403, 'Unauthorized access.');
         }
 
         $today = Carbon::today();
+        $isAdmin = $user->isAdmin();
+        $isManager = $user->isManager();
+
+        // Get managed sub-department IDs for managers
+        $managedSubDepartmentIds = $isManager ? $user->getManagedSubDepartmentIds() : [];
 
         // No default date filters - show all records if no filter applied
         $startDate = $request->input('start_date');
@@ -235,32 +240,55 @@ class AttendanceController extends Controller
 
         $query = Attendance::with(['user.department', 'user.subDepartment']);
 
+        // For managers, always filter by their managed sub-departments
+        if ($isManager && !$isAdmin) {
+            $query->whereHas('user', function ($q) use ($managedSubDepartmentIds, $subDepartmentId) {
+                if ($subDepartmentId && in_array($subDepartmentId, $managedSubDepartmentIds)) {
+                    $q->where('sub_department_id', $subDepartmentId);
+                } elseif (!empty($managedSubDepartmentIds)) {
+                    $q->whereIn('sub_department_id', $managedSubDepartmentIds);
+                } else {
+                    // If no managed sub-departments, show nothing
+                    $q->whereRaw('1 = 0');
+                }
+            });
+        } else {
+            // Admin filters
+            if ($employeeId) {
+                $query->where('user_id', $employeeId);
+            } elseif ($subDepartmentId) {
+                $query->whereHas('user', function ($q) use ($subDepartmentId) {
+                    $q->where('sub_department_id', $subDepartmentId);
+                });
+            } elseif ($departmentId) {
+                $query->whereHas('user', function ($q) use ($departmentId) {
+                    $q->where('department_id', $departmentId);
+                });
+            }
+        }
+
         // Apply date filter only if both dates are provided
         if ($startDate && $endDate) {
             $query->whereBetween('date', [$startDate, $endDate]);
         }
 
-        if ($employeeId) {
-            $query->where('user_id', $employeeId);
-        } elseif ($subDepartmentId) {
-            $query->whereHas('user', function ($q) use ($subDepartmentId) {
-                $q->where('sub_department_id', $subDepartmentId);
-            });
-        } elseif ($departmentId) {
-            $query->whereHas('user', function ($q) use ($departmentId) {
-                $q->where('department_id', $departmentId);
-            });
-        }
-
         $attendances = $query->orderBy('date', 'desc')->paginate(30);
 
-        // Get all departments, sub-departments, and employees for filters
-        $departments = \App\Models\Department::active()->get(['id', 'name']);
-        $subDepartments = \App\Models\SubDepartment::active()->with('department:id,name')->get(['id', 'name', 'department_id']);
-        $employees = User::where('role', '!=', 'admin')->with(['department:id,name', 'subDepartment:id,name'])->get(['id', 'name', 'employee_id', 'department_id', 'sub_department_id']);
-
-        // Get company-wide summary for today
-        $companySummary = $this->attendanceService->getGlobalAttendanceSummary($today->toDateString());
+        // Get filter options based on role
+        if ($isAdmin) {
+            $departments = \App\Models\Department::active()->get(['id', 'name']);
+            $subDepartments = \App\Models\SubDepartment::active()->with('department:id,name')->get(['id', 'name', 'department_id']);
+            $employees = User::where('role', '!=', 'admin')->with(['department:id,name', 'subDepartment:id,name'])->get(['id', 'name', 'employee_id', 'department_id', 'sub_department_id']);
+            $companySummary = $this->attendanceService->getGlobalAttendanceSummary($today->toDateString());
+        } else {
+            // Manager: only show their managed sub-departments
+            $departments = collect([]);
+            $subDepartments = $user->getManagedSubDepartments();
+            $employees = User::whereIn('sub_department_id', $managedSubDepartmentIds)
+                ->with(['department:id,name', 'subDepartment:id,name'])
+                ->get(['id', 'name', 'employee_id', 'department_id', 'sub_department_id']);
+            $companySummary = $this->attendanceService->getManagedEmployeesSummary($managedSubDepartmentIds, $today->toDateString());
+        }
 
         return Inertia::render('attendance/Records', [
             'attendances' => $attendances,
@@ -268,6 +296,7 @@ class AttendanceController extends Controller
             'subDepartments' => $subDepartments,
             'employees' => $employees,
             'companySummary' => $companySummary,
+            'isAdmin' => $isAdmin,
             'filters' => [
                 'start_date' => $startDate ?? '',
                 'end_date' => $endDate ?? '',
