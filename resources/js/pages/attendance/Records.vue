@@ -89,6 +89,7 @@ interface Props {
     employees: Employee[];
     filters: AttendanceFilters;
     companySummary: CompanySummary | null;
+    isAdmin?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -425,7 +426,7 @@ const hasActiveFilters = computed(() => {
                                     <th class="px-4 pb-3 text-left font-medium">Clock Out</th>
                                     <th class="px-4 pb-3 text-left font-medium">Net Hours</th>
                                     <th class="px-4 pb-3 text-left font-medium">Status</th>
-                                    <th class="px-4 pb-3 text-left font-medium">Actions</th>
+                                    <th v-if="isAdmin" class="px-4 pb-3 text-left font-medium">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -455,7 +456,7 @@ const hasActiveFilters = computed(() => {
                                         <Badge v-else-if="attendance.is_late" variant="destructive" class="text-xs bg-amber-500 hover:bg-amber-600 border-amber-500">Late</Badge>
                                         <Badge v-else variant="outline" class="text-xs">On Time</Badge>
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td v-if="isAdmin" class="px-4 py-3">
                                         <div class="flex items-center gap-2">
                                             <Button
                                                 variant="ghost"
@@ -477,7 +478,7 @@ const hasActiveFilters = computed(() => {
                                     </td>
                                 </tr>
                                 <tr v-if="attendances.data.length === 0">
-                                    <td colspan="8" class="py-8 text-center text-muted-foreground">
+                                    <td :colspan="isAdmin ? 8 : 7" class="py-8 text-center text-muted-foreground">
                                         No attendance records found.
                                     </td>
                                 </tr>

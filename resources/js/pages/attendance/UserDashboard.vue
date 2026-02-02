@@ -590,6 +590,10 @@ const getLocation = (attendance: Attendance | null | undefined) => {
              <Card v-else class="border-0 shadow-sm rounded-xl">
                 <CardContent class="p-0">
                     <DataTable :columns="columns" :data="attendances">
+                        <template #mobileHeader="{ row }">
+                            <span class="font-semibold text-gray-900 dark:text-gray-100">{{ formatDate(row.date) }}</span>
+                        </template>
+
                         <template #cell-date="{ row }">
                             <span class="font-medium text-gray-900 dark:text-gray-100">{{ formatDate(row.date) }}</span>
                         </template>
