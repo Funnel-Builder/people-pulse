@@ -60,6 +60,7 @@ interface Employee {
 interface Props {
     employee?: Employee | null;
     departments: Department[];
+    managerResponsibilities?: number[]; // Array of sub-department IDs the manager is responsible for
 }
 
 const props = defineProps<Props>();
@@ -90,6 +91,8 @@ const form = useForm({
     designation: props.employee?.designation || '',
     role: props.employee?.role || 'user' as 'user' | 'manager' | 'admin',
     weekend_days: [] as string[],
+    // Manager Responsibilities
+    manager_responsibilities: [] as number[],
     // Personal Information
     nid_number: props.employee?.nid_number || '',
     joining_date: props.employee?.joining_date || '',
@@ -100,6 +103,9 @@ const form = useForm({
     mothers_name: props.employee?.mothers_name || '',
     graduated_institution: props.employee?.graduated_institution || '',
 });
+
+// Manager responsibilities selection - track selected sub-department IDs
+const selectedManagerResponsibilities = ref<number[]>(props.managerResponsibilities || []);
 
 // Separation form
 const separationForm = useForm({
@@ -118,6 +124,75 @@ const selectedDepartment = computed(() => {
 
 const availableSubDepartments = computed(() => {
     return selectedDepartment.value?.sub_departments || [];
+});
+
+// Helper functions for manager responsibilities
+const isSubDepartmentSelected = (subDeptId: number) => {
+    return selectedManagerResponsibilities.value.includes(subDeptId);
+};
+
+const toggleSubDepartment = (subDeptId: number) => {
+    const index = selectedManagerResponsibilities.value.indexOf(subDeptId);
+    if (index === -1) {
+        selectedManagerResponsibilities.value.push(subDeptId);
+    } else {
+        selectedManagerResponsibilities.value.splice(index, 1);
+    }
+};
+
+const isDepartmentFullySelected = (dept: Department) => {
+    return dept.sub_departments.length > 0 && 
+           dept.sub_departments.every(sd => selectedManagerResponsibilities.value.includes(sd.id));
+};
+
+const isDepartmentPartiallySelected = (dept: Department) => {
+    const selectedCount = dept.sub_departments.filter(sd => 
+        selectedManagerResponsibilities.value.includes(sd.id)
+    ).length;
+    return selectedCount > 0 && selectedCount < dept.sub_departments.length;
+};
+
+const toggleDepartment = (dept: Department) => {
+    const allSubDeptIds = dept.sub_departments.map(sd => sd.id);
+    const allSelected = isDepartmentFullySelected(dept);
+    
+    if (allSelected) {
+        // Remove all sub-departments of this department
+        selectedManagerResponsibilities.value = selectedManagerResponsibilities.value.filter(
+            id => !allSubDeptIds.includes(id)
+        );
+    } else {
+        // Add all sub-departments of this department
+        allSubDeptIds.forEach(id => {
+            if (!selectedManagerResponsibilities.value.includes(id)) {
+                selectedManagerResponsibilities.value.push(id);
+            }
+        });
+    }
+};
+
+const hasAnyResponsibilities = computed(() => {
+    return selectedManagerResponsibilities.value.length > 0;
+});
+
+// Get summary of managed sub-departments grouped by department
+const managedSummary = computed(() => {
+    const summary: { department: string; subDepartments: string[] }[] = [];
+    
+    props.departments.forEach(dept => {
+        const selectedSubDepts = dept.sub_departments.filter(sd => 
+            selectedManagerResponsibilities.value.includes(sd.id)
+        );
+        
+        if (selectedSubDepts.length > 0) {
+            summary.push({
+                department: dept.name,
+                subDepartments: selectedSubDepts.map(sd => sd.name),
+            });
+        }
+    });
+    
+    return summary;
 });
 
 // Format joining date for display
@@ -147,6 +222,7 @@ const formattedClosingDate = computed(() => {
 
 const submit = () => {
     form.weekend_days = selectedWeekendDays.value;
+    form.manager_responsibilities = selectedManagerResponsibilities.value;
 
     if (isEditMode.value) {
         form.put(`/employees/${props.employee!.id}`, {
@@ -496,29 +572,86 @@ const employeeStatusBanner = computed(() => {
                         </CardContent>
                     </Card>
 
-                    <!-- Manager Info Card -->
+                    <!-- Manager Responsibilities Card -->
                     <Card v-if="form.role === 'manager'">
                         <CardHeader>
                             <CardTitle>Manager Responsibilities</CardTitle>
+                            <p class="text-sm text-muted-foreground">
+                                Select the departments and sub-departments this manager will oversee.
+                            </p>
                         </CardHeader>
                         <CardContent>
-                            <div class="space-y-2">
-                                <ul class="text-sm text-muted-foreground list-disc list-inside space-y-1">
-                                    <li v-if="!form.department_id">Please assign a department to this manager.</li>
-                                    <li v-else-if="form.sub_department_id">
-                                        This manager will manage only the <strong class="text-foreground">{{ availableSubDepartments.find(sd => sd.id === form.sub_department_id)?.name || 'selected sub-department' }}</strong>.
-                                    </li>
-                                    <li v-else-if="availableSubDepartments.length > 0">
-                                        This manager will manage <strong class="text-foreground">all sub-departments</strong> in the <strong class="text-foreground">{{ departments.find(d => d.id === form.department_id)?.name }}</strong> department:
-                                        <ul class="ml-6 mt-1">
-                                            <li v-for="subDept in availableSubDepartments" :key="subDept.id">• {{ subDept.name }}</li>
-                                        </ul>
-                                    </li>
-                                    <li v-else>
-                                        This manager will manage the <strong class="text-foreground">{{ departments.find(d => d.id === form.department_id)?.name }}</strong> department (no sub-departments available).
-                                    </li>
-                                </ul>
+                            <div class="space-y-4">
+                                <!-- Department list with sub-departments -->
+                                <div v-for="dept in departments" :key="dept.id" class="border rounded-lg p-4">
+                                    <div class="flex items-center space-x-3">
+                                        <input
+                                            type="checkbox"
+                                            :id="`dept-${dept.id}`"
+                                            :checked="isDepartmentFullySelected(dept)"
+                                            :indeterminate="isDepartmentPartiallySelected(dept)"
+                                            @change="toggleDepartment(dept)"
+                                            class="h-4 w-4 rounded border-gray-300"
+                                            :disabled="dept.sub_departments.length === 0"
+                                        />
+                                        <Label :for="`dept-${dept.id}`" class="font-semibold cursor-pointer">
+                                            {{ dept.name }}
+                                            <span v-if="dept.sub_departments.length === 0" class="text-xs text-muted-foreground ml-2">
+                                                (No sub-departments)
+                                            </span>
+                                        </Label>
+                                    </div>
+                                    <!-- Sub-departments -->
+                                    <div v-if="dept.sub_departments.length > 0" class="ml-7 mt-3 space-y-2">
+                                        <div v-for="subDept in dept.sub_departments" :key="subDept.id" class="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                :id="`subdept-${subDept.id}`"
+                                                :checked="isSubDepartmentSelected(subDept.id)"
+                                                @change="toggleSubDepartment(subDept.id)"
+                                                class="h-4 w-4 rounded border-gray-300"
+                                            />
+                                            <Label :for="`subdept-${subDept.id}`" class="cursor-pointer text-sm">
+                                                {{ subDept.name }}
+                                            </Label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Summary -->
+                                <div v-if="hasAnyResponsibilities" class="mt-4 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                                    <p class="text-sm font-medium text-primary mb-2">This manager will have access to:</p>
+                                    <ul class="text-sm text-muted-foreground space-y-1">
+                                        <li v-for="item in managedSummary" :key="item.department">
+                                            <strong class="text-foreground">{{ item.department }}:</strong>
+                                            {{ item.subDepartments.join(', ') }}
+                                        </li>
+                                    </ul>
+                                </div>
+                                
+                                <!-- Fallback info when no explicit responsibilities -->
+                                <div v-else class="mt-4 p-4 bg-muted/50 rounded-lg">
+                                    <p class="text-sm text-muted-foreground">
+                                        <template v-if="!form.department_id">
+                                            Please assign a department to this manager, or select specific responsibilities above.
+                                        </template>
+                                        <template v-else-if="form.sub_department_id">
+                                            Without explicit responsibilities selected, this manager will manage only the 
+                                            <strong class="text-foreground">{{ availableSubDepartments.find(sd => sd.id === form.sub_department_id)?.name || 'selected sub-department' }}</strong>.
+                                        </template>
+                                        <template v-else-if="availableSubDepartments.length > 0">
+                                            Without explicit responsibilities selected, this manager will manage 
+                                            <strong class="text-foreground">all sub-departments</strong> in the 
+                                            <strong class="text-foreground">{{ departments.find(d => d.id === form.department_id)?.name }}</strong> department.
+                                        </template>
+                                        <template v-else>
+                                            Without explicit responsibilities selected, this manager will manage the 
+                                            <strong class="text-foreground">{{ departments.find(d => d.id === form.department_id)?.name }}</strong> department.
+                                        </template>
+                                    </p>
+                                </div>
                             </div>
+                            <p v-if="form.errors.manager_responsibilities" class="mt-2 text-sm text-destructive">{{ form.errors.manager_responsibilities }}</p>
                         </CardContent>
                     </Card>
 

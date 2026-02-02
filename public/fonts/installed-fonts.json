@@ -1,8 +1,8 @@
 {
     "inter": {
-        "300": "\/home\/ronssrony\/Documents\/projects\/people-pulse\/public\/fonts\/inter_300_581aadde28e79d450319256b572f5548",
-        "normal": "\/home\/ronssrony\/Documents\/projects\/people-pulse\/public\/fonts\/inter_normal_4d172b5bbd2c0f1b044ff5fcdadaa0f5",
-        "500": "\/home\/ronssrony\/Documents\/projects\/people-pulse\/public\/fonts\/inter_500_7ea1357c411f61c198c086d7463a04c8",
-        "bold": "inter_bold_c994f3f192a6a6135a1aff0abc6fc6ba"
+        "300": "\/var\/www\/html\/public\/fonts\/inter_300_f225e50d2ce569ac8be5ae785cb1102f",
+        "normal": "\/var\/www\/html\/public\/fonts\/inter_normal_dc4b21af9071580dcbd0eb31d77960b7",
+        "500": "\/var\/www\/html\/public\/fonts\/inter_500_d3b794ebc15940630eee0c18c958e27f",
+        "bold": "inter_bold_2b0c36f5c4945b0f32711c305c0adc49"
     }
 }

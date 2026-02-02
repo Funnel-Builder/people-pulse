@@ -192,8 +192,19 @@ const goToReview = (request: any) => {
     router.get(`/services/${routeSlug}/${request.id}/review`);
 };
 
-const authorizeRequest = (requestId: number) => {
-    router.post(`/services/employment-certificate/${requestId}/authorize`);
+const getRouteSlug = (type: string) => {
+    const typeToRouteMap: Record<string, string> = {
+        'employment_certificate': 'employment-certificate',
+        'visa_recommendation_letter': 'visa-recommendation-letter',
+        'release_letter': 'release-letter',
+        'experience_certificate': 'experience-certificate',
+    };
+    return typeToRouteMap[type] || 'employment-certificate';
+};
+
+const authorizeRequest = (request: CertificateRequest) => {
+    const routeSlug = getRouteSlug(request.type);
+    router.post(`/services/${routeSlug}/${request.id}/authorize`);
 };
 
 // Rejection Modal Logic
@@ -215,18 +226,24 @@ const closeRejectModal = () => {
 const confirmReject = () => {
     if (!requestToReject.value) return;
 
+    const request = filteredRequestsData.value.find(r => r.id === requestToReject.value);
+    if (!request) return;
+
     isRejecting.value = true;
-    router.post(`/services/employment-certificate/${requestToReject.value}/reject`, {}, {
+    const routeSlug = getRouteSlug(request.type);
+    router.post(`/services/${routeSlug}/${requestToReject.value}/reject`, {}, {
         onFinish: () => closeRejectModal(),
     });
 };
 
-const downloadCertificate = (requestId: number) => {
-    window.open(`/services/employment-certificate/${requestId}/download`, '_blank');
+const downloadCertificate = (request: CertificateRequest) => {
+    const routeSlug = getRouteSlug(request.type);
+    window.open(`/services/${routeSlug}/${request.id}/download`, '_blank');
 };
 
-const printCertificate = (requestId: number) => {
-    const url = `/services/employment-certificate/${requestId}/download?view=true`;
+const printCertificate = (request: CertificateRequest) => {
+    const routeSlug = getRouteSlug(request.type);
+    const url = `/services/${routeSlug}/${request.id}/download?view=true`;
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
@@ -385,7 +402,7 @@ const printCertificate = (requestId: number) => {
                                                 v-if="!isAdmin && request.status === 'pending'"
                                                 size="sm"
                                                 class="text-xs bg-blue-600 hover:bg-blue-700"
-                                                @click="authorizeRequest(request.id)"
+                                                @click="authorizeRequest(request)"
                                             >
                                                 Authorize
                                             </Button>
@@ -394,7 +411,7 @@ const printCertificate = (requestId: number) => {
                                                 v-if="isAdmin"
                                                 size="sm"
                                                 class="text-xs bg-primary hover:bg-primary/90"
-                                                @click="goToReview(request.id)"
+                                                @click="goToReview(request)"
                                             >
                                                 Approve & Issue
                                             </Button>
@@ -416,7 +433,7 @@ const printCertificate = (requestId: number) => {
                                                 size="sm"
                                                 class="h-8 w-8 p-0"
                                                 :disabled="request.status !== 'issued'"
-                                                @click="downloadCertificate(request.id)"
+                                                @click="downloadCertificate(request)"
                                                 title="Download PDF"
                                             >
                                                 <Download class="h-4 w-4" />
@@ -426,7 +443,7 @@ const printCertificate = (requestId: number) => {
                                                 size="sm"
                                                 class="h-8 w-8 p-0"
                                                 :disabled="request.status !== 'issued'"
-                                                @click="printCertificate(request.id)"
+                                                @click="printCertificate(request)"
                                                 title="Print"
                                             >
                                                 <Printer class="h-4 w-4" />

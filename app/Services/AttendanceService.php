@@ -333,6 +333,40 @@ class AttendanceService
     }
 
     /**
+     * Get attendance summary for employees in specific sub-departments.
+     * Used for manager dashboard to aggregate across all managed departments.
+     */
+    public function getManagedEmployeesSummary(array $subDepartmentIds, ?string $date = null): array
+    {
+        if (empty($subDepartmentIds)) {
+            return [
+                'total_employees' => 0,
+                'present' => 0,
+                'absent' => 0,
+                'late' => 0,
+                'all_list' => [],
+                'present_list' => [],
+                'absent_list' => [],
+                'late_list' => [],
+            ];
+        }
+
+        $targetDate = $date ? Carbon::parse($date) : Carbon::today();
+
+        $users = User::whereIn('sub_department_id', $subDepartmentIds)->get();
+        $attendances = Attendance::whereHas('user', function ($q) use ($subDepartmentIds) {
+            $q->whereIn('sub_department_id', $subDepartmentIds);
+        })
+            ->forDate($targetDate)
+            ->with('user')
+            ->get()
+            ->keyBy('user_id');
+
+        return $this->calculateSummary($users, $attendances, $targetDate);
+    }
+
+
+    /**
      * Get global attendance summary (for company-wide dashboard)
      */
     public function getGlobalAttendanceSummary(?string $date = null): array

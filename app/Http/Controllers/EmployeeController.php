@@ -67,6 +67,7 @@ class EmployeeController extends Controller
         return Inertia::render('employees/Form', [
             'employee' => null,
             'departments' => $departments,
+            'managerResponsibilities' => [],
         ]);
     }
 
@@ -101,6 +102,9 @@ class EmployeeController extends Controller
             'fathers_name' => ['nullable', 'string', 'max:255'],
             'mothers_name' => ['nullable', 'string', 'max:255'],
             'graduated_institution' => ['nullable', 'string', 'max:255'],
+            // Manager Responsibilities (only applicable if role is 'manager')
+            'manager_responsibilities' => ['nullable', 'array'],
+            'manager_responsibilities.*' => ['exists:sub_departments,id'],
         ]);
 
         $user = User::create([
@@ -126,6 +130,11 @@ class EmployeeController extends Controller
             'graduated_institution' => $validated['graduated_institution'] ?? null,
         ]);
 
+        // Sync manager responsibilities if role is manager
+        if ($validated['role'] === 'manager' && !empty($validated['manager_responsibilities'])) {
+            $user->managedResponsibilities()->sync($validated['manager_responsibilities']);
+        }
+
         return redirect()->route('employees.index')->with('success', 'Employee created successfully!');
     }
 
@@ -138,12 +147,16 @@ class EmployeeController extends Controller
             abort(403, 'Unauthorized access.');
         }
 
-        $employee->load(['department', 'subDepartment']);
+        $employee->load(['department', 'subDepartment', 'managedResponsibilities']);
         $departments = Department::active()->with('subDepartments')->get();
+
+        // Get the IDs of sub-departments the manager is responsible for
+        $managerResponsibilities = $employee->managedResponsibilities->pluck('id')->toArray();
 
         return Inertia::render('employees/Form', [
             'employee' => $employee,
             'departments' => $departments,
+            'managerResponsibilities' => $managerResponsibilities,
         ]);
     }
 
@@ -175,6 +188,9 @@ class EmployeeController extends Controller
             'fathers_name' => ['nullable', 'string', 'max:255'],
             'mothers_name' => ['nullable', 'string', 'max:255'],
             'graduated_institution' => ['nullable', 'string', 'max:255'],
+            // Manager Responsibilities (only applicable if role is 'manager')
+            'manager_responsibilities' => ['nullable', 'array'],
+            'manager_responsibilities.*' => ['exists:sub_departments,id'],
         ]);
 
         $employee->update([
@@ -196,6 +212,15 @@ class EmployeeController extends Controller
             'mothers_name' => $validated['mothers_name'] ?? null,
             'graduated_institution' => $validated['graduated_institution'] ?? null,
         ]);
+
+        // Sync manager responsibilities
+        if ($validated['role'] === 'manager') {
+            // Sync the pivot table with selected responsibilities (or clear if empty)
+            $employee->managedResponsibilities()->sync($validated['manager_responsibilities'] ?? []);
+        } else {
+            // Clear responsibilities if role is not manager
+            $employee->managedResponsibilities()->detach();
+        }
 
         return redirect()->route('employees.index')->with('success', 'Employee updated successfully!');
     }

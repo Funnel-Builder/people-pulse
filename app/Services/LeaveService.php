@@ -170,7 +170,8 @@ class LeaveService
 
     /**
      * Get cover person options for a user.
-     * Returns all users for Admin, users from same sub-department for regular users.
+     * Returns all users for Admin, users from managed sub-departments for managers,
+     * and users from same sub-department for regular users.
      */
     public function getCoverPersonOptions(User $user): Collection
     {
@@ -181,6 +182,18 @@ class LeaveService
                 ->get(['id', 'name', 'employee_id', 'designation']);
         }
 
+        // If user is Manager, they can select employees from their managed sub-departments
+        if ($user->isManager()) {
+            $managedSubDeptIds = $user->getManagedSubDepartmentIds();
+            if (!empty($managedSubDeptIds)) {
+                return User::whereIn('sub_department_id', $managedSubDeptIds)
+                    ->where('id', '!=', $user->id)
+                    ->orderBy('name')
+                    ->get(['id', 'name', 'employee_id', 'designation']);
+            }
+        }
+
+        // Regular users: only from same sub-department
         if (!$user->sub_department_id) {
             return collect([]);
         }

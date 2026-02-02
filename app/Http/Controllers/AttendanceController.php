@@ -192,14 +192,11 @@ class AttendanceController extends Controller
 
         $attendances = $query->orderBy('date', 'desc')->paginate(30);
 
-        // Get department summary if manager has a department
-        $departmentSummary = null;
-        if ($user->department_id) {
-            $departmentSummary = $this->attendanceService->getDepartmentSummary(
-                $user->department_id,
-                $today->toDateString()
-            );
-        }
+        // Get summary for all managed employees across all sub-departments
+        $departmentSummary = $this->attendanceService->getManagedEmployeesSummary(
+            $managedSubDepartmentIds,
+            $today->toDateString()
+        );
 
         // Get sub-departments that this manager manages
         $subDepartments = $user->getManagedSubDepartments();
