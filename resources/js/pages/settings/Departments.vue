@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useForm, router } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import { useForm, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,18 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFo
 import { Plus, Building2, Trash2, Edit, ChevronRight, ChevronDown, Network } from 'lucide-vue-next';
 import { Badge } from '@/components/ui/badge';
 import type { BreadcrumbItem } from '@/types';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle, CheckCircle2 } from 'lucide-vue-next';
 
 interface SubDepartment {
     id: number;
@@ -32,6 +44,9 @@ const props = defineProps<{
     departments: Department[];
 }>();
 
+const page = usePage();
+const flash = computed(() => page.props.flash as { success?: string; error?: string });
+
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Office Settings', href: '/settings' },
@@ -44,6 +59,10 @@ const editingDepartment = ref<Department | null>(null);
 const editingSubDepartment = ref<SubDepartment | null>(null);
 const activeDepartmentForSub = ref<Department | null>(null);
 const expandedDepartments = ref<Set<number>>(new Set());
+
+// Delete Confirmation State
+const showDeleteDialog = ref(false);
+const itemToDelete = ref<{ id: number; name: string; type: 'department' | 'sub_department' } | null>(null);
 
 // Toggle department expansion
 const toggleExpand = (deptId: number) => {
@@ -99,9 +118,8 @@ const submitDepartmentComp = () => {
 };
 
 const deleteDepartment = (dept: Department) => {
-    if (confirm(`Are you sure you want to delete ${dept.name}?`)) {
-        router.delete(`/settings/departments/${dept.id}`);
-    }
+    itemToDelete.value = { id: dept.id, name: dept.name, type: 'department' };
+    showDeleteDialog.value = true;
 };
 
 // Sub-Department Actions
@@ -141,9 +159,29 @@ const submitSubDepartmentComp = () => {
 };
 
 const deleteSubDepartment = (sub: SubDepartment) => {
-    if (confirm(`Are you sure you want to delete ${sub.name}?`)) {
-        router.delete(`/settings/sub-departments/${sub.id}`);
-    }
+    itemToDelete.value = { id: sub.id, name: sub.name, type: 'sub_department' };
+    showDeleteDialog.value = true;
+};
+
+const executeDelete = () => {
+    if (!itemToDelete.value) return;
+
+    const url = itemToDelete.value.type === 'department'
+        ? `/settings/departments/${itemToDelete.value.id}`
+        : `/settings/sub-departments/${itemToDelete.value.id}`;
+
+    router.delete(url, {
+        preserveScroll: true,
+        onSuccess: () => {
+            showDeleteDialog.value = false;
+            itemToDelete.value = null;
+        },
+        onError: (errors) => {
+            // Optional: Handle errors if backend sends specific error bags,
+            // but normally flash messages are handled globally or we can inspect page props.
+            showDeleteDialog.value = false;
+        }
+    });
 };
 </script>
 
@@ -161,6 +199,22 @@ const deleteSubDepartment = (sub: SubDepartment) => {
                     <Plus class="h-4 w-4" />
                     Add Department
                 </Button>
+            </div>
+
+            <!-- Flash Messages -->
+            <div v-if="flash.success" class="mb-4">
+                <Alert variant="default" class="border-green-500 bg-green-50 text-green-700 dark:bg-green-900/10 dark:text-green-400">
+                    <CheckCircle2 class="h-4 w-4" />
+                    <AlertTitle>Success</AlertTitle>
+                    <AlertDescription>{{ flash.success }}</AlertDescription>
+                </Alert>
+            </div>
+            <div v-if="flash.error" class="mb-4">
+                <Alert variant="destructive">
+                    <AlertCircle class="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{{ flash.error }}</AlertDescription>
+                </Alert>
             </div>
 
             <!-- List View -->
@@ -227,12 +281,12 @@ const deleteSubDepartment = (sub: SubDepartment) => {
                                         <p v-if="sub.description" class="text-xs text-muted-foreground">{{ sub.description }}</p>
                                     </div>
                                 </div>
-                                <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button variant="ghost" size="icon" class="h-7 w-7" @click="openEditSubDepartment(sub)">
-                                        <Edit class="h-3 w-3 text-muted-foreground" />
+                                <div class="flex items-center gap-1">
+                                    <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" @click="openEditSubDepartment(sub)">
+                                        <Edit class="h-3.5 w-3.5" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" class="h-7 w-7" @click="deleteSubDepartment(sub)">
-                                        <Trash2 class="h-3 w-3 text-destructive" />
+                                    <Button variant="ghost" size="icon" class="h-7 w-7 text-destructive hover:text-destructive/90" @click="deleteSubDepartment(sub)">
+                                        <Trash2 class="h-3.5 w-3.5" />
                                     </Button>
                                 </div>
                             </div>
@@ -300,4 +354,30 @@ const deleteSubDepartment = (sub: SubDepartment) => {
 
         </div>
     </AppLayout>
+
+    <!-- Delete Confirmation Dialog -->
+    <AlertDialog v-model:open="showDeleteDialog">
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the 
+                    {{ itemToDelete?.type === 'department' ? 'department' : 'sub-department' }}
+                    <strong>{{ itemToDelete?.name }}</strong>.
+                    <span v-if="itemToDelete?.type === 'department'">
+                        This will fail if there are active sub-departments or employees assigned.
+                    </span>
+                    <span v-if="itemToDelete?.type === 'sub_department'">
+                        This will fail if there are employees assigned.
+                    </span>
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction class="bg-destructive text-destructive-foreground hover:bg-destructive/90" @click="executeDelete">
+                    Delete
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
 </template>
