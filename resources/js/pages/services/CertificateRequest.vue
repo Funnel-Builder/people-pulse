@@ -225,7 +225,7 @@ const getPurposeDisplay = (purpose: string, purposeOther: string | null) => {
 };
 
 const downloadCertificate = (id: number) => {
-    window.open(`/services/employment-certificate/${id}/download`, '_blank');
+    window.open(`${getBaseUrl.value}/${id}/download`, '_blank');
 };
 
 // Email Button Logic
@@ -236,7 +236,7 @@ const sendEmail = (id: number) => {
 
     emailStatus.value = 'sending';
 
-    router.post(`/services/employment-certificate/${id}/email`, { recipient: 'self' }, {
+    router.post(`${getBaseUrl.value}/${id}/email`, { recipient: 'self' }, {
         preserveScroll: true,
         onSuccess: () => {
             emailStatus.value = 'success';
@@ -308,59 +308,16 @@ const sendEmail = (id: number) => {
                                 </div>
                             </CardHeader>
                             <CardContent class="p-0">
-                                <!-- Desktop View: Certificate HTML Preview -->
+                                <!-- Desktop View: Certificate Preview via iframe -->
                                 <div class="hidden md:block">
                                     <div class="bg-muted/50 p-6">
-                                        <!-- HTML Certificate Preview -->
-                                        <div class="bg-white text-black rounded-lg p-8 shadow-inner border mx-auto text-left" style="max-width: 680px;">
-                                            <!-- Header -->
-                                            <div class="flex justify-between items-start mb-8">
-                                                <p class="text-sm">Ref: {{ props.latestIssuedCertificate.ref_id }}</p>
-                                                <p class="text-sm">Date: {{ formatCurrentDate() }}</p>
-                                            </div>
-
-                                            <!-- Title -->
-                                            <h2 class="text-center text-xl font-bold underline mb-8">
-                                                EMPLOYMENT CERTIFICATE
-                                            </h2>
-
-                                            <!-- Salutation -->
-                                            <p class="font-semibold mb-4">To Whom It May Concern,</p>
-
-                                            <!-- Body -->
-                                            <p class="text-justify leading-relaxed mb-4">
-                                                To Whom It May Concern, This is to certify that Mr. 
-                                                <span>{{ props.employeeInfo.name || '[Name]' }}</span>
-                                                (ID: <span>{{ props.employeeInfo.employee_id || '[ID]' }}</span>), 
-                                                son of <span>{{ props.employeeInfo.fathers_name || "[Father's Name]" }}</span>
-                                                and <span>{{ props.employeeInfo.mothers_name || "[Mother's Name]" }}</span>, 
-                                                National ID Card Number. <span>{{ props.employeeInfo.nid_number || '[NID Number]' }}</span>, 
-                                                has been employed at {{ props.companyInfo?.name || 'Company Name' }} as a permanent employee since 
-                                                <span>{{ props.employeeInfo.joining_date || '[joining date]' }}</span>. 
-                                                Currently he is working in the 
-                                                <span>{{ props.employeeInfo.department || '[Department Name]' }}</span>
-                                                <span> ({{ props.employeeInfo.sub_department || 'Sub-Department Name if applicable' }})</span>
-                                                department as a <span>{{ props.employeeInfo.designation || '[Current Designation]' }}</span>.
-                                            </p>
-
-                                            <p class="text-justify leading-relaxed mb-4">
-                                                This certification is being issued on the date of {{ formatCurrentDate() }}
-                                                upon {{ props.employeeInfo.name?.split(' ')[0] || 'his' }} request and can be used for reference purposes.
-                                            </p>
-
-                                            <p class="text-justify leading-relaxed mb-8">
-                                                I hereby certify that the above-mentioned information is correct and accurate to the best of my knowledge.
-                                            </p>
-
-                                            <!-- Closing -->
-                                            <p class="mb-16">Sincerely,</p>
-
-                                            <!-- Signature -->
-                                            <div class="border-t border-black inline-block pt-2 min-w-[200px]">
-                                                <p class="font-bold">{{ props.issuerInfo?.name || 'Issuer Name' }}</p>
-                                                <p class="text-sm">{{ props.issuerInfo?.title || 'Issuer Title' }}</p>
-                                                <p class="text-sm">Cell: {{ props.issuerInfo?.phone || 'Issuer Phone' }}</p>
-                                            </div>
+                                        <!-- Dynamic Certificate Preview via iframe -->
+                                        <div class="bg-white rounded-lg shadow-inner border mx-auto overflow-hidden" style="max-width: 680px; height: 800px;">
+                                            <iframe 
+                                                :src="`${getBaseUrl}/${props.latestIssuedCertificate.id}/preview`" 
+                                                class="w-full h-full border-0"
+                                                title="Certificate Preview"
+                                            ></iframe>
                                         </div>
                                     </div>
                                     

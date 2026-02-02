@@ -358,7 +358,7 @@ class AttendanceController extends Controller
                 $request->userAgent()
             );
 
-            return back()->with('success', 'Clocked in successfully!');
+            return back();
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -376,7 +376,7 @@ class AttendanceController extends Controller
                 $request->userAgent()
             );
 
-            return back()->with('success', 'Clocked out successfully!');
+            return back();
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
