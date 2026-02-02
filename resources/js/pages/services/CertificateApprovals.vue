@@ -182,29 +182,11 @@ const getInitials = (name: string) => {
 };
 
 const goToReview = (request: any) => {
-    const typeToRouteMap: Record<string, string> = {
-        'employment_certificate': 'employment-certificate',
-        'visa_recommendation_letter': 'visa-recommendation-letter',
-        'release_letter': 'release-letter',
-        'experience_certificate': 'experience-certificate',
-    };
-    const routeSlug = typeToRouteMap[request.type] || 'employment-certificate';
-    router.get(`/services/${routeSlug}/${request.id}/review`);
-};
-
-const getRouteSlug = (type: string) => {
-    const typeToRouteMap: Record<string, string> = {
-        'employment_certificate': 'employment-certificate',
-        'visa_recommendation_letter': 'visa-recommendation-letter',
-        'release_letter': 'release-letter',
-        'experience_certificate': 'experience-certificate',
-    };
-    return typeToRouteMap[type] || 'employment-certificate';
+    router.visit(`/services/certificate/${request.id}/review`);
 };
 
 const authorizeRequest = (request: CertificateRequest) => {
-    const routeSlug = getRouteSlug(request.type);
-    router.post(`/services/${routeSlug}/${request.id}/authorize`);
+    router.post(`/services/certificate/${request.id}/authorize`);
 };
 
 // Rejection Modal Logic
@@ -230,40 +212,9 @@ const confirmReject = () => {
     if (!request) return;
 
     isRejecting.value = true;
-    const routeSlug = getRouteSlug(request.type);
-    router.post(`/services/${routeSlug}/${requestToReject.value}/reject`, {}, {
+    router.post(`/services/certificate/${requestToReject.value}/reject`, {}, {
         onFinish: () => closeRejectModal(),
     });
-};
-
-const downloadCertificate = (request: CertificateRequest) => {
-    const routeSlug = getRouteSlug(request.type);
-    window.open(`/services/${routeSlug}/${request.id}/download`, '_blank');
-};
-
-const printCertificate = (request: CertificateRequest) => {
-    const routeSlug = getRouteSlug(request.type);
-    const url = `/services/${routeSlug}/${request.id}/download?view=true`;
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    iframe.src = url;
-    
-    document.body.appendChild(iframe);
-    
-    if (iframe.contentWindow) {
-        iframe.contentWindow.onload = () => {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
-            setTimeout(() => {
-               document.body.removeChild(iframe); 
-            }, 60000);
-        };
-    }
 };
 </script>
 
@@ -272,7 +223,6 @@ const printCertificate = (request: CertificateRequest) => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 p-4 md:p-6 max-w-7xl mx-auto">
-            <!-- Header -->
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
@@ -427,26 +377,6 @@ const printCertificate = (request: CertificateRequest) => {
                                                 @click="goToReview(request)"
                                             >
                                                 View
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                class="h-8 w-8 p-0"
-                                                :disabled="request.status !== 'issued'"
-                                                @click="downloadCertificate(request)"
-                                                title="Download PDF"
-                                            >
-                                                <Download class="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                class="h-8 w-8 p-0"
-                                                :disabled="request.status !== 'issued'"
-                                                @click="printCertificate(request)"
-                                                title="Print"
-                                            >
-                                                <Printer class="h-4 w-4" />
                                             </Button>
                                         </template>
                                     </div>

@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\CertificateRequest;
 use App\Models\User;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -91,11 +90,11 @@ class CertificateService
     public function getUserRequests(User $user, ?string $type = null)
     {
         $query = CertificateRequest::where('user_id', $user->id);
-        
+
         if ($type) {
             $query->where('type', $type);
         }
-        
+
         return $query->orderBy('created_at', 'desc')
             ->paginate(7);
     }
@@ -180,50 +179,6 @@ class CertificateService
         }
 
         return CertificateRequest::where('status', CertificateRequest::STATUS_PENDING)->count();
-    }
-
-    /**
-     * Generate certificate PDF.
-     */
-    public function generateCertificatePdf(CertificateRequest $request)
-    {
-        $request->load(['user.department', 'user.subDepartment', 'issuer']);
-
-        $data = [
-            'request' => $request,
-            'user' => $request->user,
-            'issueDate' => $request->issued_at ?? now(),
-            'issuer' => config('services_module.issuer'),
-            'company' => config('services_module.company'),
-        ];
-
-        $view = match ($request->type) {
-            CertificateRequest::TYPE_VISA_RECOMMENDATION => 'pdf.visa-recommendation-letter',
-            CertificateRequest::TYPE_RELEASE_LETTER => 'pdf.release-letter',
-            CertificateRequest::TYPE_EXPERIENCE_CERTIFICATE => 'pdf.experience-certificate',
-            default => 'pdf.certificate',
-        };
-
-        $pdf = Pdf::loadView($view, $data);
-        $pdf->setPaper('a4', 'portrait');
-
-        return $pdf;
-    }
-
-    /**
-     * Get certificate data for HTML preview.
-     */
-    public function getCertificateData(CertificateRequest $request): array
-    {
-        $request->load(['user.department', 'user.subDepartment', 'issuer']);
-
-        return [
-            'request' => $request,
-            'user' => $request->user,
-            'issueDate' => $request->issued_at ?? now(),
-            'issuer' => config('services_module.issuer'),
-            'company' => config('services_module.company'),
-        ];
     }
 
     /**

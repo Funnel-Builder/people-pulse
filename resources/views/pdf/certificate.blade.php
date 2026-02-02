@@ -5,36 +5,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employment Certificate - {{ $request->ref_id }}</title>
-    <style>
-        @font-face {
-            font-family: 'Inter';
-            src: url('{{ public_path('fonts/Inter-Light.ttf') }}') format('truetype');
-            font-weight: 300;
-            font-style: normal;
-        }
+    @if(isset($isWebView) && $isWebView)
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+        <style>
+            body {
+                font-family: 'Inter', sans-serif;
+            }
 
-        @font-face {
-            font-family: 'Inter';
-            src: url('{{ public_path('fonts/Inter-Regular.ttf') }}') format('truetype');
-            font-weight: 400;
-            font-style: normal;
-        }
+    @else <style>@font-face {
+                font-family: 'Inter';
+                src: url('{{ public_path('fonts/Inter-Light.ttf') }}') format('truetype');
+                font-weight: 300;
+                font-style: normal;
+            }
 
-        @font-face {
-            font-family: 'Inter';
-            src: url('{{ public_path('fonts/Inter-Medium.ttf') }}') format('truetype');
-            font-weight: 500;
-            font-style: normal;
-        }
+            @font-face {
+                font-family: 'Inter';
+                src: url('{{ public_path('fonts/Inter-Regular.ttf') }}') format('truetype');
+                font-weight: 400;
+                font-style: normal;
+            }
 
-        @font-face {
-            font-family: 'Inter';
-            src: url('{{ public_path('fonts/Inter-Bold.ttf') }}') format('truetype');
-            font-weight: 700;
-            font-style: normal;
-        }
+            @font-face {
+                font-family: 'Inter';
+                src: url('{{ public_path('fonts/Inter-Medium.ttf') }}') format('truetype');
+                font-weight: 500;
+                font-style: normal;
+            }
 
-        @page {
+            @font-face {
+                font-family: 'Inter';
+                src: url('{{ public_path('fonts/Inter-Bold.ttf') }}') format('truetype');
+                font-weight: 700;
+                font-style: normal;
+            }
+
+        @endif @page {
             size: A4;
             margin: 0;
         }
