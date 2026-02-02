@@ -18,6 +18,7 @@ import { FileText, Clock, CheckCircle, XCircle, AlertCircle, History, Check, X, 
 import { ref, computed, watch } from 'vue';
 import type { BreadcrumbItem } from '@/types';
 
+
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Services', href: '#' },
@@ -252,6 +253,15 @@ const sendEmail = (id: number) => {
         },
     });
 };
+
+// Map data for preview components
+// Helper for display name
+const certificateDisplayName = computed(() => {
+    return props.currentType
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+});
 </script>
 
 <template>
@@ -307,116 +317,13 @@ const sendEmail = (id: number) => {
                                     </Badge>
                                 </div>
                             </CardHeader>
-                            <CardContent class="p-0">
-                                <!-- Desktop View: Certificate Preview via iframe -->
-                                <div class="hidden md:block">
-                                    <div class="bg-muted/50 p-6">
-                                        <!-- Dynamic Certificate Preview via iframe -->
-                                        <div class="bg-white rounded-lg shadow-inner border mx-auto overflow-hidden" style="max-width: 680px; height: 800px;">
-                                            <iframe 
-                                                :src="`${getBaseUrl}/${props.latestIssuedCertificate.id}/preview`" 
-                                                class="w-full h-full border-0"
-                                                title="Certificate Preview"
-                                            ></iframe>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Desktop Action Buttons -->
-                                    <div v-if="page.props.auth.user.role === 'admin'" class="flex items-center justify-center gap-4 py-4 border-t border-border/50">
-                                        <Button
-                                            variant="outline"
-                                            class="gap-2 min-w-[140px] transition-all duration-300"
-                                            :class="{
-                                                'bg-green-50 text-green-600 border-green-200 hover:bg-green-100': emailStatus === 'success',
-                                                'bg-red-50 text-red-600 border-red-200 hover:bg-red-100': emailStatus === 'error'
-                                            }"
-                                            @click="sendEmail(props.latestIssuedCertificate.id)"
-                                            :disabled="emailStatus !== 'idle'"
-                                        >
-                                            <template v-if="emailStatus === 'idle'">
-                                                <Mail class="h-4 w-4" />
-                                                Send to Email
-                                            </template>
-                                            <template v-else-if="emailStatus === 'sending'">
-                                                <Loader2 class="h-4 w-4 animate-spin" />
-                                                Sending...
-                                            </template>
-                                            <template v-else-if="emailStatus === 'success'">
-                                                <Check class="h-4 w-4" />
-                                                Sent!
-                                            </template>
-                                            <template v-else-if="emailStatus === 'error'">
-                                                <XCircle class="h-4 w-4" />
-                                                Failed
-                                            </template>
-                                        </Button>
-                                        <Button
-                                            class="gap-2"
-                                            @click="downloadCertificate(props.latestIssuedCertificate.id)"
-                                        >
-                                            <Download class="h-4 w-4" />
-                                            Download PDF
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                <!-- Mobile View: Simplified Details -->
-                                <div class="block md:hidden p-4">
-                                    <div class="rounded-lg bg-muted/50 p-4 border border-border/50">
-                                        <div class="space-y-4">
-                                            <div class="space-y-1">
-                                                <p class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Employee Name</p>
-                                                <p class="font-medium text-lg">{{ props.employeeInfo.name }}</p>
-                                            </div>
-                                            <div class="space-y-1">
-                                                <p class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Reference ID</p>
-                                                <p class="font-mono text-lg">{{ props.latestIssuedCertificate.ref_id }}</p>
-                                            </div>
-                                            <div class="space-y-1">
-                                                <p class="text-xs font-medium text-muted-foreground uppercase tracking-wider">Issued Date</p>
-                                                <p class="font-medium">{{ formatDate(props.latestIssuedCertificate.issued_at) }}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Mobile Action Buttons -->
-                                    <div v-if="page.props.auth.user.role === 'admin'" class="flex flex-col gap-3 mt-6">
-                                        <Button
-                                            variant="outline"
-                                            class="w-full gap-2 transition-all duration-300"
-                                            :class="{
-                                                'bg-green-50 text-green-600 border-green-200 hover:bg-green-100': emailStatus === 'success',
-                                                'bg-red-50 text-red-600 border-red-200 hover:bg-red-100': emailStatus === 'error'
-                                            }"
-                                            @click="sendEmail(props.latestIssuedCertificate.id)"
-                                            :disabled="emailStatus !== 'idle'"
-                                        >
-                                            <template v-if="emailStatus === 'idle'">
-                                                <Mail class="h-4 w-4" />
-                                                Send to Email
-                                            </template>
-                                            <template v-else-if="emailStatus === 'sending'">
-                                                <Loader2 class="h-4 w-4 animate-spin" />
-                                                Sending...
-                                            </template>
-                                            <template v-else-if="emailStatus === 'success'">
-                                                <Check class="h-4 w-4" />
-                                                Sent!
-                                            </template>
-                                            <template v-else-if="emailStatus === 'error'">
-                                                <XCircle class="h-4 w-4" />
-                                                Failed
-                                            </template>
-                                        </Button>
-                                        <Button
-                                            class="w-full gap-2"
-                                            @click="downloadCertificate(props.latestIssuedCertificate.id)"
-                                        >
-                                            <Download class="h-4 w-4" />
-                                            Download PDF
-                                        </Button>
-                                    </div>
-                                </div>
+                            <CardContent class="p-8 flex flex-col items-center justify-center text-center space-y-4 min-h-[300px]">
+                                <h3 class="text-xl font-semibold">Certificate Issued</h3>
+                                <p class="text-muted-foreground max-w-md">
+                                    Your {{ certificateDisplayName }} has been issued.
+                                    <br>
+                                    Please collect it physically from the HR department.
+                                </p>
                             </CardContent>
                         </Card>
                     </div>
