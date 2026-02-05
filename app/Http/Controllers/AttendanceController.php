@@ -36,6 +36,8 @@ class AttendanceController extends Controller
         $monthEnd = $today->copy()->endOfMonth();
 
         $stats = $this->attendanceService->getAttendanceStats($user);
+        $punctuality = $this->attendanceService->calculatePunctuality($user);
+        $punctualityCheck = $this->attendanceService->getMonthlyPunctualityTrends($user);
 
         $companyStats = null;
         // Optimization: In a real app, maybe only load this via async request or for specific roles

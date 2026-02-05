@@ -156,7 +156,7 @@ const closeModal = () => {
                         <Button 
                             class="w-full h-11 text-base font-medium rounded-xl shadow-lg transition-all duration-200 active:scale-95"
                             :class="{ 
-                                'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white': status === 'working',
+                                'bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white': status === 'working',
                                 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white': status === 'idle'
                             }"
                             :disabled="loading"
