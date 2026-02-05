@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Mail\MissedClockOutReport;
 use App\Models\Attendance;
+use App\Models\Holiday;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -40,6 +41,13 @@ class NotifyMissedClockOut extends Command
 
         $this->info("Checking for missed clock-outs on {$formattedDate}...");
         Log::info("[Missed Clock-Out] Starting check for {$date}");
+
+        // Check if today is a holiday - skip entire process
+        if ($this->isHoliday($date)) {
+            $this->info("Skipping: {$date} is a holiday.");
+            Log::info("[Missed Clock-Out] Skipping {$date} - holiday");
+            return self::SUCCESS;
+        }
 
         // Find employees who clocked in but didn't clock out
         $missedClockOuts = Attendance::with(['user', 'user.department'])
@@ -104,5 +112,13 @@ class NotifyMissedClockOut extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Check if the given date is a holiday.
+     */
+    protected function isHoliday(string $date): bool
+    {
+        return Holiday::whereDate('date', $date)->exists();
     }
 }

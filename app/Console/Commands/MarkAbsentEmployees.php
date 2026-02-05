@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Attendance;
+use App\Models\Holiday;
 use App\Models\Leave;
 use App\Models\LeaveDate;
 use App\Models\User;
@@ -58,6 +59,13 @@ class MarkAbsentEmployees extends Command
         if ($employees->isEmpty()) {
             $this->warn('No employees found.');
             Log::warning("[Attendance Scheduler] No employees found for {$date}");
+            return self::SUCCESS;
+        }
+
+        // Check if today is a holiday - skip entire process like weekend
+        if ($this->isHoliday($date)) {
+            $this->info("Skipping: {$date} is a holiday.");
+            Log::info("[Attendance Scheduler] Skipping {$date} - holiday");
             return self::SUCCESS;
         }
 
@@ -153,6 +161,14 @@ class MarkAbsentEmployees extends Command
         ]);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Check if the given date is a holiday.
+     */
+    protected function isHoliday(string $date): bool
+    {
+        return Holiday::whereDate('date', $date)->exists();
     }
 
     /**

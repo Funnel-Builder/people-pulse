@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Mail\ClockInReminder;
 use App\Models\Attendance;
+use App\Models\Holiday;
 use App\Models\Leave;
 use App\Models\LeaveDate;
 use App\Models\Setting;
@@ -61,6 +62,13 @@ class NotifyMissedClockIn extends Command
         if ($employees->isEmpty()) {
             $this->warn('No employees found.');
             Log::warning("[Clock-In Reminder] No employees found for {$date}");
+            return self::SUCCESS;
+        }
+
+        // Check if today is a holiday - skip entire process like weekend
+        if ($this->isHoliday($date)) {
+            $this->info("Skipping: {$date} is a holiday.");
+            Log::info("[Clock-In Reminder] Skipping {$date} - holiday");
             return self::SUCCESS;
         }
 
@@ -132,6 +140,14 @@ class NotifyMissedClockIn extends Command
         ]);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Check if the given date is a holiday.
+     */
+    protected function isHoliday(string $date): bool
+    {
+        return Holiday::whereDate('date', $date)->exists();
     }
 
     /**
