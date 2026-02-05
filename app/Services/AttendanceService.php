@@ -353,7 +353,12 @@ class AttendanceService
 
         $targetDate = $date ? Carbon::parse($date) : Carbon::today();
 
-        $users = User::whereIn('sub_department_id', $subDepartmentIds)->get();
+        $users = User::whereIn('sub_department_id', $subDepartmentIds)
+            ->where(function ($query) {
+                $query->where('is_active', true)
+                    ->orWhereNull('is_active'); // Treat null as active for backward compatibility
+            })
+            ->get();
         $attendances = Attendance::whereHas('user', function ($q) use ($subDepartmentIds) {
             $q->whereIn('sub_department_id', $subDepartmentIds);
         })
@@ -376,7 +381,12 @@ class AttendanceService
         // Exclude admins from the general "Employee" stats if desired, or include all.
         // Usually dashboards show "Employees". Assuming role!=admin or just all users.
         // Let's include all non-admin users as "employees".
-        $users = User::where('role', '!=', 'admin')->get();
+        $users = User::where('role', '!=', 'admin')
+            ->where(function ($query) {
+                $query->where('is_active', true)
+                    ->orWhereNull('is_active'); // Treat null as active for backward compatibility
+            })
+            ->get();
 
         $attendances = Attendance::whereIn('user_id', $users->pluck('id'))
             ->forDate($targetDate)
