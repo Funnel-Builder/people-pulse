@@ -35,11 +35,7 @@ class AttendanceController extends Controller
         $monthStart = $today->copy()->startOfMonth();
         $monthEnd = $today->copy()->endOfMonth();
 
-        $stats = $this->attendanceService->getAttendanceStats(
-            $user,
-            $monthStart->toDateString(),
-            $monthEnd->toDateString()
-        );
+        $stats = $this->attendanceService->getAttendanceStats($user);
 
         $companyStats = null;
         // Optimization: In a real app, maybe only load this via async request or for specific roles
