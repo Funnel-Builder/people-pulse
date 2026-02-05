@@ -436,4 +436,78 @@ class AttendanceService
 
         return $summary;
     }
+
+    /**
+     * Calculate lifetime punctuality
+     */
+    public function calculatePunctuality(User $user): array
+    {
+        // Get total present days (clocked in)
+        $totalPresent = Attendance::forUser($user->id)
+            ->whereNotNull('clock_in')
+            ->count();
+
+        if ($totalPresent === 0) {
+            return [
+                'percentage' => 100, // Default to 100% if no history? Or 0? 100 seems more encouraging or N/A
+                'total_present' => 0,
+                'total_late' => 0
+            ];
+        }
+
+        $totalLate = Attendance::forUser($user->id)
+            ->where('is_late', true)
+            ->count();
+
+        // Formula: (Total Present - Late) / Total Present * 100
+        $onTime = $totalPresent - $totalLate;
+        $percentage = ($onTime / $totalPresent) * 100;
+
+        return [
+            'percentage' => round($percentage, 1),
+            'total_present' => $totalPresent,
+            'total_late' => $totalLate
+        ];
+    }
+
+    /**
+     * Get monthly punctuality trends for the last X months
+     */
+    public function getMonthlyPunctualityTrends(User $user, int $months = 6): array
+    {
+        $trends = [];
+        $now = Carbon::now();
+
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $date = $now->copy()->subMonths($i);
+            $monthStart = $date->copy()->startOfMonth();
+            $monthEnd = $date->copy()->endOfMonth();
+
+            $totalPresent = Attendance::forUser($user->id)
+                ->whereBetween('date', [$monthStart, $monthEnd])
+                ->whereNotNull('clock_in')
+                ->count();
+
+            $totalLate = Attendance::forUser($user->id)
+                ->whereBetween('date', [$monthStart, $monthEnd])
+                ->where('is_late', true)
+                ->count();
+
+            $percentage = 0;
+            if ($totalPresent > 0) {
+                $onTime = $totalPresent - $totalLate;
+                $percentage = ($onTime / $totalPresent) * 100;
+            }
+
+            $trends[] = [
+                'month' => $date->format('M'),
+                'full_date' => $date->format('Y-m'),
+                'percentage' => round($percentage, 1),
+                'total_present' => $totalPresent,
+                'total_late' => $totalLate
+            ];
+        }
+
+        return $trends;
+    }
 }

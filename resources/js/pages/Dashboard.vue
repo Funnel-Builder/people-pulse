@@ -28,6 +28,28 @@ interface CompanyStats {
 }
 
 interface Props {
+    attendanceSummary?: {
+        total_employees: number;
+        present: number;
+        absent: number;
+        late: number;
+        all_list: User[];
+        present_list: User[];
+        absent_list: User[];
+        late_list: User[];
+    } | null;
+    punctuality?: {
+        percentage: number;
+        total_present: number;
+        total_late: number;
+    };
+    punctualityTrends?: Array<{
+        month: string;
+        full_date: string;
+        percentage: number;
+        total_present: number;
+        total_late: number;
+    }>;
     todayAttendance: Attendance | null;
     stats: AttendanceStats;
     companyStats?: CompanyStats | null;
@@ -359,49 +381,64 @@ const getStatusLabel = (status: string) => {
                 <AlertDescription>{{ flash.error }}</AlertDescription>
             </Alert>
 
-            <!-- Welcome -->
-            <div class="flex items-center justify-between">
+            <!-- Welcome & Clock Action -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 class="text-xl font-semibold">Welcome, {{ user.name.split(' ')[0] }}</h1>
                     <p class="text-sm text-muted-foreground">{{ formattedDate }} • {{ formattedTime }}</p>
+                </div>
+
+                <!-- Header Clock Action -->
+                <div class="flex items-center bg-card border rounded-xl shadow-sm overflow-hidden">
+                    <div class="px-4 py-1.5 flex flex-col items-start border-r bg-muted/20 min-w-[100px] justify-center h-[42px]">
+                        <span class="text-[9px] uppercase font-bold text-muted-foreground tracking-wider leading-none mb-0.5">Status</span>
+                        <div class="flex items-center gap-2">
+                            <span class="relative flex h-2.5 w-2.5">
+                                <span class="relative inline-flex rounded-full h-2.5 w-2.5" :class="{
+                                    'bg-green-500': buttonStatus === 'working',
+                                    'bg-amber-500': buttonStatus === 'idle',
+                                    'bg-gray-400': buttonStatus === 'clocked_out'
+                                }"></span>
+                            </span>
+                            <span class="text-xs font-semibold leading-none" :class="{
+                                'text-green-600 dark:text-green-400': buttonStatus === 'working',
+                                'text-amber-600 dark:text-amber-400': buttonStatus === 'idle',
+                                'text-muted-foreground': buttonStatus === 'clocked_out'
+                            }">
+                                {{ buttonStatus === 'working' ? 'Working' : (buttonStatus === 'idle' ? 'Ready' : 'Completed') }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="p-1">
+                        <Button 
+                            v-if="buttonStatus !== 'clocked_out'"
+                            :variant="buttonStatus === 'working' ? 'destructive' : 'default'"
+                            class="h-[42px] px-5 font-semibold shadow-md transition-all hover:scale-[1.02] active:scale-95 rounded-lg flex items-center gap-2 text-sm"
+                            :class="{
+                                'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-500/20': buttonStatus === 'idle',
+                                'bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white shadow-red-500/20': buttonStatus === 'working'
+                            }"
+                            :disabled="isProcessing"
+                            @click="handleClockAction"
+                        >
+                            <div class="flex flex-col items-center leading-none gap-0.5">
+                                <LogIn v-if="buttonStatus === 'idle'" class="h-3.5 w-3.5" />
+                                <LogOut v-else class="h-3.5 w-3.5" />
+                            </div>
+                            <span>{{ buttonStatus === 'working' ? 'Clock Out' : 'Clock In' }}</span>
+                        </Button>
+                         <div v-else class="h-[42px] px-5 bg-muted/30 rounded-lg text-xs font-medium text-muted-foreground flex items-center gap-2">
+                            <CheckCircle class="h-4 w-4 text-green-500" />
+                            <span>Day Complete</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Bento Grid Layout -->
             <div class="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-8">
 
-                <!-- Clock In/Out Card (Hidden on Mobile) -->
-                <Card class="hidden md:block lg:col-span-2 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                    <CardContent class="p-6 h-full flex flex-col justify-center items-center">
-                        <div class="text-center space-y-4">
 
-
-                            <div>
-                                <div v-if="currentStatus === 'absent'" class="text-sm text-red-600 dark:text-red-400 flex items-center gap-2 justify-center">
-                                    <span class="h-2 w-2 rounded-full bg-red-500"></span>
-                                    Marked Absent
-                                </div>
-                                <div v-else-if="isWeekend" class="text-sm text-muted-foreground">
-                                    Weekend
-                                </div>
-                                <div v-else-if="currentStatus === 'working'" class="text-sm text-green-600 dark:text-green-400 flex items-center gap-2 justify-center">
-                                    <span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-                                    Working
-                                </div>
-
-                                <div v-else-if="currentStatus === 'not_clocked_in'" class="text-sm text-muted-foreground">
-                                    Ready to Clock In
-                                </div>
-                            </div>
-
-                            <ClockInButton
-                                :status="buttonStatus"
-                                :loading="isProcessing"
-                                @click="handleClockAction"
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
 
                 <!-- Today's Stats Card -->
                 <Card class="lg:col-span-2">
@@ -436,6 +473,51 @@ const getStatusLabel = (status: string) => {
                             >
                                 {{ todayAttendance?.status === 'absent' ? 'Absent' : (todayAttendance?.is_late ? 'Late' : (todayAttendance?.clock_in ? 'On Time' : 'Not Marked')) }}
                             </Badge>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <!-- Punctuality Card -->
+                <Card class="bg-card/50 backdrop-blur-sm border-muted/50 shadow-sm hover:shadow-md transition-all duration-300 group overflow-hidden relative">
+                     <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Clock class="h-16 w-16 text-primary" />
+                    </div>
+                    <CardHeader class="pb-2">
+                        <div class="flex items-center justify-between">
+                            <CardTitle class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Punctuality</CardTitle>
+                            <span v-if="punctualityTrends && punctualityTrends.length > 1" 
+                                  class="text-xs font-medium px-2 py-0.5 rounded-full" 
+                                  :class="punctualityTrends[punctualityTrends.length - 1].percentage >= punctualityTrends[punctualityTrends.length - 2].percentage ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'">
+                                {{ punctualityTrends[punctualityTrends.length - 1].percentage >= punctualityTrends[punctualityTrends.length - 2].percentage ? '+' : '' }}{{ (punctualityTrends[punctualityTrends.length - 1].percentage - punctualityTrends[punctualityTrends.length - 2].percentage).toFixed(1) }}%
+                            </span>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="text-3xl font-bold tracking-tight text-foreground flex items-baseline gap-1">
+                                    {{ punctuality ? punctuality.percentage : 0 }}%
+                                </div>
+                                <p class="text-xs text-muted-foreground mt-1">Lifetime on-time arrival rate</p>
+                            </div>
+                            
+                            <!-- Simple Bar Chart -->
+                            <div class="h-[60px] flex items-end justify-between gap-1 pt-2">
+                                <div v-for="(month, index) in punctualityTrends" :key="index" class="relative flex-1 flex flex-col justify-end group/bar">
+                                    <div 
+                                        class="w-full rounded-sm transition-all duration-300 hover:opacity-80 relative"
+                                        :class="month.percentage >= 90 ? 'bg-amber-500' : (month.percentage >= 75 ? 'bg-amber-400' : 'bg-red-400')"
+                                        :style="{ height: `${Math.max(month.percentage * 0.6, 5)}%` }"
+                                    ></div>
+                                    <div class="opacity-0 group-hover/bar:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-popover text-popover-foreground text-[10px] px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap z-10 border transition-opacity pointer-events-none">
+                                        {{ month.month }}: {{ month.percentage }}%
+                                    </div>
+                                </div>
+                                <!-- Empty states placeholders if needed -->
+                                <div v-if="!punctualityTrends || punctualityTrends.length === 0" class="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground bg-muted/20 rounded">
+                                    No data
+                                </div>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
