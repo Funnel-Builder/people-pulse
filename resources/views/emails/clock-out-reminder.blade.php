@@ -19,7 +19,7 @@
                     <tr>
                         <td
                             style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 32px 40px; text-align: center;">
-                            <img src="{{ asset('logos/logo-icon-peoplepulse-dark-mode.png') }}" alt="PeoplePulse"
+                            <img src="{{ url('logos/logo-icon-peoplepulse-dark-mode.png') }}" alt="PeoplePulse"
                                 style="height: 40px; margin-bottom: 16px;">
                             <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">Clock-Out Reminder
                             </h1>
