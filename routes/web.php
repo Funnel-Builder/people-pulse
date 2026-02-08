@@ -76,6 +76,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/leave', [LeaveReportController::class, 'index'])->name('leave');
         Route::get('/leave/employees', [LeaveReportController::class, 'employeeReport'])->name('leave.employees');
         Route::get('/leave/employees/{employee}', [LeaveReportController::class, 'employeeDetail'])->name('leave.employees.detail');
+
+        // Employee Lifetime Report
+        Route::get('/employees', [App\Http\Controllers\EmployeeReportController::class, 'index'])->name('employees.index');
+        Route::get('/employees/{employee}', [App\Http\Controllers\EmployeeReportController::class, 'show'])->name('employees.show');
+        Route::get('/employees/{employee}/export', [App\Http\Controllers\EmployeeReportController::class, 'export'])->name('employees.export');
     });
 
     // =====================================================

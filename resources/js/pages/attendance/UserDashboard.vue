@@ -641,5 +641,3 @@ const getLocation = (attendance: Attendance | null | undefined) => {
         </div>
     </AppLayout>
 </template>
-
-

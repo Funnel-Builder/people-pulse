@@ -489,13 +489,17 @@ const workHoursTrend = computed(() => {
     const current = trends[trends.length - 1];
     const previous = trends[trends.length - 2];
     
-    // Guard: If current displayed hours is 0, don't show a confusing trend (e.g. 494% for 1 minute)
-    if (current.hours < 1) return 0;
-
-    if (previous.dailyAvg === 0) return 100; // If prev was 0 and now >0, assume 100% start
+    // Logic: Calculate trend based on VISIBLE hours (floored), not internal exact minutes.
+    // This prevents "494%" scenarios when both show "0h".
     
-    // Calculate percentage difference
-    const diff = ((current.dailyAvg - previous.dailyAvg) / previous.dailyAvg) * 100;
+    // Case 1: Both are 0h -> No change visibly.
+    if (previous.hours === 0 && current.hours === 0) return 0;
+
+    // Case 2: Previous was 0h, now we have hours -> 100% increase (New)
+    if (previous.hours === 0) return 100;
+    
+    // Case 3: Standard calculation
+    const diff = ((current.hours - previous.hours) / previous.hours) * 100;
     return Math.round(diff);
 });
 
@@ -646,25 +650,16 @@ const currentMonthWorkHours = computed(() => {
                                 <Timer class="h-4 w-4" />
                                 Work Hours
                             </CardTitle>
-                             <TooltipProvider>
-                                <Tooltip :delay-duration="0">
-                                    <TooltipTrigger as-child>
                                          <div 
-                                            class="px-2 py-0.5 rounded-full text-[10px] font-medium border cursor-help"
-                                            :class="[
-                                                workHoursTrend > 0 ? 'bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400' : 
-                                                workHoursTrend < 0 ? 'bg-red-100 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400' :
-                                                'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
-                                            ]"
-                                        >
-                                            {{ workHoursTrend > 0 ? '+' : ''}}{{ workHoursTrend }}%
-                                        </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="bottom">
-                                        <p class="text-xs">Vs Last Month's Daily Average</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                             </TooltipProvider>
+                                             class="px-2 py-0.5 rounded-full text-[10px] font-medium border cursor-default"
+                                             :class="[
+                                                 workHoursTrend > 0 ? 'bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400' : 
+                                                 workHoursTrend < 0 ? 'bg-red-100 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400' :
+                                                 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+                                             ]"
+                                         >
+                                             {{ workHoursTrend > 0 ? '+' : ''}}{{ workHoursTrend }}%
+                                         </div>
                         </div>
                     </CardHeader>
                     <CardContent class="space-y-4">
@@ -711,25 +706,16 @@ const currentMonthWorkHours = computed(() => {
                                 <TrendingUp class="h-4 w-4" />
                                 Performance
                             </CardTitle>
-                             <TooltipProvider>
-                                <Tooltip :delay-duration="0">
-                                    <TooltipTrigger as-child>
                                          <div 
-                                            class="px-2 py-0.5 rounded-full text-[10px] font-medium border cursor-help"
-                                            :class="[
-                                                punctualityTrend > 0 ? 'bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400' : 
-                                                punctualityTrend < 0 ? 'bg-red-100 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400' :
-                                                'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
-                                            ]"
-                                        >
-                                            {{ punctualityTrend > 0 ? '+' : ''}}{{ punctualityTrend }}%
-                                        </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="bottom">
-                                        <p class="text-xs">Vs Last Month's Score</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                             </TooltipProvider>
+                                             class="px-2 py-0.5 rounded-full text-[10px] font-medium border cursor-default"
+                                             :class="[
+                                                 punctualityTrend > 0 ? 'bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400' : 
+                                                 punctualityTrend < 0 ? 'bg-red-100 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400' :
+                                                 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+                                             ]"
+                                         >
+                                             {{ punctualityTrend > 0 ? '+' : ''}}{{ punctualityTrend }}%
+                                         </div>
                         </div>
                     </CardHeader>
                     <CardContent class="space-y-4">

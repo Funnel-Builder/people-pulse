@@ -141,6 +141,11 @@ const mainNavItems = computed<NavItem[]>(() => {
                     href: '/reports/leave',
                     icon: FileBarChart,
                 },
+                {
+                    title: 'Employee Report',
+                    href: '/reports/employees',
+                    icon: UserCog, // Using UserCog as a placeholder for Employee Report icon
+                },
             ],
         });
     }
