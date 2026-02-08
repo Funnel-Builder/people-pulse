@@ -440,9 +440,13 @@ const monthlyTrends = computed(() => {
 
         // Performance Score Calculation (Sync with UserDashboard)
         // Formula: 100 - (Absent * 10) - (Late * 2)
-        let score = 100 - (m.absent * 10) - (m.late * 2);
-        if (score < 0) score = 0;
-        if (score > 100) score = 100;
+        // Fix: If no entries, score should be 0 (not 100)
+        let score = 0;
+        if (m.totalEntries > 0) {
+            score = 100 - (m.absent * 10) - (m.late * 2);
+            if (score < 0) score = 0;
+            if (score > 100) score = 100;
+        }
         
         // Work Hours Height Scale (Max 200h/mo?)
         // Ensure min height of 15% for visibility of "empty" or low bars
@@ -463,6 +467,8 @@ const monthlyTrends = computed(() => {
 
         return {
             month: m.monthLabel,
+            year: m.year,   // Ensure year is passed for sorting if needed, logic uses index though.
+            monthIndex: m.month, // Ensure month index is passed
             hours,
             dailyAvg,
             punctuality: Math.round(punctuality),
@@ -470,6 +476,9 @@ const monthlyTrends = computed(() => {
             workHeight,
             punctualityHeight
         };
+    }).sort((a, b) => {
+        if (a.year !== b.year) return a.year - b.year;
+        return a.monthIndex - b.monthIndex;
     });
 });
 
@@ -480,7 +489,10 @@ const workHoursTrend = computed(() => {
     const current = trends[trends.length - 1];
     const previous = trends[trends.length - 2];
     
-    if (previous.dailyAvg === 0) return 0;
+    // Guard: If current displayed hours is 0, don't show a confusing trend (e.g. 494% for 1 minute)
+    if (current.hours < 1) return 0;
+
+    if (previous.dailyAvg === 0) return 100; // If prev was 0 and now >0, assume 100% start
     
     // Calculate percentage difference
     const diff = ((current.dailyAvg - previous.dailyAvg) / previous.dailyAvg) * 100;
@@ -494,6 +506,9 @@ const punctualityTrend = computed(() => { // Actually Performance Trend now
     const current = trends[trends.length - 1];
     const previous = trends[trends.length - 2];
     
+    // Guard: If current score is 0 (no data), trend is 0
+    if (current.score === 0) return 0;
+
     // Calculate percentage point difference
     return current.score - previous.score;
 });
