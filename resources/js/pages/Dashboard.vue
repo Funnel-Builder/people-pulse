@@ -553,11 +553,7 @@ const currentMonthWorkHours = computed(() => {
                 </div>
 
                 <!-- Header Clock Action -->
-<<<<<<< HEAD
-                <div class="flex items-center bg-card border rounded-xl shadow-sm overflow-hidden">
-=======
                 <div class="hidden md:flex items-center bg-card border rounded-xl shadow-sm overflow-hidden">
->>>>>>> dev
                     <div class="px-4 py-1.5 flex flex-col items-start border-r bg-muted/20 min-w-[100px] justify-center h-[42px]">
                         <span class="text-[9px] uppercase font-bold text-muted-foreground tracking-wider leading-none mb-0.5">Status</span>
                         <div class="flex items-center gap-2">
@@ -645,49 +641,7 @@ const currentMonthWorkHours = computed(() => {
                     </CardContent>
                 </Card>
 
-<<<<<<< HEAD
-                <!-- Punctuality Card -->
-                <Card class="bg-card/50 backdrop-blur-sm border-muted/50 shadow-sm hover:shadow-md transition-all duration-300 group overflow-hidden relative">
-                     <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Clock class="h-16 w-16 text-primary" />
-                    </div>
-                    <CardHeader class="pb-2">
-                        <div class="flex items-center justify-between">
-                            <CardTitle class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Punctuality</CardTitle>
-                            <span v-if="punctualityTrends && punctualityTrends.length > 1" 
-                                  class="text-xs font-medium px-2 py-0.5 rounded-full" 
-                                  :class="punctualityTrends[punctualityTrends.length - 1].percentage >= punctualityTrends[punctualityTrends.length - 2].percentage ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'">
-                                {{ punctualityTrends[punctualityTrends.length - 1].percentage >= punctualityTrends[punctualityTrends.length - 2].percentage ? '+' : '' }}{{ (punctualityTrends[punctualityTrends.length - 1].percentage - punctualityTrends[punctualityTrends.length - 2].percentage).toFixed(1) }}%
-                            </span>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div class="space-y-4">
-                            <div>
-                                <div class="text-3xl font-bold tracking-tight text-foreground flex items-baseline gap-1">
-                                    {{ punctuality ? punctuality.percentage : 0 }}%
-                                </div>
-                                <p class="text-xs text-muted-foreground mt-1">Lifetime on-time arrival rate</p>
-                            </div>
-                            
-                            <!-- Simple Bar Chart -->
-                            <div class="h-[60px] flex items-end justify-between gap-1 pt-2">
-                                <div v-for="(month, index) in punctualityTrends" :key="index" class="relative flex-1 flex flex-col justify-end group/bar">
-                                    <div 
-                                        class="w-full rounded-sm transition-all duration-300 hover:opacity-80 relative"
-                                        :class="month.percentage >= 90 ? 'bg-amber-500' : (month.percentage >= 75 ? 'bg-amber-400' : 'bg-red-400')"
-                                        :style="{ height: `${Math.max(month.percentage * 0.6, 5)}%` }"
-                                    ></div>
-                                    <div class="opacity-0 group-hover/bar:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-popover text-popover-foreground text-[10px] px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap z-10 border transition-opacity pointer-events-none">
-                                        {{ month.month }}: {{ month.percentage }}%
-                                    </div>
-                                </div>
-                                <!-- Empty states placeholders if needed -->
-                                <div v-if="!punctualityTrends || punctualityTrends.length === 0" class="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground bg-muted/20 rounded">
-                                    No data
-                                </div>
-                            </div>
-=======
+
                 <!-- New Stats Grid -->
                 <!-- Work Hours Card -->
                 <Card class="lg:col-span-2">
@@ -796,7 +750,7 @@ const currentMonthWorkHours = computed(() => {
                                     <span class="text-[10px] text-muted-foreground font-medium uppercase">{{ month.month }}</span>
                                 </div>
                             </template>
->>>>>>> dev
+
                         </div>
                     </CardContent>
                 </Card>
