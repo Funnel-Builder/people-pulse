@@ -8,7 +8,7 @@ import ClockInModal from '@/components/ClockInModal.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { type BreadcrumbItem, type Attendance, type AttendanceStats, type User } from '@/types';
 import { Head, router, usePage, Link } from '@inertiajs/vue3';
-import { Clock, LogIn, LogOut, AlertTriangle, CheckCircle, CalendarDays, Timer, TrendingUp, Calendar, Info, Bell } from 'lucide-vue-next';
+import { Clock, LogIn, LogOut, AlertTriangle, CheckCircle, CalendarDays, Timer, TrendingUp, Calendar, Info, Bell, Check } from 'lucide-vue-next';
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import {
     Tooltip,
@@ -364,6 +364,151 @@ const getStatusLabel = (status: string) => {
         default: return 'No Data';
     }
 };
+
+// --- New Cards Logic ---
+
+// --- New Cards Logic ---
+
+const monthlyTrends = computed(() => {
+    // Group attendanceHistory by Month (YYYY-MM)
+    const monthlyData: Record<string, { 
+        totalMinutes: number; 
+        present: number; 
+        late: number; 
+        absent: number;
+        totalEntries: number; 
+        monthLabel: string;
+        year: number;
+        month: number;
+    }> = {};
+
+    // Get last 6 months including current
+    const today = new Date();
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        monthlyData[key] = {
+            totalMinutes: 0,
+            present: 0,
+            late: 0,
+            absent: 0,
+            totalEntries: 0,
+            monthLabel: d.toLocaleString('default', { month: 'short' }),
+            year: d.getFullYear(),
+            month: d.getMonth()
+        };
+    }
+
+    // Process all history
+    Object.values(props.attendanceHistory).forEach(record => {
+        const d = new Date(record.date);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (monthlyData[key]) {
+             if (record.clock_in && record.clock_out) {
+                const start = new Date(record.clock_in);
+                const end = new Date(record.clock_out);
+                const duration = (end.getTime() - start.getTime()) / 1000 / 60;
+                monthlyData[key].totalMinutes += duration;
+             }
+             
+             if (record.status !== 'weekend' && record.status !== 'holiday') { // Only count working days for punctuality
+                 monthlyData[key].totalEntries++;
+                 if (record.status === 'present' || record.status === 'late') {
+                     monthlyData[key].present++;
+                 }
+                 if (record.is_late) {
+                     monthlyData[key].late++;
+                 }
+                 if (record.status === 'absent') {
+                     monthlyData[key].absent++;
+                 }
+             }
+        }
+    });
+
+    // Convert to Array
+    return Object.values(monthlyData).map(m => {
+        const hours = Math.floor(m.totalMinutes / 60);
+        
+        // Punctuality Calculation (Legacy/Reference)
+        let punctuality = 0;
+        if (m.totalEntries > 0) {
+             const onTime = m.present - m.late;
+             punctuality = (onTime / m.totalEntries) * 100;
+        }
+
+        // Performance Score Calculation (Sync with UserDashboard)
+        // Formula: 100 - (Absent * 10) - (Late * 2)
+        let score = 100 - (m.absent * 10) - (m.late * 2);
+        if (score < 0) score = 0;
+        if (score > 100) score = 100;
+        
+        // Work Hours Height Scale (Max 200h/mo?)
+        // Ensure min height of 15% for visibility of "empty" or low bars
+        let workHeight = (hours / 200) * 100;
+        if (workHeight > 100) workHeight = 100;
+        if (workHeight < 15) workHeight = 15;
+
+        // Punctuality/Performance Height
+        // Ensure min height of 15%
+        let punctualityHeight = score; // Use Score for height
+        if (punctualityHeight < 15) punctualityHeight = 15;
+
+        // Calculate Daily Average (Hours)
+        let dailyAvg = 0;
+        if (m.totalEntries > 0) {
+            dailyAvg = (m.totalMinutes / m.totalEntries) / 60;
+        }
+
+        return {
+            month: m.monthLabel,
+            hours,
+            dailyAvg,
+            punctuality: Math.round(punctuality),
+            score: Math.round(score), // Export score
+            workHeight,
+            punctualityHeight
+        };
+    });
+});
+
+const workHoursTrend = computed(() => {
+    const trends = monthlyTrends.value;
+    if (trends.length < 2) return 0;
+    
+    const current = trends[trends.length - 1];
+    const previous = trends[trends.length - 2];
+    
+    if (previous.dailyAvg === 0) return 0;
+    
+    // Calculate percentage difference
+    const diff = ((current.dailyAvg - previous.dailyAvg) / previous.dailyAvg) * 100;
+    return Math.round(diff);
+});
+
+const punctualityTrend = computed(() => { // Actually Performance Trend now
+    const trends = monthlyTrends.value;
+    if (trends.length < 2) return 0;
+    
+    const current = trends[trends.length - 1];
+    const previous = trends[trends.length - 2];
+    
+    // Calculate percentage point difference
+    return current.score - previous.score;
+});
+
+const currentPerformanceScore = computed(() => {
+    const current = monthlyTrends.value[monthlyTrends.value.length - 1];
+    return current ? current.score : 100; // Default 100 if no data? Or 0? Logic says 100 start.
+});
+
+const currentMonthWorkHours = computed(() => {
+    // Get the last month from trends (which is current month)
+    const current = monthlyTrends.value[monthlyTrends.value.length - 1];
+    return current ? current.hours : 0;
+});
+
 </script>
 
 <template>
@@ -389,7 +534,7 @@ const getStatusLabel = (status: string) => {
                 </div>
 
                 <!-- Header Clock Action -->
-                <div class="flex items-center bg-card border rounded-xl shadow-sm overflow-hidden">
+                <div class="hidden md:flex items-center bg-card border rounded-xl shadow-sm overflow-hidden">
                     <div class="px-4 py-1.5 flex flex-col items-start border-r bg-muted/20 min-w-[100px] justify-center h-[42px]">
                         <span class="text-[9px] uppercase font-bold text-muted-foreground tracking-wider leading-none mb-0.5">Status</span>
                         <div class="flex items-center gap-2">
@@ -477,53 +622,138 @@ const getStatusLabel = (status: string) => {
                     </CardContent>
                 </Card>
 
-                <!-- Punctuality Card -->
-                <Card class="bg-card/50 backdrop-blur-sm border-muted/50 shadow-sm hover:shadow-md transition-all duration-300 group overflow-hidden relative">
-                     <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Clock class="h-16 w-16 text-primary" />
-                    </div>
-                    <CardHeader class="pb-2">
-                        <div class="flex items-center justify-between">
-                            <CardTitle class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Punctuality</CardTitle>
-                            <span v-if="punctualityTrends && punctualityTrends.length > 1" 
-                                  class="text-xs font-medium px-2 py-0.5 rounded-full" 
-                                  :class="punctualityTrends[punctualityTrends.length - 1].percentage >= punctualityTrends[punctualityTrends.length - 2].percentage ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'">
-                                {{ punctualityTrends[punctualityTrends.length - 1].percentage >= punctualityTrends[punctualityTrends.length - 2].percentage ? '+' : '' }}{{ (punctualityTrends[punctualityTrends.length - 1].percentage - punctualityTrends[punctualityTrends.length - 2].percentage).toFixed(1) }}%
-                            </span>
+                <!-- New Stats Grid -->
+                <!-- Work Hours Card -->
+                <Card class="lg:col-span-2">
+                    <CardHeader class="pb-3">
+                         <div class="flex items-center justify-between">
+                            <CardTitle class="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                <Timer class="h-4 w-4" />
+                                Work Hours
+                            </CardTitle>
+                             <TooltipProvider>
+                                <Tooltip :delay-duration="0">
+                                    <TooltipTrigger as-child>
+                                         <div 
+                                            class="px-2 py-0.5 rounded-full text-[10px] font-medium border cursor-help"
+                                            :class="[
+                                                workHoursTrend > 0 ? 'bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400' : 
+                                                workHoursTrend < 0 ? 'bg-red-100 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400' :
+                                                'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+                                            ]"
+                                        >
+                                            {{ workHoursTrend > 0 ? '+' : ''}}{{ workHoursTrend }}%
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">
+                                        <p class="text-xs">Vs Last Month's Daily Average</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                             </TooltipProvider>
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div class="space-y-4">
-                            <div>
-                                <div class="text-3xl font-bold tracking-tight text-foreground flex items-baseline gap-1">
-                                    {{ punctuality ? punctuality.percentage : 0 }}%
+                    <CardContent class="space-y-4">
+                        <div class="flex items-baseline gap-1">
+                            <p class="text-2xl font-bold tracking-tight">{{ currentMonthWorkHours }}h</p>
+                            <span class="text-sm text-muted-foreground">/mo</span>
+                        </div>
+
+                         <!-- Bar Chart -->
+                         <div class="flex items-end justify-between gap-2 mt-4">
+                            <template v-for="(month, index) in monthlyTrends" :key="index">
+                                <div class="flex flex-col items-center gap-2 flex-1">
+                                    <TooltipProvider>
+                                        <Tooltip :delay-duration="0">
+                                            <TooltipTrigger as-child>
+                                                <div class="h-12 w-full flex items-end rounded-sm bg-muted/20 overflow-hidden">
+                                                    <div 
+                                                        class="w-2/3 mx-auto rounded-t-sm transition-all duration-300 hover:opacity-80 cursor-help"
+                                                        :class="[
+                                                            month.workHeight > 20 ? 'bg-blue-500 dark:bg-blue-600' : 'bg-muted'
+                                                        ]" 
+                                                        :style="`height: ${month.workHeight}%`"
+                                                    ></div>
+                                                </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" class="text-xs">
+                                                <p>{{ month.month }}</p>
+                                                <p>{{ month.hours }}h Worked</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                    <span class="text-[10px] text-muted-foreground font-medium uppercase">{{ month.month }}</span>
                                 </div>
-                                <p class="text-xs text-muted-foreground mt-1">Lifetime on-time arrival rate</p>
-                            </div>
-                            
-                            <!-- Simple Bar Chart -->
-                            <div class="h-[60px] flex items-end justify-between gap-1 pt-2">
-                                <div v-for="(month, index) in punctualityTrends" :key="index" class="relative flex-1 flex flex-col justify-end group/bar">
-                                    <div 
-                                        class="w-full rounded-sm transition-all duration-300 hover:opacity-80 relative"
-                                        :class="month.percentage >= 90 ? 'bg-amber-500' : (month.percentage >= 75 ? 'bg-amber-400' : 'bg-red-400')"
-                                        :style="{ height: `${Math.max(month.percentage * 0.6, 5)}%` }"
-                                    ></div>
-                                    <div class="opacity-0 group-hover/bar:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-popover text-popover-foreground text-[10px] px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap z-10 border transition-opacity pointer-events-none">
-                                        {{ month.month }}: {{ month.percentage }}%
-                                    </div>
+                            </template>
+                         </div>
+                    </CardContent>
+                </Card>
+
+                <!-- Performance Card (Previously Punctuality) -->
+                <Card class="lg:col-span-2">
+                     <CardHeader class="pb-3">
+                         <div class="flex items-center justify-between">
+                            <CardTitle class="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                <TrendingUp class="h-4 w-4" />
+                                Performance
+                            </CardTitle>
+                             <TooltipProvider>
+                                <Tooltip :delay-duration="0">
+                                    <TooltipTrigger as-child>
+                                         <div 
+                                            class="px-2 py-0.5 rounded-full text-[10px] font-medium border cursor-help"
+                                            :class="[
+                                                punctualityTrend > 0 ? 'bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400' : 
+                                                punctualityTrend < 0 ? 'bg-red-100 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400' :
+                                                'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+                                            ]"
+                                        >
+                                            {{ punctualityTrend > 0 ? '+' : ''}}{{ punctualityTrend }}%
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">
+                                        <p class="text-xs">Vs Last Month's Score</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                             </TooltipProvider>
+                        </div>
+                    </CardHeader>
+                    <CardContent class="space-y-4">
+                        <div class="flex items-baseline gap-1">
+                             <p class="text-2xl font-bold tracking-tight">{{ currentPerformanceScore }}%</p>
+                        </div>
+
+                        <!-- Bar Chart -->
+                        <div class="flex items-end justify-between gap-2 mt-4">
+                            <template v-for="(month, index) in monthlyTrends" :key="index">
+                                <div class="flex flex-col items-center gap-2 flex-1">
+                                    <TooltipProvider>
+                                        <Tooltip :delay-duration="0">
+                                            <TooltipTrigger as-child>
+                                                <div class="h-12 w-full flex items-end rounded-sm bg-muted/20 overflow-hidden">
+                                                    <div 
+                                                        class="w-2/3 mx-auto rounded-t-sm transition-all duration-300 hover:opacity-80 cursor-help"
+                                                        :class="[
+                                                            month.score > 0 ? 'bg-amber-500' : 'bg-muted'
+                                                        ]" 
+                                                        :style="`height: ${month.punctualityHeight}%`"
+                                                    ></div>
+                                                </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" class="text-xs">
+                                                <p>{{ month.month }}</p>
+                                                <p>{{ month.score }}% Score</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                    <span class="text-[10px] text-muted-foreground font-medium uppercase">{{ month.month }}</span>
                                 </div>
-                                <!-- Empty states placeholders if needed -->
-                                <div v-if="!punctualityTrends || punctualityTrends.length === 0" class="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground bg-muted/20 rounded">
-                                    No data
-                                </div>
-                            </div>
+                            </template>
                         </div>
                     </CardContent>
                 </Card>
 
                 <!-- Announcements Section -->
-                <Card class="lg:col-span-4">
+                <Card class="lg:col-span-2 flex flex-col">
                     <CardHeader class="pb-3">
                         <div class="flex items-center justify-between">
                             <CardTitle class="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -535,7 +765,7 @@ const getStatusLabel = (status: string) => {
                             </Link>
                         </div>
                     </CardHeader>
-                    <CardContent class="space-y-3">
+                    <CardContent class="space-y-3 flex-1 overflow-hidden">
                         <template v-if="announcements && announcements.length > 0">
                             <div
                                 v-for="announcement in announcements.slice(0, 3)"
@@ -551,7 +781,7 @@ const getStatusLabel = (status: string) => {
                                     />
                                     <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium truncate">{{ announcement.title }}</p>
-                                        <p class="text-xs text-muted-foreground line-clamp-2 mt-1">{{ announcement.content }}</p>
+                                        <p class="text-xs text-muted-foreground line-clamp-1 mt-1">{{ announcement.content }}</p>
                                         <p class="text-xs text-muted-foreground mt-2">{{ announcement.created_at }}</p>
                                     </div>
                                 </div>
@@ -643,7 +873,7 @@ const getStatusLabel = (status: string) => {
                 <!-- Statistics & Leave Balances Split -->
                 <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Stats Card - Combined -->
-                    <Card class="bg-gradient-to-br from-background to-muted/20">
+                    <Card>
                         <CardHeader class="pb-3">
                             <CardTitle class="text-sm font-medium text-muted-foreground">Attendance</CardTitle>
                         </CardHeader>
@@ -680,7 +910,7 @@ const getStatusLabel = (status: string) => {
                     </Card>
 
                     <!-- Leave Balance Card -->
-                    <Card class="bg-gradient-to-br from-background to-muted/20">
+                    <Card>
                         <CardHeader class="pb-3">
                             <CardTitle class="text-sm font-medium text-muted-foreground">Leave Balances</CardTitle>
                         </CardHeader>

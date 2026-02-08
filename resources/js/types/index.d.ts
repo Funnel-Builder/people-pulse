@@ -89,6 +89,8 @@ export interface AttendanceStats {
     late_days: number;
     total_net_hours: number;
     average_net_hours: number;
+    present: number;
+    late: number;
 }
 
 export interface DepartmentSummary {

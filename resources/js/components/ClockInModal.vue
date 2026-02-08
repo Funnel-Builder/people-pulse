@@ -80,7 +80,7 @@ const closeModal = () => {
 
 <template>
     <Dialog :open="modelValue" @update:open="(val) => !loading && emit('update:modelValue', val)">
-        <DialogContent class="sm:max-w-[425px] overflow-hidden border-0 bg-transparent shadow-none p-0 flex items-center justify-center min-h-[300px]">
+        <DialogContent :show-close-button="false" class="sm:max-w-[425px] overflow-hidden border-0 bg-transparent shadow-none p-0 flex items-center justify-center min-h-[300px]">
             
             <!-- Backdrop/Card with blurring is handled by DialogOverlay usually, but we want a custom card look -->
             <div class="relative w-full max-w-sm overflow-hidden rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl transition-all duration-300 transform">
