@@ -16,11 +16,12 @@ import {
 import type { BreadcrumbItem } from '@/types';
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
-import { ChevronDown, ChevronUp, UserMinus, AlertTriangle, Loader2, Calendar as CalendarIcon, CheckCircle, Ban } from 'lucide-vue-next';
+import { ChevronDown, ChevronUp, UserMinus, AlertTriangle, Loader2, Calendar as CalendarIcon, CheckCircle, Ban, ChevronsUpDown, Check, X, Search } from 'lucide-vue-next';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
 
 interface SubDepartment {
     id: number;
@@ -31,6 +32,17 @@ interface Department {
     id: number;
     name: string;
     sub_departments: SubDepartment[];
+}
+
+interface Skill {
+    id: number;
+    name: string;
+}
+
+interface SkillGroup {
+    id: number;
+    name: string;
+    skills: Skill[];
 }
 
 interface Employee {
@@ -44,6 +56,7 @@ interface Employee {
     role: 'user' | 'manager' | 'admin';
     weekend_days: string[];
     managedSubDepartments?: SubDepartment[];
+    skills?: Skill[];
     // Personal Information
     nid_number?: string | null;
     joining_date?: string | null;
@@ -61,6 +74,7 @@ interface Props {
     employee?: Employee | null;
     departments: Department[];
     managerResponsibilities?: number[]; // Array of sub-department IDs the manager is responsible for
+    skillGroups: SkillGroup[];
 }
 
 const props = defineProps<Props>();
@@ -81,6 +95,9 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => [
 // Use separate ref for weekend days to work with native checkboxes
 const selectedWeekendDays = ref<string[]>(props.employee?.weekend_days ? [...props.employee.weekend_days] : []);
 
+// Use separate ref for selected skills
+const selectedSkills = ref<number[]>(props.employee?.skills ? props.employee.skills.map(s => s.id) : []);
+
 const form = useForm({
     employee_id: props.employee?.employee_id || '',
     name: props.employee?.name || '',
@@ -93,6 +110,8 @@ const form = useForm({
     weekend_days: [] as string[],
     // Manager Responsibilities
     manager_responsibilities: [] as number[],
+    // Skills
+    skills: [] as number[],
     // Personal Information
     nid_number: props.employee?.nid_number || '',
     joining_date: props.employee?.joining_date || '',
@@ -223,6 +242,7 @@ const formattedClosingDate = computed(() => {
 const submit = () => {
     form.weekend_days = selectedWeekendDays.value;
     form.manager_responsibilities = selectedManagerResponsibilities.value;
+    form.skills = selectedSkills.value;
 
     if (isEditMode.value) {
         form.put(`/employees/${props.employee!.id}`, {
@@ -292,6 +312,53 @@ const employeeStatusBanner = computed(() => {
 
     return null;
 });
+
+// --- Skill Handling Logic ---
+const skillSearchQuery = ref('');
+const isSkillPopoverOpen = ref(false);
+
+const allSkills = computed(() => {
+    return props.skillGroups.flatMap(group => 
+        group.skills.map(skill => ({
+            ...skill,
+            groupName: group.name
+        }))
+    );
+});
+
+const filteredSkills = computed(() => {
+    if (!skillSearchQuery.value) return allSkills.value;
+    const query = skillSearchQuery.value.toLowerCase();
+    return allSkills.value.filter(skill => 
+        skill.name.toLowerCase().includes(query)
+    );
+});
+
+const getSkillName = (id: number) => {
+    return allSkills.value.find(s => s.id === id)?.name || 'Unknown Skill';
+};
+
+const getSkillGroupName = (id: number) => {
+    return allSkills.value.find(s => s.id === id)?.groupName || '';
+};
+
+const toggleSkill = (id: number) => {
+    const index = selectedSkills.value.indexOf(id);
+    if (index === -1) {
+        selectedSkills.value.push(id);
+    } else {
+        selectedSkills.value.splice(index, 1);
+    }
+    // Optional: Keep popover open for multiple selections
+    // isSkillPopoverOpen.value = false; 
+};
+
+const removeSkill = (id: number) => {
+    const index = selectedSkills.value.indexOf(id);
+    if (index !== -1) {
+        selectedSkills.value.splice(index, 1);
+    }
+};
 </script>
 
 <template>
@@ -312,7 +379,7 @@ const employeeStatusBanner = computed(() => {
             <!-- Employee Status Banner -->
             <Alert
                 v-if="employeeStatusBanner"
-                :variant="employeeStatusBanner.variant"
+                :variant="employeeStatusBanner.variant as 'default' | 'destructive' | null | undefined"
                 class="flex items-center justify-between"
             >
                 <div class="flex items-center gap-2">
@@ -549,28 +616,7 @@ const employeeStatusBanner = computed(() => {
                         </CardContent>
                     </Card>
 
-                    <!-- Weekend Days -->
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Weekend Days <span class="text-destructive">*</span></CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div class="flex flex-wrap gap-4">
-                                <div v-for="option in weekendOptions" :key="option.value" class="flex items-center space-x-2">
-                                    <input
-                                        type="checkbox"
-                                        :id="option.value"
-                                        :value="option.value"
-                                        v-model="selectedWeekendDays"
-                                        class="h-4 w-4 rounded border-gray-300"
-                                    />
-                                    <Label :for="option.value" class="cursor-pointer">{{ option.label }}</Label>
-                                </div>
-                            </div>
-                            <p class="mt-2 text-sm text-muted-foreground">Select at least one weekend day</p>
-                            <p v-if="form.errors.weekend_days" class="mt-2 text-sm text-destructive">{{ form.errors.weekend_days }}</p>
-                        </CardContent>
-                    </Card>
+
 
                     <!-- Manager Responsibilities Card -->
                     <Card v-if="form.role === 'manager'">
@@ -657,17 +703,90 @@ const employeeStatusBanner = computed(() => {
                         </CardContent>
                     </Card>
 
-                    <!-- Separation Status Card (only in edit mode when already scheduled) -->
-                    <Card v-if="isEditMode && hasClosingDate" class="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
-                        <CardContent class="pt-6">
-                            <p class="text-sm text-amber-700 dark:text-amber-400">
-                                <strong>{{ employee?.name }}</strong> is separated on <strong>{{ formattedClosingDate }}</strong>.
-                            </p>
-                            <p class="text-sm text-amber-700 dark:text-amber-400 mt-1">
-                                They will be deactivated and unable to log in after this date.
-                            </p>
+                    <!-- Skills & Expertise -->
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Skills & Expertise</CardTitle>
+                            <p class="text-sm text-muted-foreground">Select the skills and technologies relevant to this employee.</p>
+                        </CardHeader>
+                        <CardContent>
+                             <div class="space-y-4">
+                                <div class="flex flex-wrap gap-2 mb-2">
+                                    <Badge
+                                        v-for="skillId in selectedSkills"
+                                        :key="skillId"
+                                        variant="secondary"
+                                        class="pl-2 pr-1 py-1 flex items-center gap-1"
+                                    >
+                                        {{ getSkillName(skillId) }}
+                                        <button
+                                            type="button"
+                                            @click="removeSkill(skillId)"
+                                            class="ml-1 hover:bg-muted p-0.5 rounded-full transition-colors"
+                                        >
+                                            <X class="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                        </button>
+                                    </Badge>
+                                </div>
+
+                                <Popover v-model:open="isSkillPopoverOpen">
+                                    <PopoverTrigger as-child>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            :aria-expanded="isSkillPopoverOpen"
+                                            class="w-full justify-between"
+                                        >
+                                            <span v-if="selectedSkills.length === 0" class="text-muted-foreground">Select skills...</span>
+                                            <span v-else>{{ selectedSkills.length }} skills selected</span>
+                                            <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent class="w-[400px] p-0" align="start">
+                                        <div class="p-2 border-b">
+                                            <div class="flex items-center px-2">
+                                                <Search class="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                                                <input
+                                                    v-model="skillSearchQuery"
+                                                    class="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                                                    placeholder="Search skills..."
+                                                />
+                                            </div>
+                                        </div>
+                                        <div class="max-h-[300px] overflow-y-auto p-1">
+                                            <div v-if="filteredSkills.length === 0" class="py-6 text-center text-sm text-muted-foreground">
+                                                No skill found.
+                                            </div>
+                                            <div v-else>
+                                                <div
+                                                    v-for="skill in filteredSkills"
+                                                    :key="skill.id"
+                                                    @click="toggleSkill(skill.id)"
+                                                    class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer"
+                                                >
+                                                    <div class="mr-2 flex h-4 w-4 items-center justify-center">
+                                                        <Check
+                                                            v-if="selectedSkills.includes(skill.id)"
+                                                            class="h-4 w-4"
+                                                        />
+                                                    </div>
+                                                    <span>{{ skill.name }}</span>
+                                                    <span class="ml-auto text-xs text-muted-foreground">
+                                                        {{ getSkillGroupName(skill.id) }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                                <p class="text-xs text-muted-foreground">
+                                    Search and select skills. Selected skills appear as tags above.
+                                </p>
+                             </div>
                         </CardContent>
                     </Card>
+
+
 
                     <!-- Actions -->
                     <div class="flex items-center justify-between">

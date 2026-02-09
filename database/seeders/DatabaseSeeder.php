@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             LeaveTypeSeeder::class,
             SettingSeeder::class,
             HolidaySeeder::class,
+            SkillSeeder::class,
         ]);
     }
 }

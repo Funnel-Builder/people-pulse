@@ -444,8 +444,17 @@
             Performance Score
             <span style="float: right; color: #111827;">
                 @php
-                    $lastMonth = end($monthlyTrends);
-                    echo ($lastMonth ? $lastMonth['score'] : 100) . '%';
+                    // Logic: Exclude current month (last item) and months with 0 score
+                    $trendsCopyScore = $monthlyTrends;
+                    array_pop($trendsCopyScore); // Remove current month
+
+                    $activeScoreMonths = array_filter($trendsCopyScore, function ($m) {
+                        return $m['score'] > 0;
+                    });
+                    $countScore = count($activeScoreMonths);
+                    $totalScore = array_sum(array_column($activeScoreMonths, 'score'));
+                    $avgScore = $countScore > 0 ? round($totalScore / $countScore) : 0;
+                    echo $avgScore . '%';
                 @endphp
             </span>
         </div>
@@ -514,26 +523,35 @@
 
     <div class="card no-break">
         <div class="card-header">
-            <span class="card-title">Cover History</span>
+            <span class="card-title">Expertise</span>
         </div>
         <div class="card-content">
-            <table class="list-t">
-                @forelse($coverHistory['recent'] as $cover)
-                    <tr class="list-r">
-                        <td class="list-d">
-                            <div style="font-weight: 500; color: #111827;">{{ $cover['covered_for'] }}</div>
-                            <div style="color: #6b7280; font-size: 8px;">{{ $cover['type'] }}</div>
-                        </td>
-                        <td class="list-d" style="text-align: right; color: #6b7280;">{{ $cover['date'] }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="2"
-                            style="text-align: center; color: #9ca3af; padding: 10px; font-style: italic; font-size: 9px;">
-                            No cover history found.</td>
-                    </tr>
-                @endforelse
-            </table>
+            @if(count($expertise) > 0)
+                <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
+                    @foreach($expertise as $group => $skills)
+                        <tr>
+                            <td style="vertical-align: top; width: 25%; padding-right: 10px;">
+                                <span
+                                    style="font-size: 9px; font-weight: bold; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    {{ $group }}
+                                </span>
+                            </td>
+                            <td style="vertical-align: top;">
+                                @foreach($skills as $skill)
+                                    <span
+                                        style="display: inline-block; background-color: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; border-radius: 4px; padding: 2px 6px; font-size: 9px; margin-right: 4px; margin-bottom: 4px;">
+                                        {{ $skill }}
+                                    </span>
+                                @endforeach
+                            </td>
+                        </tr>
+                    @endforeach
+                </table>
+            @else
+                <div style="text-align: center; color: #9ca3af; padding: 15px; font-style: italic; font-size: 10px;">
+                    No expertise recorded.
+                </div>
+            @endif
         </div>
     </div>
 

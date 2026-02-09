@@ -74,7 +74,7 @@ class EmployeeReportController extends Controller
      */
     private function getReportData(User $employee)
     {
-        $employee->load(['department', 'subDepartment', 'attendances', 'leaves.leaveType']);
+        $employee->load(['department', 'subDepartment', 'attendances', 'leaves.leaveType', 'skills.group']);
 
         // 1. Personal Details
         $personalDetails = [
@@ -196,29 +196,21 @@ class EmployeeReportController extends Controller
                 'count' => $leaves->count(),
             ])->values();
 
-        // 5. Cover History
-        $coverHistoryCount = Leave::where('cover_person_id', $employee->id)->count();
-        $recentCovers = Leave::where('cover_person_id', $employee->id)
-            ->with(['user'])
-            ->latest()
-            ->take(5)
+        // 5. Expertise (Skills)
+        $expertise = $employee->skills()
+            ->with('group')
             ->get()
-            ->map(fn($leave) => [
-                'date' => $leave->created_at->format('M d, Y'),
-                'covered_for' => $leave->user->name,
-                'type' => $leave->type,
-            ]);
+            ->groupBy(fn($skill) => $skill->group?->name ?? 'Other')
+            ->map(fn($skills) => $skills->pluck('name')->toArray())
+            ->toArray();
 
         return [
             'employee' => $personalDetails,
             'attendanceStats' => $attendanceStats,
+            'monthlyTrends' => array_values($monthlyTrends), // Reset keys for JSON array in Vue
             'leaveStats' => $leaveStats,
             'leaveBreakdown' => $leaveBreakdown,
-            'monthlyTrends' => array_values($monthlyTrends),
-            'coverHistory' => [
-                'count' => $coverHistoryCount,
-                'recent' => $recentCovers,
-            ],
+            'expertise' => $expertise, // Replaces coverHistory
             // 'attendanceHistory' is used only for chart in Vue, but we calculated trends here
             'attendanceHistory' => $attendanceRecords->map(fn($item) => [
                 'date' => $item->date,
@@ -241,7 +233,7 @@ class EmployeeReportController extends Controller
             'attendanceHistory' => $data['attendanceHistory']->keyBy(fn($item) => Carbon::parse($item['date'])->format('Y-m-d')),
             'leaveStats' => $data['leaveStats'],
             'leaveBreakdown' => $data['leaveBreakdown'],
-            'coverHistory' => $data['coverHistory'],
+            'expertise' => $data['expertise'],
             // We can pass 'monthlyTrends' to Vue if we want to sync backend logic later
         ]);
     }

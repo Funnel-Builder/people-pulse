@@ -99,6 +99,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Holidays
         Route::resource('holidays', App\Http\Controllers\Settings\HolidayController::class)->except(['create', 'edit', 'show']);
+
+        // Skills & Expertise
+        Route::get('/skills', [App\Http\Controllers\SkillController::class, 'index'])->name('settings.skills.index');
+        Route::post('/skill-groups', [App\Http\Controllers\SkillController::class, 'storeGroup'])->name('settings.skill-groups.store');
+        Route::put('/skill-groups/{skillGroup}', [App\Http\Controllers\SkillController::class, 'updateGroup'])->name('settings.skill-groups.update');
+        Route::delete('/skill-groups/{skillGroup}', [App\Http\Controllers\SkillController::class, 'destroyGroup'])->name('settings.skill-groups.destroy');
+        Route::post('/skills', [App\Http\Controllers\SkillController::class, 'storeSkill'])->name('settings.skills.store');
+        Route::put('/skills/{skill}', [App\Http\Controllers\SkillController::class, 'updateSkill'])->name('settings.skills.update');
+        Route::delete('/skills/{skill}', [App\Http\Controllers\SkillController::class, 'destroySkill'])->name('settings.skills.destroy');
     });
 
     // =====================================================

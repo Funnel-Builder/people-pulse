@@ -15,6 +15,11 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
+    public function skills(): BelongsToMany
+    {
+        return $this->belongsToMany(Skill::class);
+    }
+
     /**
      * The attributes that are mass assignable.
      *

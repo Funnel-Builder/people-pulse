@@ -5,6 +5,7 @@ export interface Auth {
     user: User;
     pendingCoverRequests?: number;
     pendingLeaveApprovals?: number;
+    pendingCertificateApprovals?: number;
 }
 
 export interface BreadcrumbItem {

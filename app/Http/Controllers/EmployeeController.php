@@ -63,11 +63,13 @@ class EmployeeController extends Controller
         }
 
         $departments = Department::active()->with('subDepartments')->get();
+        $skillGroups = \App\Models\SkillGroup::with('skills')->get();
 
         return Inertia::render('employees/Form', [
             'employee' => null,
             'departments' => $departments,
             'managerResponsibilities' => [],
+            'skillGroups' => $skillGroups,
         ]);
     }
 
@@ -105,6 +107,9 @@ class EmployeeController extends Controller
             // Manager Responsibilities (only applicable if role is 'manager')
             'manager_responsibilities' => ['nullable', 'array'],
             'manager_responsibilities.*' => ['exists:sub_departments,id'],
+            // Skills
+            'skills' => ['nullable', 'array'],
+            'skills.*' => ['exists:skills,id'],
         ]);
 
         $user = User::create([
@@ -130,6 +135,11 @@ class EmployeeController extends Controller
             'graduated_institution' => $validated['graduated_institution'] ?? null,
         ]);
 
+        // Sync skills
+        if (!empty($validated['skills'])) {
+            $user->skills()->sync($validated['skills']);
+        }
+
         // Sync manager responsibilities if role is manager
         if ($validated['role'] === 'manager' && !empty($validated['manager_responsibilities'])) {
             $user->managedResponsibilities()->sync($validated['manager_responsibilities']);
@@ -147,8 +157,9 @@ class EmployeeController extends Controller
             abort(403, 'Unauthorized access.');
         }
 
-        $employee->load(['department', 'subDepartment', 'managedResponsibilities']);
+        $employee->load(['department', 'subDepartment', 'managedResponsibilities', 'skills']);
         $departments = Department::active()->with('subDepartments')->get();
+        $skillGroups = \App\Models\SkillGroup::with('skills')->get();
 
         // Get the IDs of sub-departments the manager is responsible for
         $managerResponsibilities = $employee->managedResponsibilities->pluck('id')->toArray();
@@ -157,6 +168,7 @@ class EmployeeController extends Controller
             'employee' => $employee,
             'departments' => $departments,
             'managerResponsibilities' => $managerResponsibilities,
+            'skillGroups' => $skillGroups,
         ]);
     }
 
@@ -191,6 +203,9 @@ class EmployeeController extends Controller
             // Manager Responsibilities (only applicable if role is 'manager')
             'manager_responsibilities' => ['nullable', 'array'],
             'manager_responsibilities.*' => ['exists:sub_departments,id'],
+            // Skills
+            'skills' => ['nullable', 'array'],
+            'skills.*' => ['exists:skills,id'],
         ]);
 
         $employee->update([
@@ -212,6 +227,9 @@ class EmployeeController extends Controller
             'mothers_name' => $validated['mothers_name'] ?? null,
             'graduated_institution' => $validated['graduated_institution'] ?? null,
         ]);
+
+        // Sync skills
+        $employee->skills()->sync($validated['skills'] ?? []);
 
         // Sync manager responsibilities
         if ($validated['role'] === 'manager') {

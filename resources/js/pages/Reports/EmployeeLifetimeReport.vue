@@ -28,8 +28,8 @@ import {
     AlertTriangle,
     TrendingUp,
     FileText,
-    History,
-    Timer
+    Timer,
+    Award
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -84,10 +84,7 @@ interface Props {
         pending_requests: number;
     };
     leaveBreakdown: LeaveStatItem[];
-    coverHistory: {
-        count: number;
-        recent: CoverHistoryItem[];
-    };
+    expertise: Record<string, string[]>;
 }
 
 const props = defineProps<Props>();
@@ -539,80 +536,44 @@ const averagePerformanceScore = computed(() => {
                         </Card>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <!-- Leave History -->
-                        <Card class="h-full border shadow-sm">
-                            <CardHeader>
-                                <CardTitle class="text-lg flex items-center gap-2">
-                                    <FileText class="h-5 w-5 text-purple-500" />
-                                    Leave Overview
-                                </CardTitle>
-                                <CardDescription>
-                                    Lifetime leave history breakdown
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div class="space-y-6">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Leaves Taken</span>
-                                        <span class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ leaveStats.total_leaves_taken }}</span>
-                                    </div>
-                                    <Separator />
-                                    <div class="space-y-3">
-                                        <div v-for="leave in leaveBreakdown" :key="leave.type" class="flex items-center justify-between text-sm">
-                                             <div class="flex items-center gap-2">
-                                                <div class="w-2 h-2 rounded-full bg-purple-500"></div>
-                                                <span>{{ leave.type }}</span>
-                                             </div>
-                                             <span class="font-medium">{{ leave.count }}</span>
-                                        </div>
-                                        <div v-if="leaveBreakdown.length === 0" class="text-sm text-gray-500 italic">
-                                            No leaves taken yet.
-                                        </div>
-                                    </div>
-                                    <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg flex justify-between items-center text-xs">
-                                        <span class="text-gray-500">Pending Requests</span>
-                                        <Badge variant="outline" class="bg-yellow-50 text-yellow-700 border-yellow-200">
-                                            {{ leaveStats.pending_requests }}
-                                        </Badge>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                    <!-- Expertise -->
+                    <Card class="border shadow-sm">
+                        <CardHeader>
+                            <CardTitle class="text-lg flex items-center gap-2">
+                                <Award class="h-5 w-5 text-blue-600" />
+                                Expertise
+                            </CardTitle>
 
-                        <!-- Cover History -->
-                        <Card class="h-full border shadow-sm">
-                            <CardHeader>
-                                <CardTitle class="text-lg flex items-center gap-2">
-                                    <History class="h-5 w-5 text-indigo-500" />
-                                    Cover History
-                                </CardTitle>
-                                <CardDescription>
-                                    Covered for other employees ({{ coverHistory.count }} times)
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div class="space-y-4">
-                                    <div v-for="(cover, index) in coverHistory.recent" :key="index" class="flex items-start gap-4 pb-4 border-b border-gray-100 dark:border-gray-800 last:border-0 last:pb-0">
-                                        <div class="mt-1 p-1.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-full text-indigo-600 dark:text-indigo-400">
-                                            <UserCheck class="h-3 w-3" />
+                        </CardHeader>
+                        <CardContent>
+                            <div class="space-y-6">
+                                <div v-if="Object.keys(expertise).length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div v-for="(skills, group) in expertise" :key="group">
+                                        <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 inline-block pb-1">
+                                            {{ group }}
+                                        </h4>
+                                        <div class="flex flex-wrap gap-2">
+                                            <Badge 
+                                                v-for="skill in skills" 
+                                                :key="skill" 
+                                                variant="secondary" 
+                                                class="bg-white text-blue-600 border-gray-200 font-medium shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:text-blue-400 dark:border-gray-700"
+                                            >
+                                                {{ skill }}
+                                            </Badge>
                                         </div>
-                                        <div>
-                                            <p class="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                Covered for {{ cover.covered_for }}
-                                            </p>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                                {{ cover.type }} • {{ cover.date }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div v-if="coverHistory.recent.length === 0" class="flex flex-col items-center justify-center py-6 text-center text-gray-500">
-                                        <p class="text-sm italic">No cover history found.</p>
                                     </div>
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                                <div v-else class="flex flex-col items-center justify-center py-10 text-center text-gray-500">
+                                    <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-full mb-3">
+                                        <Award class="h-8 w-8 text-gray-400" />
+                                    </div>
+                                    <p class="text-base font-medium">No expertise recorded</p>
+                                    <p class="text-sm text-gray-400 mt-1">Skills and competencies will appear here.</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
 
                 </div>
             </div>

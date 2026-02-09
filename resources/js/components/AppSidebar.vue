@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Clock, LayoutGrid, Users, Shield, UserCog, FileBarChart, Settings as SettingsIcon, CalendarDays, ClipboardList, CalendarCog, FolderOpen, BarChart3, Bell, Network } from 'lucide-vue-next';
+import { Clock, LayoutGrid, Users, Shield, UserCog, FileBarChart, Settings as SettingsIcon, CalendarDays, ClipboardList, CalendarCog, FolderOpen, BarChart3, Bell, Network, Award } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
 
@@ -75,7 +75,7 @@ const mainNavItems = computed<NavItem[]>(() => {
             subtitle: 'Request & Manage',
             href: '/services/certificate',
             icon: ClipboardList,
-            permission: 'view_services'
+            // permission: 'view_services'
         },
     ];
 
@@ -181,6 +181,11 @@ const mainNavItems = computed<NavItem[]>(() => {
                 title: 'Holidays',
                 href: '/settings/holidays',
                 icon: CalendarDays,
+            },
+            {
+                title: 'Skills & Expertise',
+                href: '/settings/skills',
+                icon: Award, 
             },
         ];
 
