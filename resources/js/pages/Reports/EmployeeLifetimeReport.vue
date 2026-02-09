@@ -589,9 +589,9 @@ const formatDate = (dateString: string) => {
                         </CardHeader>
                         <CardContent>
                             <div class="space-y-6">
-                                <div v-if="Object.keys(expertise).length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div v-for="(skills, group) in expertise" :key="group">
-                                        <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 inline-block pb-1">
+                                <div v-if="Object.keys(expertise).length > 0" class="space-y-6">
+                                    <div v-for="(skills, group) in expertise" :key="group" class="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
+                                        <h4 class="w-full sm:w-32 text-sm font-semibold text-gray-700 dark:text-gray-300 shrink-0 pt-1">
                                             {{ group }}
                                         </h4>
                                         <div class="flex flex-wrap gap-2">

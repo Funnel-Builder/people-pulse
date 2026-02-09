@@ -484,42 +484,7 @@
     </div>
 
     <!-- 5. History Lists (Stacked Full Width) -->
-    <div class="card no-break">
-        <div class="card-header">
-            <span class="card-title">Leave Overview</span>
-        </div>
-        <div class="card-content">
-            <table class="list-t">
-                <tr class="list-r">
-                    <td class="list-d" style="font-weight: bold; width: 70%;">Total Leaves</td>
-                    <td class="list-d" style="text-align: right; font-weight: bold;">
-                        {{ $leaveStats['total_leaves_taken'] }}
-                    </td>
-                </tr>
-                @forelse($leaveBreakdown as $leave)
-                    <tr class="list-r">
-                        <td class="list-d">
-                            <span
-                                style="display:inline-block; width:6px; height:6px; background-color:#a855f7; border-radius:50%; margin-right:4px;"></span>
-                            {{ $leave['type'] }}
-                        </td>
-                        <td class="list-d" style="text-align: right;">{{ $leave['count'] }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="2"
-                            style="text-align: center; color: #9ca3af; padding: 10px; font-style: italic; font-size: 9px;">
-                            No leaves recorded.</td>
-                    </tr>
-                @endforelse
-            </table>
 
-            <div
-                style="margin-top: 10px; font-size: 9px; color: #6b7280; background: #f9fafb; padding: 5px; border-radius: 4px;">
-                Pending Requests: <strong>{{ $leaveStats['pending_requests'] }}</strong>
-            </div>
-        </div>
-    </div>
 
     <div class="card no-break">
         <div class="card-header">
