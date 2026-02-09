@@ -34,6 +34,7 @@ import {
 import { computed } from 'vue';
 
 interface EmployeeDetails {
+    id: number;
     name: string;
     employee_id: string;
     designation: string;
@@ -107,7 +108,8 @@ const getInitials = (name: string) => {
 };
 
 const handlePrint = () => {
-    window.print();
+    // Open the PDF export route in a new window
+    window.open(`/reports/employees/${props.employee.id}/export`, '_blank');
 };
 
 // --- Chart Logic Ported from Dashboard.vue ---
@@ -237,14 +239,34 @@ const punctualityTrend = computed(() => {
     return current.score - previous.score;
 });
 
-const currentPerformanceScore = computed(() => {
-    const current = monthlyTrends.value[monthlyTrends.value.length - 1];
-    return current ? current.score : 100;
+const averageMonthlyWorkHours = computed(() => {
+    const trends = monthlyTrends.value;
+    if (trends.length <= 1) return 0; // Need at least 1 previous month
+    
+    // Create copy and remove last (current) month
+    const previousMonths = trends.slice(0, -1);
+    
+    // Filter months with 0 hours
+    const activeMonths = previousMonths.filter(m => m.hours > 0);
+    if (activeMonths.length === 0) return 0;
+    
+    const totalHours = activeMonths.reduce((sum, item) => sum + item.hours, 0);
+    return Math.round(totalHours / activeMonths.length);
 });
 
-const currentMonthWorkHours = computed(() => {
-    const current = monthlyTrends.value[monthlyTrends.value.length - 1];
-    return current ? current.hours : 0;
+const averagePerformanceScore = computed(() => {
+    const trends = monthlyTrends.value;
+    if (trends.length <= 1) return 0;
+    
+    // Create copy and remove last (current) month
+    const previousMonths = trends.slice(0, -1);
+    
+    // Filter months with 0 score
+    const activeMonths = previousMonths.filter(m => m.score > 0);
+    if (activeMonths.length === 0) return 0;
+
+    const totalScore = activeMonths.reduce((sum, item) => sum + item.score, 0);
+    return Math.round(totalScore / activeMonths.length);
 });
 </script>
 
@@ -265,10 +287,10 @@ const currentMonthWorkHours = computed(() => {
                     </p>
                 </div>
                 <div class="flex gap-3 print:hidden">
-                    <!-- <Button variant="outline" @click="handlePrint">
+                     <Button variant="outline" @click="handlePrint">
                         <Printer class="h-4 w-4 mr-2" />
                         Print Report
-                    </Button> -->
+                    </Button>
                     <!--
                     <Link :href="`/reports/employees/${employee.employee_id}/export`">
                         <Button>
@@ -431,7 +453,7 @@ const currentMonthWorkHours = computed(() => {
                             </CardHeader>
                             <CardContent class="space-y-4">
                                 <div class="flex items-baseline gap-1">
-                                    <p class="text-2xl font-bold tracking-tight">{{ currentMonthWorkHours }}h</p>
+                                    <p class="text-2xl font-bold tracking-tight">{{ averageMonthlyWorkHours }}h</p>
                                     <span class="text-sm text-muted-foreground">/mo</span>
                                 </div>
 
@@ -480,7 +502,7 @@ const currentMonthWorkHours = computed(() => {
                             </CardHeader>
                             <CardContent class="space-y-4">
                                 <div class="flex items-baseline gap-1">
-                                     <p class="text-2xl font-bold tracking-tight">{{ currentPerformanceScore }}%</p>
+                                     <p class="text-2xl font-bold tracking-tight">{{ averagePerformanceScore }}%</p>
                                 </div>
 
                                 <!-- Bar Chart -->

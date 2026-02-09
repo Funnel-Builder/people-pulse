@@ -72,12 +72,13 @@ class EmployeeReportController extends Controller
     /**
      * Display the specified employee's lifetime report.
      */
-    public function show(User $employee)
+    private function getReportData(User $employee)
     {
         $employee->load(['department', 'subDepartment', 'attendances', 'leaves.leaveType']);
 
         // 1. Personal Details
         $personalDetails = [
+            'id' => $employee->id,
             'name' => $employee->name,
             'employee_id' => $employee->employee_id,
             'designation' => $employee->designation,
@@ -85,7 +86,7 @@ class EmployeeReportController extends Controller
             'sub_department' => $employee->subDepartment?->name,
             'joining_date' => $employee->joining_date ? $employee->joining_date->format('M d, Y') : null,
             'email' => $employee->email,
-            'phone' => $employee->phone ?? 'N/A', // Assuming phone exists or add migration
+            'phone' => $employee->phone ?? 'N/A',
             'profile_picture' => $employee->profile_picture,
             'status' => $employee->isActive() ? 'Active' : 'Inactive',
         ];
@@ -99,29 +100,92 @@ class EmployeeReportController extends Controller
         ];
 
         // 3. Attendance History for Charts (Last 12 Months)
-        // We fetch raw attendance records to process on frontend for consistency with Dashboard
         $oneYearAgo = Carbon::today()->subMonths(11)->startOfMonth();
-        $attendanceHistory = $employee->attendances()
+        $attendanceRecords = $employee->attendances()
             ->whereBetween('date', [$oneYearAgo->toDateString(), Carbon::today()->toDateString()])
-            ->get()
-            ->keyBy(fn($item) => Carbon::parse($item->date)->format('Y-m-d'))
-            ->map(fn($item) => [
-                'date' => $item->date,
-                'status' => $item->status,
-                'clock_in' => $item->clock_in,
-                'clock_out' => $item->clock_out,
-                'is_late' => $item->is_late,
-                'net_minutes' => $item->net_minutes,
-            ]);
+            ->get();
 
-        // 3. Leave Stats
+        // Calculate Monthly Trends (PHP version of Vue logic)
+        $monthlyTrends = [];
+        $today = Carbon::today();
+
+        // Initialize last 12 months
+        for ($i = 11; $i >= 0; $i--) {
+            $d = $today->copy()->subMonths($i);
+            $key = $d->format('Y-m');
+            $monthlyTrends[$key] = [
+                'monthLabel' => $d->format('M'),
+                'year' => $d->year,
+                'month' => $d->month,
+                'totalMinutes' => 0,
+                'present' => 0,
+                'late' => 0,
+                'absent' => 0,
+                'totalEntries' => 0,
+                'hours' => 0,
+                'score' => 0,
+                'workHeight' => 0,
+                'punctualityHeight' => 0,
+            ];
+        }
+
+        foreach ($attendanceRecords as $record) {
+            $d = Carbon::parse($record->date);
+            $key = $d->format('Y-m');
+
+            if (isset($monthlyTrends[$key])) {
+                if ($record->net_minutes) {
+                    $monthlyTrends[$key]['totalMinutes'] += $record->net_minutes;
+                } elseif ($record->clock_in && $record->clock_out) {
+                    $start = Carbon::parse($record->clock_in);
+                    $end = Carbon::parse($record->clock_out);
+                    $monthlyTrends[$key]['totalMinutes'] += $end->diffInMinutes($start);
+                }
+
+                if ($record->status !== 'weekend' && $record->status !== 'holiday') {
+                    $monthlyTrends[$key]['totalEntries']++;
+                    if ($record->status === 'present' || $record->status === 'late') {
+                        $monthlyTrends[$key]['present']++;
+                    }
+                    if ($record->is_late) {
+                        $monthlyTrends[$key]['late']++;
+                    }
+                    if ($record->status === 'absent') {
+                        $monthlyTrends[$key]['absent']++;
+                    }
+                }
+            }
+        }
+
+        // Finalize calculations
+        foreach ($monthlyTrends as &$m) {
+            $m['hours'] = floor($m['totalMinutes'] / 60);
+
+            // Score Calculation: 100 - (Absent * 10) - (Late * 2)
+            $score = 0;
+            if ($m['totalEntries'] > 0) {
+                $score = 100 - ($m['absent'] * 10) - ($m['late'] * 2);
+                $score = max(0, min(100, $score));
+            }
+            $m['score'] = round($score);
+
+            // Work Hours Height
+            $workHeight = ($m['hours'] / 200) * 100;
+            $m['workHeight'] = max(15, min(100, $workHeight));
+
+            // Performance Height
+            $punctualityHeight = $score;
+            $m['punctualityHeight'] = max(15, $punctualityHeight);
+        }
+
+        // 4. Leave Stats
         $leaveStats = [
-            'total_leaves_taken' => $employee->leaves()->where('status', 'approved')->count(), // Days count would be better if we sum leave dates
+            'total_leaves_taken' => $employee->leaves()->where('status', 'approved')->count(),
             'rejected_requests' => $employee->leaves()->where('status', 'rejected')->count(),
             'pending_requests' => $employee->leaves()->where('status', 'pending')->count(),
         ];
 
-        // Detailed leave breakdown by type
+        // Detailed leave breakdown
         $leaveBreakdown = $employee->leaves()
             ->where('status', 'approved')
             ->with('leaveType')
@@ -129,41 +193,69 @@ class EmployeeReportController extends Controller
             ->groupBy('leave_type_id')
             ->map(fn($leaves) => [
                 'type' => $leaves->first()->leaveType->name,
-                'count' => $leaves->count(), // Simplify to just count requests for now, ideally sum days
+                'count' => $leaves->count(),
             ])->values();
 
-        // 4. Cover History (Times this employee covered for others)
-        // Adjusting to count 'cover_person_id' in Leave model
+        // 5. Cover History
         $coverHistoryCount = Leave::where('cover_person_id', $employee->id)->count();
         $recentCovers = Leave::where('cover_person_id', $employee->id)
-            ->with(['user']) // The person who requested leave
+            ->with(['user'])
             ->latest()
             ->take(5)
             ->get()
             ->map(fn($leave) => [
-                'date' => $leave->created_at->format('M d, Y'), // Or leave dates
+                'date' => $leave->created_at->format('M d, Y'),
                 'covered_for' => $leave->user->name,
                 'type' => $leave->type,
             ]);
 
-        return Inertia::render('Reports/EmployeeLifetimeReport', [
+        return [
             'employee' => $personalDetails,
             'attendanceStats' => $attendanceStats,
-            'attendanceHistory' => $attendanceHistory,
             'leaveStats' => $leaveStats,
             'leaveBreakdown' => $leaveBreakdown,
+            'monthlyTrends' => array_values($monthlyTrends),
             'coverHistory' => [
                 'count' => $coverHistoryCount,
                 'recent' => $recentCovers,
             ],
+            // 'attendanceHistory' is used only for chart in Vue, but we calculated trends here
+            'attendanceHistory' => $attendanceRecords->map(fn($item) => [
+                'date' => $item->date,
+                'status' => $item->status,
+                'clock_in' => $item->clock_in,
+                'clock_out' => $item->clock_out,
+                'is_late' => $item->is_late,
+                'net_minutes' => $item->net_minutes,
+            ]),
+        ];
+    }
+
+    public function show(User $employee)
+    {
+        $data = $this->getReportData($employee);
+
+        return Inertia::render('Reports/EmployeeLifetimeReport', [
+            'employee' => $data['employee'],
+            'attendanceStats' => $data['attendanceStats'],
+            'attendanceHistory' => $data['attendanceHistory']->keyBy(fn($item) => Carbon::parse($item['date'])->format('Y-m-d')),
+            'leaveStats' => $data['leaveStats'],
+            'leaveBreakdown' => $data['leaveBreakdown'],
+            'coverHistory' => $data['coverHistory'],
+            // We can pass 'monthlyTrends' to Vue if we want to sync backend logic later
         ]);
     }
 
-    public function export(User $employee)
+    public function export(Request $request, User $employee)
     {
-        // Implementation for export PDF/Excel
-        // For now placeholder or reuse existing logic
-        // This can be done via frontend "Print" button which is easier for "good UI/UX" reports
-        return back();
+        $data = $this->getReportData($employee);
+
+        if ($request->has('preview')) {
+            return view('pdf.employee-lifetime-report', $data);
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.employee-lifetime-report', $data);
+
+        return $pdf->stream("{$employee->name}_Lifetime_Report.pdf");
     }
 }
