@@ -101,6 +101,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the milestones for the user.
+     */
+    public function milestones(): HasMany
+    {
+        return $this->hasMany(EmployeeMilestone::class)->orderBy('date', 'desc');
+    }
+
+    /**
      * Get all leaves applied by this user.
      */
     public function leaves(): HasMany

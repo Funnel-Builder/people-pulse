@@ -157,7 +157,7 @@ class EmployeeController extends Controller
             abort(403, 'Unauthorized access.');
         }
 
-        $employee->load(['department', 'subDepartment', 'managedResponsibilities', 'skills']);
+        $employee->load(['department', 'subDepartment', 'managedResponsibilities', 'skills', 'milestones']);
         $departments = Department::active()->with('subDepartments')->get();
         $skillGroups = \App\Models\SkillGroup::with('skills')->get();
 

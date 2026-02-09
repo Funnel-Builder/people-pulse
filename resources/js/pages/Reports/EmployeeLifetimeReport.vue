@@ -29,7 +29,8 @@ import {
     TrendingUp,
     FileText,
     Timer,
-    Award
+    Award,
+    Building2
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -85,6 +86,13 @@ interface Props {
     };
     leaveBreakdown: LeaveStatItem[];
     expertise: Record<string, string[]>;
+    milestones: {
+        id: number;
+        type: string;
+        title: string;
+        date: string;
+        description: string;
+    }[];
 }
 
 const props = defineProps<Props>();
@@ -265,6 +273,13 @@ const averagePerformanceScore = computed(() => {
     const totalScore = activeMonths.reduce((sum, item) => sum + item.score, 0);
     return Math.round(totalScore / activeMonths.length);
 });
+const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+};
 </script>
 
 <template>
@@ -331,7 +346,7 @@ const averagePerformanceScore = computed(() => {
                                 {{ employee.designation }}
                             </p>
 
-                            <div class="w-full grid grid-cols-1 gap-4 mt-4 text-left">
+                            <div class="w-full grid grid-cols-2 gap-4 mt-4 text-left">
                                 <div class="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
                                     <div class="flex items-center gap-3 text-gray-500">
                                         <div class="p-2 bg-gray-50 dark:bg-gray-700 rounded-md">
@@ -339,7 +354,7 @@ const averagePerformanceScore = computed(() => {
                                         </div>
                                         <span class="text-sm font-medium">ID</span>
                                     </div>
-                                    <span class="text-sm font-bold text-gray-900 dark:text-gray-100">
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">
                                         {{ employee.employee_id }}
                                     </span>
                                 </div>
@@ -351,14 +366,14 @@ const averagePerformanceScore = computed(() => {
                                         </div>
                                         <span class="text-sm font-medium">Joined</span>
                                     </div>
-                                    <span class="text-sm font-bold text-gray-900 dark:text-gray-100">
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">
                                         {{ employee.joining_date }}
                                     </span>
                                 </div>
                                 
-                                <div class="border-t border-gray-100 dark:border-gray-700 my-2"></div>
+                                <div class="col-span-2 border-t border-gray-100 dark:border-gray-700 my-2"></div>
 
-                                <div class="space-y-3">
+                                <div class="col-span-2 space-y-3">
                                     <div class="flex items-center gap-3 text-sm">
                                         <Mail class="h-4 w-4 text-gray-400" />
                                         <span class="text-gray-600 dark:text-gray-300">{{ employee.email }}</span>
@@ -368,7 +383,7 @@ const averagePerformanceScore = computed(() => {
                                         <span class="text-gray-600 dark:text-gray-300">{{ employee.phone }}</span>
                                     </div>
                                     <div class="flex items-center gap-3 text-sm">
-                                        <MapPin class="h-4 w-4 text-gray-400" />
+                                        <Building2 class="h-4 w-4 text-gray-400" />
                                         <span class="text-gray-600 dark:text-gray-300">
                                             {{ employee.department }}
                                             <span v-if="employee.sub_department" class="text-gray-400">
@@ -377,9 +392,36 @@ const averagePerformanceScore = computed(() => {
                                         </span>
                                     </div>
                                 </div>
+
+                                <div class="col-span-2 border-t border-gray-100 dark:border-gray-700 my-4"></div>
+                                <div class="col-span-2 space-y-4">
+                                     <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                        <Briefcase class="h-4 w-4 text-gray-400" />
+                                        Career Timeline
+                                    </h3>
+                                    <div class="relative pl-4 border-l-2 border-gray-200 dark:border-gray-700 space-y-6 ml-2">
+                                        <div v-for="milestone in milestones" :key="milestone.id" class="relative">
+                                            <div class="absolute -left-[21.5px] top-[5px] h-2.5 w-2.5 rounded-full bg-blue-500 ring-4 ring-white dark:ring-gray-800"></div>
+                                            <div>
+                                                <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ milestone.title }}</h4>
+                                                <div class="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                                                    <span class="capitalize">{{ milestone.type }}</span>
+                                                    <span>•</span>
+                                                    <span>{{ formatDate(milestone.date) }}</span>
+                                                </div>
+                                                <p v-if="milestone.description" class="text-xs text-gray-500 mt-1">
+                                                    {{ milestone.description }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div v-if="milestones.length === 0" class="text-xs text-muted-foreground italic pl-2">
+                                            No milestones recorded.
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                     </CardContent>
+                    </CardContent>
                 </Card>
 
                 <!-- Right Column: Stats & Charts -->

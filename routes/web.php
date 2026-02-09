@@ -108,7 +108,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/skills', [App\Http\Controllers\SkillController::class, 'storeSkill'])->name('settings.skills.store');
         Route::put('/skills/{skill}', [App\Http\Controllers\SkillController::class, 'updateSkill'])->name('settings.skills.update');
         Route::delete('/skills/{skill}', [App\Http\Controllers\SkillController::class, 'destroySkill'])->name('settings.skills.destroy');
+
+        Route::delete('/skills/{skill}', [App\Http\Controllers\SkillController::class, 'destroySkill'])->name('settings.skills.destroy');
     });
+
+    // Employee Milestones
+    Route::post('/employees/{employee}/milestones', [\App\Http\Controllers\EmployeeMilestoneController::class, 'store'])->name('employees.milestones.store');
+    Route::put('/milestones/{milestone}', [\App\Http\Controllers\EmployeeMilestoneController::class, 'update'])->name('milestones.update');
+    Route::delete('/milestones/{milestone}', [\App\Http\Controllers\EmployeeMilestoneController::class, 'destroy'])->name('milestones.destroy');
 
     // =====================================================
     // SERVICES MODULE

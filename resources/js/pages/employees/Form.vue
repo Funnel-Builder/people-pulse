@@ -16,12 +16,22 @@ import {
 import type { BreadcrumbItem } from '@/types';
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
-import { ChevronDown, ChevronUp, UserMinus, AlertTriangle, Loader2, Calendar as CalendarIcon, CheckCircle, Ban, ChevronsUpDown, Check, X, Search } from 'lucide-vue-next';
+import { ChevronDown, ChevronUp, UserMinus, AlertTriangle, Loader2, Calendar as CalendarIcon, CheckCircle, Ban, ChevronsUpDown, Check, X, Search, Plus, Pencil, Trash2, Milestone as MilestoneIcon, Briefcase, Award, ArrowRightLeft } from 'lucide-vue-next';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface SubDepartment {
     id: number;
@@ -45,6 +55,14 @@ interface SkillGroup {
     skills: Skill[];
 }
 
+interface Milestone {
+    id: number;
+    type: 'joined' | 'promoted' | 'transfer' | 'award' | 'other';
+    title: string;
+    date: string;
+    description?: string;
+}
+
 interface Employee {
     id: number;
     employee_id: string;
@@ -57,6 +75,7 @@ interface Employee {
     weekend_days: string[];
     managedSubDepartments?: SubDepartment[];
     skills?: Skill[];
+    milestones?: Milestone[];
     // Personal Information
     nid_number?: string | null;
     joining_date?: string | null;
@@ -114,7 +133,7 @@ const form = useForm({
     skills: [] as number[],
     // Personal Information
     nid_number: props.employee?.nid_number || '',
-    joining_date: props.employee?.joining_date || '',
+    joining_date: props.employee?.joining_date ? props.employee.joining_date.split('T')[0] : '',
     permanent_address: props.employee?.permanent_address || '',
     present_address: props.employee?.present_address || '',
     nationality: props.employee?.nationality || '',
@@ -130,6 +149,91 @@ const selectedManagerResponsibilities = ref<number[]>(props.managerResponsibilit
 const separationForm = useForm({
     closing_date: '',
 });
+
+// Milestone Logic
+const showMilestoneModal = ref(false);
+const editingMilestone = ref<Milestone | null>(null);
+const milestoneForm = useForm({
+    type: 'joined' as 'joined' | 'promoted' | 'transfer' | 'award' | 'other',
+    title: '',
+    date: '',
+    description: '',
+});
+
+const openMilestoneModal = (milestone?: Milestone) => {
+    if (milestone) {
+        editingMilestone.value = milestone;
+        milestoneForm.type = milestone.type;
+        milestoneForm.title = milestone.title;
+        milestoneForm.date = milestone.date;
+        milestoneForm.description = milestone.description || '';
+    } else {
+        editingMilestone.value = null;
+        milestoneForm.reset();
+        milestoneForm.date = new Date().toISOString().split('T')[0]; // Default to today
+    }
+    showMilestoneModal.value = true;
+};
+
+const closeMilestoneModal = () => {
+    showMilestoneModal.value = false;
+    milestoneForm.reset();
+    editingMilestone.value = null;
+};
+
+const submitMilestone = () => {
+    if (!props.employee) return;
+
+    if (editingMilestone.value) {
+        milestoneForm.put(`/milestones/${editingMilestone.value.id}`, {
+            preserveScroll: true,
+            onSuccess: () => closeMilestoneModal(),
+        });
+    } else {
+        milestoneForm.post(`/employees/${props.employee.id}/milestones`, {
+            preserveScroll: true,
+            onSuccess: () => closeMilestoneModal(),
+        });
+    }
+};
+
+const showDeleteDialog = ref(false);
+const milestoneToDelete = ref<Milestone | null>(null);
+
+const confirmDeleteMilestone = (milestone: Milestone) => {
+    milestoneToDelete.value = milestone;
+    showDeleteDialog.value = true;
+};
+
+const executeDeleteMilestone = () => {
+    if (!milestoneToDelete.value) return;
+    
+    router.delete(`/milestones/${milestoneToDelete.value.id}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            showDeleteDialog.value = false;
+            milestoneToDelete.value = null;
+        },
+    });
+};
+
+const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+};
+
+const getMilestoneIcon = (type: string) => {
+    switch (type) {
+        case 'joined': return MilestoneIcon;
+        case 'promoted': return AlertTriangle; // Or TrendingUp?
+        case 'transfer': return ArrowRightLeft;
+        case 'award': return Award;
+        default: return Briefcase;
+    }
+};
 
 const weekendOptions = [
     { value: 'friday', label: 'Friday' },
@@ -703,6 +807,49 @@ const removeSkill = (id: number) => {
                         </CardContent>
                     </Card>
 
+                    <!-- Career Timeline (Only in Edit Mode) -->
+                    <Card v-if="isEditMode">
+                        <CardHeader class="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle>Career Timeline</CardTitle>
+                                <p class="text-sm text-muted-foreground">Track career milestones and history.</p>
+                            </div>
+                            <Button size="sm" type="button" @click="openMilestoneModal()">
+                                <Plus class="h-4 w-4 mr-1" />
+                                Add Milestone
+                            </Button>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="relative pl-4 border-l-2 border-gray-200 dark:border-gray-700 space-y-8 ml-2">
+                                <div v-for="milestone in employee?.milestones" :key="milestone.id" class="relative">
+                                    <div class="absolute -left-[21.5px] top-[5px] h-2.5 w-2.5 rounded-full bg-blue-500 ring-4 ring-white dark:ring-gray-950"></div>
+                                    <div class="flex items-start justify-between group">
+                                        <div>
+                                            <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ milestone.title }}</h4>
+                                            <div class="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                                                <span class="capitalize">{{ milestone.type }}</span>
+                                                <span>•</span>
+                                                <span>{{ formatDate(milestone.date) }}</span>
+                                            </div>
+                                            <p v-if="milestone.description" class="text-sm text-gray-600 dark:text-gray-400 mt-2 whitespace-pre-wrap">{{ milestone.description }}</p>
+                                        </div>
+                                        <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button variant="ghost" size="icon" type="button" class="h-8 w-8" @click="openMilestoneModal(milestone)">
+                                                <Pencil class="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" type="button" class="h-8 w-8 text-destructive hover:text-destructive" @click="confirmDeleteMilestone(milestone)">
+                                                <Trash2 class="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-if="!employee?.milestones?.length" class="text-sm text-muted-foreground italic pl-2">
+                                    No milestones recorded yet.
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     <!-- Skills & Expertise -->
                     <Card>
                         <CardHeader>
@@ -799,57 +946,51 @@ const removeSkill = (id: number) => {
                             </Button>
                         </div>
                         
-                        <!-- Separate Employee Button (only in edit mode) -->
                         <Button 
-                            v-if="isEditMode && !hasClosingDate"
+                            v-if="isEditMode && props.employee?.is_active !== false"
                             type="button" 
-                            variant="destructive"
+                            variant="destructive" 
+                            class="gap-2"
                             @click="openSeparationModal"
                         >
-                            <UserMinus class="mr-2 h-4 w-4" />
+                            <UserMinus class="h-4 w-4" />
                             Separate Employee
                         </Button>
                     </div>
+
+                    <!-- Manager Responsibilities Card (Moved up in logic but keeping structure) -->
                 </div>
             </form>
         </div>
 
         <!-- Separation Modal -->
-        <Dialog :open="showSeparationModal" @update:open="closeSeparationModal">
-            <DialogContent class="sm:max-w-md">
+        <Dialog :open="showSeparationModal" @update:open="showSeparationModal = $event">
+             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle class="flex items-center gap-2">
-                        <UserMinus class="h-5 w-5 text-destructive" />
-                        Separate Employee
-                    </DialogTitle>
-                    <DialogDescription>
-                        The employee will be deactivated and unable to log in after the closing date.
-                    </DialogDescription>
                 </DialogHeader>
-
                 <form @submit.prevent="submitSeparation">
-                    <div class="py-4">
-                        <div class="space-y-2">
-                            <Label for="separation_closing_date">Closing Date <span class="text-destructive">*</span></Label>
-                            <Popover>
-                                <PopoverTrigger as-child>
-                                    <Button
-                                        variant="outline"
-                                        :class="cn(
-                                            'w-full justify-start text-left font-normal',
-                                            !separationForm.closing_date && 'text-muted-foreground'
-                                        )"
-                                    >
-                                        <CalendarIcon class="mr-2 h-4 w-4" />
-                                        <span>{{ separationForm.closing_date ? format(new Date(separationForm.closing_date), 'PPP') : 'Pick a date' }}</span>
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent class="w-auto p-0">
-                                    <Calendar v-model="separationForm.closing_date" />
-                                </PopoverContent>
-                            </Popover>
-                            <p class="text-xs text-muted-foreground">
-                                If a past date is selected, the employee will be separated immediately.
+                    <div class="space-y-4 py-4">
+                    <div class="space-y-2">
+                        <Label for="separation_closing_date">Closing Date <span class="text-destructive">*</span></Label>
+                        <Popover>
+                            <PopoverTrigger as-child>
+                                <Button
+                                    variant="outline"
+                                    :class="cn(
+                                        'w-full justify-start text-left font-normal',
+                                        !separationForm.closing_date && 'text-muted-foreground'
+                                    )"
+                                >
+                                    <CalendarIcon class="mr-2 h-4 w-4" />
+                                    <span>{{ separationForm.closing_date ? format(new Date(separationForm.closing_date), 'PPP') : 'Pick a date' }}</span>
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent class="w-auto p-0">
+                                <Calendar v-model="separationForm.closing_date" />
+                            </PopoverContent>
+                        </Popover>
+                        <p class="text-xs text-muted-foreground">
+                            If a past date is selected, the employee will be separated immediately.
                             </p>
                             <p v-if="separationForm.errors.closing_date" class="text-sm text-destructive">
                                 {{ separationForm.errors.closing_date }}
@@ -873,5 +1014,77 @@ const removeSkill = (id: number) => {
                 </form>
             </DialogContent>
         </Dialog>
+
+        <!-- Milestone Form Modal -->
+        <Dialog :open="showMilestoneModal" @update:open="showMilestoneModal = $event">
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{{ editingMilestone ? 'Edit Milestone' : 'Add Milestone' }}</DialogTitle>
+                </DialogHeader>
+                <div class="space-y-4 py-4">
+                     <div class="space-y-2">
+                        <Label for="m_type">Type</Label>
+                        <select
+                            id="m_type"
+                            v-model="milestoneForm.type"
+                            class="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <option value="joined">Joined</option>
+                            <option value="promoted">Promoted</option>
+                            <option value="award">Award</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <p v-if="milestoneForm.errors.type" class="text-sm text-destructive">{{ milestoneForm.errors.type }}</p>
+                    </div>
+                    <div class="space-y-2">
+                        <Label for="m_title">Title</Label>
+                        <Input id="m_title" v-model="milestoneForm.title" placeholder="e.g. Senior Developer" />
+                        <p v-if="milestoneForm.errors.title" class="text-sm text-destructive">{{ milestoneForm.errors.title }}</p>
+                    </div>
+                    <div class="space-y-2">
+                        <Label for="m_date">Date</Label>
+                        <Input id="m_date" type="date" v-model="milestoneForm.date" />
+                        <p v-if="milestoneForm.errors.date" class="text-sm text-destructive">{{ milestoneForm.errors.date }}</p>
+                    </div>
+                    <div class="space-y-2">
+                        <Label for="m_desc">Description</Label>
+                        <textarea
+                            id="m_desc"
+                            v-model="milestoneForm.description"
+                            rows="3"
+                            class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        ></textarea>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" type="button" @click="closeMilestoneModal">Cancel</Button>
+                    <Button type="button" @click="submitMilestone" :disabled="milestoneForm.processing">
+                        {{ editingMilestone ? 'Update' : 'Add' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+         <!-- Delete Confirmation Dialog -->
+        <AlertDialog :open="showDeleteDialog" @update:open="showDeleteDialog = false">
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the milestone <strong>"{{ milestoneToDelete?.title }}"</strong>.
+                        This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                        @click="executeDeleteMilestone"
+                        class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                        Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </AppLayout>
 </template>

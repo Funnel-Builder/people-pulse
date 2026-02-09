@@ -74,7 +74,7 @@ class EmployeeReportController extends Controller
      */
     private function getReportData(User $employee)
     {
-        $employee->load(['department', 'subDepartment', 'attendances', 'leaves.leaveType', 'skills.group']);
+        $employee->load(['department', 'subDepartment', 'attendances', 'leaves.leaveType', 'skills.group', 'milestones']);
 
         // 1. Personal Details
         $personalDetails = [
@@ -185,7 +185,7 @@ class EmployeeReportController extends Controller
             'pending_requests' => $employee->leaves()->where('status', 'pending')->count(),
         ];
 
-        // Detailed leave breakdown
+        // detailed leave breakdown
         $leaveBreakdown = $employee->leaves()
             ->where('status', 'approved')
             ->with('leaveType')
@@ -204,14 +204,25 @@ class EmployeeReportController extends Controller
             ->map(fn($skills) => $skills->pluck('name')->toArray())
             ->toArray();
 
+        // 6. Milestones
+        $milestones = $employee->milestones()
+            ->orderBy('date', 'desc')
+            ->get()
+            ->map(fn($m) => [
+                'id' => $m->id,
+                'type' => $m->type,
+                'title' => $m->title,
+                'date' => $m->date->format('Y-m-d'),
+                'description' => $m->description,
+            ]);
+
         return [
             'employee' => $personalDetails,
             'attendanceStats' => $attendanceStats,
-            'monthlyTrends' => array_values($monthlyTrends), // Reset keys for JSON array in Vue
+            'monthlyTrends' => array_values($monthlyTrends),
             'leaveStats' => $leaveStats,
             'leaveBreakdown' => $leaveBreakdown,
-            'expertise' => $expertise, // Replaces coverHistory
-            // 'attendanceHistory' is used only for chart in Vue, but we calculated trends here
+            'expertise' => $expertise,
             'attendanceHistory' => $attendanceRecords->map(fn($item) => [
                 'date' => $item->date,
                 'status' => $item->status,
@@ -220,6 +231,7 @@ class EmployeeReportController extends Controller
                 'is_late' => $item->is_late,
                 'net_minutes' => $item->net_minutes,
             ]),
+            'milestones' => $milestones,
         ];
     }
 
@@ -234,7 +246,7 @@ class EmployeeReportController extends Controller
             'leaveStats' => $data['leaveStats'],
             'leaveBreakdown' => $data['leaveBreakdown'],
             'expertise' => $data['expertise'],
-            // We can pass 'monthlyTrends' to Vue if we want to sync backend logic later
+            'milestones' => $data['milestones'],
         ]);
     }
 
