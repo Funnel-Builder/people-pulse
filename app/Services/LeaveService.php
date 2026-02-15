@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Mail\LeaveApproved;
+use App\Mail\LeaveAuthorized;
 use App\Models\Leave;
 use App\Models\LeaveApproval;
 use App\Models\LeaveDate;
@@ -146,11 +147,12 @@ class LeaveService
                     // Send approval notification email to the employee
                     try {
                         $leave->load(['user', 'leaveType', 'dates']);
-                        Mail::to($leave->user->email)->send(new LeaveApproved($leave));
+                        Mail::to($leave->user->email)->send(new LeaveApproved($leave, $approver));
                         Log::info('[Leave Approved] Email sent to employee', [
                             'leave_id' => $leave->id,
                             'employee' => $leave->user->name,
                             'email' => $leave->user->email,
+                            'approver' => $approver->name,
                         ]);
                     } catch (\Exception $e) {
                         Log::error('[Leave Approved] Failed to send email', [
@@ -161,6 +163,25 @@ class LeaveService
                 } else {
                     // Move to next step
                     $leave->update(['current_approval_step' => $leave->current_approval_step + 1]);
+
+                    // Send authorization notification if approved by manager (but not final step)
+                    if ($approver->isManager()) {
+                        try {
+                            $leave->load(['user', 'leaveType', 'dates']);
+                            Mail::to($leave->user->email)->send(new LeaveAuthorized($leave, $approver));
+                            Log::info('[Leave Authorized] Email sent to employee', [
+                                'leave_id' => $leave->id,
+                                'employee' => $leave->user->name,
+                                'email' => $leave->user->email,
+                                'authorizer' => $approver->name,
+                            ]);
+                        } catch (\Exception $e) {
+                            Log::error('[Leave Authorized] Failed to send email', [
+                                'leave_id' => $leave->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
                 }
             }
 

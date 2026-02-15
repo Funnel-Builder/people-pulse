@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leave Approved</title>
+    <title>Leave Authorized</title>
 </head>
 
 <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; padding: 20px;">
@@ -28,10 +28,7 @@
                     {{ \Illuminate\Support\Carbon::parse($endDate)->format('M j, Y') }}
                 @endif
             </strong>
-            has been approved
-            @if(isset($approver))
-                by <strong>{{ $approver->name }}</strong>
-            @endif.
+            has been authorized by <strong>{{ $approver->name }}</strong>.
         </p>
         <p style="color: #94a3b8; font-size: 12px; margin-top: 20px;">
             This is an automated notification from PeoplePulse.
