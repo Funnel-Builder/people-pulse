@@ -147,7 +147,7 @@
             </p>
 
             <!-- Closing -->
-            <p class="closing">Sincerely,</p>
+            <p class="closing this">Sincerely,</p>
 
             <!-- Signature -->
             <div class="signature-line">
