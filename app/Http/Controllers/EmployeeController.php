@@ -82,7 +82,6 @@ class EmployeeController extends Controller
             abort(403, 'Unauthorized access.');
         }
 
-        Log::info('Storing new employee', $request->all());
         $validated = $request->validate([
             'employee_id' => ['required', 'string', 'unique:users,employee_id'],
             'name' => ['required', 'string', 'max:255'],
@@ -92,8 +91,8 @@ class EmployeeController extends Controller
             'sub_department_id' => ['nullable', 'exists:sub_departments,id'],
             'designation' => ['required', 'string', 'max:255'],
             'role' => ['required', Rule::in(['user', 'manager', 'admin'])],
-            'weekend_days' => ['required', 'array', 'min:1'],
-            'weekend_days.*' => ['string', Rule::in(['friday', 'saturday', 'sunday'])],
+            'weekend_days' => ['array'],
+//            'weekend_days.*' => ['string', Rule::in(['friday', 'saturday', 'sunday'])],
             // Personal Information (nullable)
             'nid_number' => ['nullable', 'string', 'max:50'],
             'joining_date' => ['nullable', 'date'],
@@ -111,6 +110,7 @@ class EmployeeController extends Controller
             'skills' => ['nullable', 'array'],
             'skills.*' => ['exists:skills,id'],
         ]);
+        Log::info('Validated employee data', $validated);
 
         $user = User::create([
             'employee_id' => $validated['employee_id'],
@@ -134,7 +134,7 @@ class EmployeeController extends Controller
             'mothers_name' => $validated['mothers_name'] ?? null,
             'graduated_institution' => $validated['graduated_institution'] ?? null,
         ]);
-
+        Log::info('Employee created', ['user_id' => $user->id, 'employee_id' => $user->employee_id]);
         // Sync skills
         if (!empty($validated['skills'])) {
             $user->skills()->sync($validated['skills']);
