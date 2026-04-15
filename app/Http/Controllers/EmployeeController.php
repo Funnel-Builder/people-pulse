@@ -188,8 +188,8 @@ class EmployeeController extends Controller
             'sub_department_id' => ['nullable', 'exists:sub_departments,id'],
             'designation' => ['required', 'string', 'max:255'],
             'role' => ['required', Rule::in(['user', 'manager', 'admin'])],
-            'weekend_days' => ['required', 'array', 'min:1'],
-            'weekend_days.*' => ['string', Rule::in(['friday', 'saturday', 'sunday'])],
+            'weekend_days' => ['array'],
+//            'weekend_days.*' => ['string', Rule::in(['friday', 'saturday', 'sunday'])],
             // Personal Information (nullable)
             'nid_number' => ['nullable', 'string', 'max:50'],
             'joining_date' => ['nullable', 'date'],
