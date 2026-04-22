@@ -86,7 +86,7 @@ class LeaveSettingController extends Controller
             'balances.*.leave_type_id' => 'required|exists:leave_types,id',
             'balances.*.balance' => 'required|numeric|min:0|max:365',
             'balances.*.accrual_type' => 'required|in:manual,attendance',
-//            'balances.*.attendance_days_threshold' => 'nullable|integer|min:1|max:365',
+            'balances.*.attendance_days_threshold' => 'nullable|integer|min:1|max:365',
         ]);
 
         foreach ($validated['balances'] as $balanceData) {
