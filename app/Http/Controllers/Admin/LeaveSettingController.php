@@ -86,7 +86,7 @@ class LeaveSettingController extends Controller
             'balances.*.leave_type_id' => 'required|exists:leave_types,id',
             'balances.*.balance' => 'required|numeric|min:0|max:365',
             'balances.*.accrual_type' => 'required|in:manual,attendance',
-            'balances.*.attendance_days_threshold' => 'nullable|integer|min:1|max:365',
+//            'balances.*.attendance_days_threshold' => 'nullable|integer|min:1|max:365',
         ]);
 
         foreach ($validated['balances'] as $balanceData) {
@@ -98,21 +98,14 @@ class LeaveSettingController extends Controller
                     'leave_type_id' => $balanceData['leave_type_id'],
                 ],
                 [
-                    // For attendance-based: balance is 0 (will be calculated by scheduler)
-                    // For manual: use the provided balance value
                     'balance' => $isAttendanceBased ? 0 : $balanceData['balance'],
                     'accrual_type' => $balanceData['accrual_type'],
                     'attendance_days_threshold' => $isAttendanceBased
-                        ? ($balanceData['attendance_days_threshold'] ?? $balanceData['balance'] ?? 30)
+                        ? ($balanceData['attendance_days_threshold'] ?? 30)
                         : null,
                 ]
             );
         }
-
-        // Trigger immediate accrual calculation for this user's attendance-based leaves
-        \Illuminate\Support\Facades\Artisan::call('leave:calculate-accrual', [
-            '--user' => $user->id,
-        ]);
 
         return redirect()->back()->with('success', "Leave balances updated for {$user->name}.");
     }
