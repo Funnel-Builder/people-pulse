@@ -23,6 +23,11 @@ class SwitchDatabaseBySubdomain
             $connection = self::SUBDOMAIN_MAP[$subdomain];
             Config::set('database.default', $connection);
             DB::setDefaultConnection($connection);
+
+            // Sessions and cache must always use the main DB — never the tenant DB.
+            // Without this, StartSession can't find/write the sessions table and
+            // every request looks unauthenticated, causing an infinite redirect loop.
+            Config::set('session.connection', env('SESSION_CONNECTION', 'mysql'));
         }
 
         return $next($request);
