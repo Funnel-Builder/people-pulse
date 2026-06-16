@@ -120,11 +120,11 @@ const closeModal = () => {
                             {{ status === 'working' ? "Couldn't Clock Out" : "Couldn't Clock In" }}
                         </h3>
                         <p class="mt-1 text-sm opacity-90">{{ errorMessage || 'Something went wrong. Please try again.' }}</p>
-                        <div class="mt-5 flex gap-3">
-                            <Button variant="secondary" class="rounded-xl" @click="emit('confirm')">
+                        <div class="mt-6 w-full flex flex-col gap-3">
+                            <Button variant="secondary" class="w-full rounded-xl" @click="emit('confirm')">
                                 Try Again
                             </Button>
-                            <Button class="rounded-xl bg-white text-red-600 hover:bg-white/90" @click="closeModal">
+                            <Button class="w-full rounded-xl bg-white text-red-600 hover:bg-white/90" @click="closeModal">
                                 Close
                             </Button>
                         </div>
