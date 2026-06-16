@@ -90,7 +90,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const isProcessing = ref(false);
-const locationError = ref<string | null>(null);
+// Outcome of the latest clock action, surfaced inside the modal.
+const clockResult = ref<'success' | 'error' | null>(null);
+const clockErrorMessage = ref<string | null>(null);
 
 // Request the browser's current position. Resolves with coordinates or
 // rejects with a human-readable message when location is unavailable/denied.
@@ -172,21 +174,39 @@ const formatTime = (dateString: string | null) => {
 };
 
 const submitPunch = async (url: string) => {
-    locationError.value = null;
+    clockResult.value = null;
+    clockErrorMessage.value = null;
+
     let coords: { latitude: number; longitude: number };
     try {
         // Acquire location BEFORE flipping the loading flag, so a denied/failed
         // location never triggers the modal's "Success!" animation.
         coords = await getCurrentLocation();
     } catch (message) {
-        locationError.value = message as string;
-        showClockModal.value = false;
+        // Location failed before we could submit — show it in the modal.
+        clockErrorMessage.value = message as string;
+        clockResult.value = 'error';
         return;
     }
 
     isProcessing.value = true;
     router.post(url, coords, {
         preserveScroll: true,
+        onSuccess: (page) => {
+            // The geofence rejection comes back as a flash error on an otherwise
+            // successful redirect, so treat a present flash.error as a failure.
+            const flash = page.props.flash as { error?: string } | undefined;
+            if (flash?.error) {
+                clockErrorMessage.value = flash.error;
+                clockResult.value = 'error';
+            } else {
+                clockResult.value = 'success';
+            }
+        },
+        onError: (errors) => {
+            clockErrorMessage.value = (Object.values(errors)[0] as string) || 'Something went wrong. Please try again.';
+            clockResult.value = 'error';
+        },
         onFinish: () => {
             isProcessing.value = false;
         },
@@ -225,7 +245,8 @@ const showClockModal = ref(false);
 
 const handleClockAction = () => {
     if (buttonStatus.value === 'clocked_out') return;
-    console.log('Clock action triggered, showing modal');
+    clockResult.value = null;
+    clockErrorMessage.value = null;
     showClockModal.value = true;
 };
 
@@ -610,10 +631,6 @@ const currentMonthWorkHours = computed(() => {
             <Alert v-if="flash.error" variant="destructive">
                 <AlertTriangle class="h-4 w-4" />
                 <AlertDescription>{{ flash.error }}</AlertDescription>
-            </Alert>
-            <Alert v-if="locationError" variant="destructive">
-                <AlertTriangle class="h-4 w-4" />
-                <AlertDescription>{{ locationError }}</AlertDescription>
             </Alert>
 
             <!-- Welcome & Clock Action -->
@@ -1052,10 +1069,12 @@ const currentMonthWorkHours = computed(() => {
         </div>
 
         <!-- Clock In Modal -->
-        <ClockInModal 
+        <ClockInModal
             v-model="showClockModal"
             :status="buttonStatus"
             :loading="isProcessing"
+            :result="clockResult"
+            :error-message="clockErrorMessage"
             :stats="stats"
             :worked-today="formattedWorkedTimeToday"
             @confirm="confirmClockAction"

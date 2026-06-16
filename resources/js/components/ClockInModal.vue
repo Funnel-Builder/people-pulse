@@ -2,13 +2,15 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { Loader2, LogIn, LogOut, CheckCircle2 } from 'lucide-vue-next';
+import { Loader2, LogIn, LogOut, CheckCircle2, AlertTriangle } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 
 const props = defineProps<{
     modelValue: boolean;
     status: 'idle' | 'working' | 'clocked_out';
     loading?: boolean;
+    result?: 'success' | 'error' | null;
+    errorMessage?: string | null;
     stats?: {
         total_days: number;
         present: number;
@@ -24,6 +26,7 @@ const emit = defineEmits<{
 }>();
 
 const showSuccess = ref(false);
+const showError = ref(false);
 const isClosing = ref(false);
 
 const title = computed(() => {
@@ -55,15 +58,23 @@ const handleConfirm = async () => {
     emit('confirm');
 };
 
-// Watch for loading completion to trigger success
+// Drive the success/error overlays from the explicit result reported by the
+// parent, NOT merely from loading finishing — a clock action can finish
+// "loading" yet still be rejected (e.g. outside the office geofence).
 import { watch } from 'vue';
-watch(() => props.loading, (newVal, oldVal) => {
-    if (oldVal === true && newVal === false) {
-        // Loading finished, show success
+watch(() => props.result, (val) => {
+    if (val === 'success') {
+        showError.value = false;
         showSuccess.value = true;
         setTimeout(() => {
             closeModal();
         }, 1500); // Show success for 1.5s
+    } else if (val === 'error') {
+        showSuccess.value = false;
+        showError.value = true; // Stays open so the user can read the reason / retry.
+    } else {
+        showSuccess.value = false;
+        showError.value = false;
     }
 });
 
@@ -71,6 +82,7 @@ const closeModal = () => {
     isClosing.value = true;
     setTimeout(() => {
         showSuccess.value = false;
+        showError.value = false;
         isClosing.value = false;
         emit('update:modelValue', false);
     }, 300);
@@ -97,6 +109,28 @@ const closeModal = () => {
                     </div>
                 </transition>
 
+                <!-- Error Overlay (stays until dismissed) -->
+                <transition name="fade-scale">
+                    <div
+                        v-if="showError"
+                        class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-red-600 text-white p-6 text-center"
+                    >
+                        <AlertTriangle class="h-12 w-12 animate-in zoom-in duration-500" />
+                        <h3 class="mt-4 text-lg font-semibold">
+                            {{ status === 'working' ? "Couldn't Clock Out" : "Couldn't Clock In" }}
+                        </h3>
+                        <p class="mt-1 text-sm opacity-90">{{ errorMessage || 'Something went wrong. Please try again.' }}</p>
+                        <div class="mt-5 flex gap-3">
+                            <Button variant="secondary" class="rounded-xl" @click="emit('confirm')">
+                                Try Again
+                            </Button>
+                            <Button variant="ghost" class="rounded-xl text-white hover:bg-white/10" @click="closeModal">
+                                Close
+                            </Button>
+                        </div>
+                    </div>
+                </transition>
+
                 <!-- Loading Wave Animation Overlay -->
                 <transition name="fade">
                     <div v-if="loading" class="absolute inset-0 z-40 flex items-center justify-center bg-black/5 dark:bg-white/5 backdrop-blur-[2px]">
@@ -109,7 +143,7 @@ const closeModal = () => {
                 </transition>
 
                 <!-- Content -->
-                <div class="relative z-10 p-6 flex flex-col items-center text-center space-y-6" :class="{ 'opacity-0': showSuccess }">
+                <div class="relative z-10 p-6 flex flex-col items-center text-center space-y-6" :class="{ 'opacity-0': showSuccess || showError }">
                     
                     <!-- Icon Bubble -->
                     <div 
