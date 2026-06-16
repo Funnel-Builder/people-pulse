@@ -717,6 +717,28 @@ const removeSkill = (id: number) => {
                                 </select>
                                 <p v-if="form.errors.role" class="text-sm text-destructive">{{ form.errors.role }}</p>
                             </div>
+                            <div class="space-y-2">
+                                <Label>Weekend (Weekly Off)</Label>
+                                <p class="text-xs text-muted-foreground">
+                                    Days marked as weekend are excluded from attendance and absence tracking.
+                                </p>
+                                <div class="flex flex-wrap gap-4 pt-1">
+                                    <label
+                                        v-for="option in weekendOptions"
+                                        :key="option.value"
+                                        class="flex items-center gap-2 text-sm cursor-pointer"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            :value="option.value"
+                                            v-model="selectedWeekendDays"
+                                            class="h-4 w-4 rounded border-input"
+                                        />
+                                        {{ option.label }}
+                                    </label>
+                                </div>
+                                <p v-if="form.errors.weekend_days" class="text-sm text-destructive">{{ form.errors.weekend_days }}</p>
+                            </div>
                         </CardContent>
                     </Card>
 
