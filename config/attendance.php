@@ -68,4 +68,25 @@ return [
         'sat_only' => ['saturday'],
         'sun_only' => ['sunday'],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Office Location Geofence
+    |--------------------------------------------------------------------------
+    |
+    | Clock in / clock out are only allowed when the user is physically within
+    | "geofence_radius_meters" of the office coordinates below. Login itself is
+    | NOT restricted by location — only attendance punches are.
+    |
+    | Set OFFICE_LATITUDE / OFFICE_LONGITUDE to your office coordinates and
+    | toggle the feature with ATTENDANCE_GEOFENCE_ENABLED.
+    |
+    */
+    'geofence_enabled' => filter_var(env('ATTENDANCE_GEOFENCE_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+
+    'office_latitude' => env('OFFICE_LATITUDE') !== null ? (float) env('OFFICE_LATITUDE') : null,
+
+    'office_longitude' => env('OFFICE_LONGITUDE') !== null ? (float) env('OFFICE_LONGITUDE') : null,
+
+    'geofence_radius_meters' => (int) env('ATTENDANCE_GEOFENCE_RADIUS_METERS', 300),
 ];

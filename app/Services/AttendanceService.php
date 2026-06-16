@@ -14,8 +14,10 @@ class AttendanceService
     /**
      * Clock in a user
      */
-    public function clockIn(User $user, ?string $ipAddress = null, ?string $userAgent = null): Attendance
+    public function clockIn(User $user, ?string $ipAddress = null, ?string $userAgent = null, ?float $latitude = null, ?float $longitude = null): Attendance
     {
+        $this->assertWithinOfficeZone($latitude, $longitude);
+
         $today = Carbon::today();
         $now = Carbon::now();
 
@@ -68,8 +70,10 @@ class AttendanceService
     /**
      * Clock out a user
      */
-    public function clockOut(User $user, ?string $ipAddress = null, ?string $userAgent = null): Attendance
+    public function clockOut(User $user, ?string $ipAddress = null, ?string $userAgent = null, ?float $latitude = null, ?float $longitude = null): Attendance
     {
+        $this->assertWithinOfficeZone($latitude, $longitude);
+
         $today = Carbon::today();
         $now = Carbon::now();
 
@@ -263,6 +267,56 @@ class AttendanceService
         }
 
         return $query->orderBy('date', 'desc')->get();
+    }
+
+    /**
+     * Ensure the punch is happening from within the office geofence.
+     *
+     * Throws a human-readable exception if the location is missing or outside
+     * the configured radius. Coordinates are only used for this check — they
+     * are not persisted.
+     */
+    protected function assertWithinOfficeZone(?float $latitude, ?float $longitude): void
+    {
+        if (!config('attendance.geofence_enabled')) {
+            return;
+        }
+
+        $officeLat = config('attendance.office_latitude');
+        $officeLng = config('attendance.office_longitude');
+
+        // If the office coordinates are not configured, skip enforcement rather
+        // than locking everyone out of clocking in.
+        if ($officeLat === null || $officeLng === null) {
+            return;
+        }
+
+        if ($latitude === null || $longitude === null) {
+            throw new \Exception('Location access is required to clock in or out. Please enable location and try again.');
+        }
+
+        $radius = (int) config('attendance.geofence_radius_meters', 300);
+        $distance = $this->distanceInMeters($latitude, $longitude, (float) $officeLat, (float) $officeLng);
+
+        if ($distance > $radius) {
+            throw new \Exception('You must be within the office premises to clock in or out. You appear to be about ' . number_format($distance) . 'm away.');
+        }
+    }
+
+    /**
+     * Great-circle distance between two coordinates, in meters (Haversine).
+     */
+    protected function distanceInMeters(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earthRadius = 6_371_000; // meters
+
+        $latDelta = deg2rad($lat2 - $lat1);
+        $lngDelta = deg2rad($lng2 - $lng1);
+
+        $a = sin($latDelta / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($lngDelta / 2) ** 2;
+
+        return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 
     /**

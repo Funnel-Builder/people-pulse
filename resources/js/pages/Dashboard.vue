@@ -90,6 +90,37 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const isProcessing = ref(false);
+const locationError = ref<string | null>(null);
+
+// Request the browser's current position. Resolves with coordinates or
+// rejects with a human-readable message when location is unavailable/denied.
+const getCurrentLocation = (): Promise<{ latitude: number; longitude: number }> => {
+    return new Promise((resolve, reject) => {
+        if (!('geolocation' in navigator)) {
+            reject('Your device or browser does not support location. Clock in/out requires location.');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                resolve({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                });
+            },
+            (error) => {
+                if (error.code === error.PERMISSION_DENIED) {
+                    reject('Location permission was denied. Please allow location access to clock in/out from the office.');
+                } else if (error.code === error.POSITION_UNAVAILABLE) {
+                    reject('Could not determine your location. Please check your device settings and try again.');
+                } else {
+                    reject('Getting your location timed out. Please try again.');
+                }
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    });
+};
 
 // Live clock
 const currentTime = ref(new Date());
@@ -140,9 +171,21 @@ const formatTime = (dateString: string | null) => {
     });
 };
 
-const clockIn = () => {
+const submitPunch = async (url: string) => {
+    locationError.value = null;
+    let coords: { latitude: number; longitude: number };
+    try {
+        // Acquire location BEFORE flipping the loading flag, so a denied/failed
+        // location never triggers the modal's "Success!" animation.
+        coords = await getCurrentLocation();
+    } catch (message) {
+        locationError.value = message as string;
+        showClockModal.value = false;
+        return;
+    }
+
     isProcessing.value = true;
-    router.post('/attendance/clock-in', {}, {
+    router.post(url, coords, {
         preserveScroll: true,
         onFinish: () => {
             isProcessing.value = false;
@@ -150,15 +193,9 @@ const clockIn = () => {
     });
 };
 
-const clockOut = () => {
-    isProcessing.value = true;
-    router.post('/attendance/clock-out', {}, {
-        preserveScroll: true,
-        onFinish: () => {
-            isProcessing.value = false;
-        },
-    });
-};
+const clockIn = () => submitPunch('/attendance/clock-in');
+
+const clockOut = () => submitPunch('/attendance/clock-out');
 
 const buttonStatus = computed(() => {
     if (currentStatus.value === 'working') return 'working';
@@ -573,6 +610,10 @@ const currentMonthWorkHours = computed(() => {
             <Alert v-if="flash.error" variant="destructive">
                 <AlertTriangle class="h-4 w-4" />
                 <AlertDescription>{{ flash.error }}</AlertDescription>
+            </Alert>
+            <Alert v-if="locationError" variant="destructive">
+                <AlertTriangle class="h-4 w-4" />
+                <AlertDescription>{{ locationError }}</AlertDescription>
             </Alert>
 
             <!-- Welcome & Clock Action -->

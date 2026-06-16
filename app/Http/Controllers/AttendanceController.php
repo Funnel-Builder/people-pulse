@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Attendance\AttendanceFilterRequest;
+use App\Http\Requests\Attendance\ClockRequest;
 use App\Http\Requests\Attendance\OverrideAttendanceRequest;
 use App\Models\Announcement;
 use App\Models\Attendance;
@@ -347,13 +348,15 @@ class AttendanceController extends Controller
     /**
      * Clock in
      */
-    public function clockIn(Request $request): RedirectResponse
+    public function clockIn(ClockRequest $request): RedirectResponse
     {
         try {
             $this->attendanceService->clockIn(
                 $request->user(),
                 $request->ip(),
-                $request->userAgent()
+                $request->userAgent(),
+                $request->filled('latitude') ? (float) $request->input('latitude') : null,
+                $request->filled('longitude') ? (float) $request->input('longitude') : null
             );
 
             return back();
@@ -365,13 +368,15 @@ class AttendanceController extends Controller
     /**
      * Clock out
      */
-    public function clockOut(Request $request): RedirectResponse
+    public function clockOut(ClockRequest $request): RedirectResponse
     {
         try {
             $this->attendanceService->clockOut(
                 $request->user(),
                 $request->ip(),
-                $request->userAgent()
+                $request->userAgent(),
+                $request->filled('latitude') ? (float) $request->input('latitude') : null,
+                $request->filled('longitude') ? (float) $request->input('longitude') : null
             );
 
             return back();
