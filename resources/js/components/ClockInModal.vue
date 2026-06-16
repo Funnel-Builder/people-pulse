@@ -124,7 +124,7 @@ const closeModal = () => {
                             <Button variant="secondary" class="w-full rounded-xl" @click="emit('confirm')">
                                 Try Again
                             </Button>
-                            <Button class="w-full rounded-xl bg-white text-red-600 hover:bg-white/90" @click="closeModal">
+                            <Button variant="ghost" class="w-full rounded-xl text-white hover:bg-white/10" @click="closeModal">
                                 Close
                             </Button>
                         </div>
