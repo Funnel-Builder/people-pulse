@@ -628,10 +628,6 @@ const currentMonthWorkHours = computed(() => {
                 <CheckCircle class="h-4 w-4" />
                 <AlertDescription>{{ flash.success }}</AlertDescription>
             </Alert>
-            <Alert v-if="flash.error" variant="destructive">
-                <AlertTriangle class="h-4 w-4" />
-                <AlertDescription>{{ flash.error }}</AlertDescription>
-            </Alert>
 
             <!-- Welcome & Clock Action -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
