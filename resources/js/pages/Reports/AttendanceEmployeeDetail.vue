@@ -299,7 +299,8 @@ const formatMinutesToHours = (minutes: number | null) => {
                                     <td class="py-3">{{ formatTime(record.clock_out) }}</td>
                                     <td class="py-3">{{ formatMinutesToHours(record.net_minutes) }}</td>
                                     <td class="py-3">
-                                        <Badge v-if="record.is_late" variant="destructive">Late</Badge>
+                                        <Badge v-if="!record.clock_in" variant="outline" class="bg-amber-50 text-amber-700 border-amber-200">Absent</Badge>
+                                        <Badge v-else-if="record.is_late" variant="destructive">Late</Badge>
                                         <Badge v-else variant="outline" class="bg-green-50 text-green-700 border-green-200">On Time</Badge>
                                     </td>
                                 </tr>

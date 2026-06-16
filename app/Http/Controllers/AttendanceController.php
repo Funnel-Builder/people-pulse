@@ -762,6 +762,7 @@ class AttendanceController extends Controller
         $employeeSummaries = $employees->map(function ($employee) use ($startDate, $endDate) {
             $attendances = Attendance::where('user_id', $employee->id)
                 ->whereBetween('date', [$startDate, $endDate])
+                ->whereNotNull('clock_in')
                 ->get();
 
             $attendanceCount = $attendances->count();
@@ -837,6 +838,7 @@ class AttendanceController extends Controller
         $employeeSummaries = $employees->map(function ($employee) use ($startDate, $endDate) {
             $attendances = Attendance::where('user_id', $employee->id)
                 ->whereBetween('date', [$startDate, $endDate])
+                ->whereNotNull('clock_in')
                 ->get();
 
             $attendanceCount = $attendances->count();
@@ -914,10 +916,13 @@ class AttendanceController extends Controller
                 ];
             });
 
-        // Calculate summary
-        $totalAttendance = $attendances->count();
-        $lateCount = $attendances->where('is_late', true)->count();
-        $totalMinutes = $attendances->sum('net_minutes');
+        // Calculate summary — only count days the employee actually clocked in.
+        // Absent/weekend records (no clock_in) must not inflate attendance or
+        // be counted as "on time".
+        $presentRecords = $attendances->whereNotNull('clock_in');
+        $totalAttendance = $presentRecords->count();
+        $lateCount = $presentRecords->where('is_late', true)->count();
+        $totalMinutes = $presentRecords->sum('net_minutes');
 
         // Get available years
         $firstAttendance = Attendance::orderBy('date', 'asc')->first();
