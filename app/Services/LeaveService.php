@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
+use NotificationChannels\WebPush\WebPushChannel;
 
 class LeaveService
 {
@@ -124,31 +125,45 @@ class LeaveService
      */
     protected function notifyNewLeaveRequest(Leave $leave): void
     {
-        try {
-            $recipients = $this->resolveFirstStepApprovers($leave);
+        $recipients = $this->resolveFirstStepApprovers($leave);
 
-            if ($recipients->isEmpty()) {
-                Log::info('[New Leave Request] No first-step approver resolved; skipping notification', [
-                    'leave_id' => $leave->id,
-                    'type' => $leave->type,
-                ]);
-                return;
-            }
-
-            $leave->loadMissing(['user', 'leaveType', 'dates']);
-            Notification::send($recipients, new NewLeaveRequest($leave));
-
-            Log::info('[New Leave Request] Notification dispatched to approvers', [
+        if ($recipients->isEmpty()) {
+            Log::info('[New Leave Request] No first-step approver resolved; skipping notification', [
                 'leave_id' => $leave->id,
-                'recipients' => $recipients->pluck('email')->all(),
+                'type' => $leave->type,
             ]);
-        } catch (\Exception $e) {
-            // Never let a notification failure break leave submission.
-            Log::error('[New Leave Request] Failed to dispatch notification', [
-                'leave_id' => $leave->id,
-                'error' => $e->getMessage(),
-            ]);
+            return;
         }
+
+        $leave->loadMissing(['user', 'leaveType', 'dates']);
+        $notification = new NewLeaveRequest($leave);
+
+        // Deliver each channel independently. A single combined send processes
+        // channels in order and aborts the rest on the first failure — so a
+        // failing email (e.g. SES rejecting an unverified address) would
+        // silently swallow the in-app bell and browser push. Sending each
+        // channel in its own try/catch keeps them fully isolated.
+        $channels = [
+            'database' => 'database',
+            'web push' => WebPushChannel::class,
+            'email' => 'mail',
+        ];
+
+        foreach ($channels as $label => $channel) {
+            try {
+                Notification::sendNow($recipients, $notification, [$channel]);
+            } catch (\Throwable $e) {
+                Log::error("[New Leave Request] {$label} channel failed", [
+                    'leave_id' => $leave->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        Log::info('[New Leave Request] Notifications dispatched to approvers', [
+            'leave_id' => $leave->id,
+            'recipients' => $recipients->pluck('email')->all(),
+        ]);
     }
 
     /**
