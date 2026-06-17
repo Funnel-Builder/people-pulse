@@ -17,8 +17,8 @@ self.addEventListener('push', (event) => {
     const title = payload.title || 'PeoplePulse';
     const options = {
         body: payload.body || '',
-        icon: payload.icon || '/favicon.ico',
-        badge: payload.badge || '/favicon.ico',
+        icon: payload.icon || '/favicons/android-chrome-192x192.png',
+        badge: payload.badge || '/favicons/favicon-32x32.png',
         data: payload.data || {},
         tag: payload.tag || undefined,
         renotify: !!payload.tag,

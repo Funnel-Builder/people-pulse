@@ -69,7 +69,8 @@ class NewLeaveRequest extends Notification
     {
         return (new WebPushMessage)
             ->title('New leave request')
-            ->icon('/favicon.ico')
+            ->icon('/favicons/android-chrome-192x192.png')
+            ->badge('/favicons/favicon-32x32.png')
             ->body("{$this->leave->user->name} requested leave ({$this->dateRange()})")
             ->data(['url' => '/leaves/' . $this->leave->id])
             ->options(['TTL' => 86400]);
