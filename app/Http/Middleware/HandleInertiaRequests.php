@@ -45,6 +45,8 @@ class HandleInertiaRequests extends Middleware
         $pendingCoverRequests = 0;
         $pendingLeaveApprovals = 0;
         $pendingCertificateApprovals = 0;
+        $notifications = [];
+        $unreadNotificationCount = 0;
 
         if ($user) {
             $user->load(['department:id,name', 'subDepartment:id,name']);
@@ -57,6 +59,19 @@ class HandleInertiaRequests extends Middleware
             // Get pending certificate approval count
             $certificateService = app(\App\Services\CertificateService::class);
             $pendingCertificateApprovals = $certificateService->getApprovalCount($user);
+
+            // Recent in-app notifications for the bell + native browser push fallback.
+            $unreadNotificationCount = $user->unreadNotifications()->count();
+            $notifications = $user->notifications()
+                ->latest()
+                ->limit(15)
+                ->get()
+                ->map(fn($n) => [
+                    'id' => $n->id,
+                    'data' => $n->data,
+                    'read_at' => $n->read_at,
+                    'created_at' => $n->created_at->toIso8601String(),
+                ]);
         }
 
         return [
@@ -69,6 +84,11 @@ class HandleInertiaRequests extends Middleware
                 'pendingLeaveApprovals' => $pendingLeaveApprovals,
                 'pendingCertificateApprovals' => $pendingCertificateApprovals,
             ],
+            'notifications' => [
+                'items' => $notifications,
+                'unreadCount' => $unreadNotificationCount,
+            ],
+            'vapidPublicKey' => config('webpush.vapid.public_key'),
             'sidebarOpen' => !$request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [
                 'success' => fn() => $request->session()->get('success'),
