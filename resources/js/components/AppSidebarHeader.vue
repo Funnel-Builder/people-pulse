@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import NotificationBell from '@/components/NotificationBell.vue';
 import UserInfo from '@/components/UserInfo.vue';
 import UserMenuContent from '@/components/UserMenuContent.vue';
 import {
@@ -39,6 +40,7 @@ const user = computed(() => page.props.auth.user);
         </div>
 
         <div class="flex items-center gap-2">
+            <NotificationBell />
             <DropdownMenu>
                 <DropdownMenuTrigger class="flex items-center gap-2 outline-none">
                     <div class="flex items-center rounded-full border border-transparent transition-colors hover:bg-muted/50 p-0 pr-2 gap-1 md:px-2 md:py-1 md:gap-2">

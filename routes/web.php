@@ -47,6 +47,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // =====================================================
+    // NOTIFICATIONS
+    // =====================================================
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::post('/subscribe', [\App\Http\Controllers\NotificationController::class, 'storeSubscription'])->name('subscribe');
+        Route::post('/unsubscribe', [\App\Http\Controllers\NotificationController::class, 'destroySubscription'])->name('unsubscribe');
+        Route::post('/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('read-all');
+        Route::post('/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('read');
+    });
+
+    // =====================================================
     // RECORDS (Admin/Manager)
     // =====================================================
     Route::prefix('records')->name('records.')->group(function () {

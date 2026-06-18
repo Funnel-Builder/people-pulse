@@ -10,11 +10,14 @@ use App\Models\LeaveDate;
 use App\Models\LeaveType;
 use App\Models\User;
 use App\Models\UserLeaveBalance;
+use App\Notifications\NewLeaveRequest;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
+use NotificationChannels\WebPush\WebPushChannel;
 
 class LeaveService
 {
@@ -23,7 +26,7 @@ class LeaveService
      */
     public function createAdvanceLeave(User $user, array $data): Leave
     {
-        return DB::transaction(function () use ($user, $data) {
+        $leave = DB::transaction(function () use ($user, $data) {
             // Get leave type (user can select for advance leave: Casual, Annual, Maternity)
             $leaveType = LeaveType::findByCode($data['leave_type'] ?? config('leave.default_advance_leave_type', 'casual'));
 
@@ -51,6 +54,11 @@ class LeaveService
 
             return $leave->load(['dates', 'approvals', 'leaveType', 'coverPerson']);
         });
+
+        // Notify the first-step approver(s) once the record is safely committed.
+        $this->notifyNewLeaveRequest($leave);
+
+        return $leave;
     }
 
     /**
@@ -58,7 +66,7 @@ class LeaveService
      */
     public function createPostLeave(User $user, array $data): Leave
     {
-        return DB::transaction(function () use ($user, $data) {
+        $leave = DB::transaction(function () use ($user, $data) {
             // Get leave type (can be changed by user for post leave)
             $leaveType = LeaveType::findByCode($data['leave_type'] ?? config('leave.default_post_leave_type', 'sick'));
 
@@ -86,6 +94,11 @@ class LeaveService
 
             return $leave->load(['dates', 'approvals', 'leaveType']);
         });
+
+        // Notify the first-step approver(s) once the record is safely committed.
+        $this->notifyNewLeaveRequest($leave);
+
+        return $leave;
     }
 
     /**
@@ -104,6 +117,106 @@ class LeaveService
                 'status' => $step === 1 ? LeaveApproval::STATUS_PENDING : LeaveApproval::STATUS_PENDING,
             ]);
         }
+    }
+
+    /**
+     * Notify the first-step approver(s) that a new leave request needs review.
+     * Sends email + a database notification (consumed by the in-app/browser bell).
+     */
+    protected function notifyNewLeaveRequest(Leave $leave): void
+    {
+        $recipients = $this->resolveFirstStepApprovers($leave);
+
+        if ($recipients->isEmpty()) {
+            Log::info('[New Leave Request] No first-step approver resolved; skipping notification', [
+                'leave_id' => $leave->id,
+                'type' => $leave->type,
+            ]);
+            return;
+        }
+
+        $leave->loadMissing(['user', 'leaveType', 'dates']);
+        $notification = new NewLeaveRequest($leave);
+
+        // Deliver each channel independently. A single combined send processes
+        // channels in order and aborts the rest on the first failure — so a
+        // failing email (e.g. SES rejecting an unverified address) would
+        // silently swallow the in-app bell and browser push. Sending each
+        // channel in its own try/catch keeps them fully isolated.
+        $channels = [
+            'database' => 'database',
+            'web push' => WebPushChannel::class,
+            'email' => 'mail',
+        ];
+
+        foreach ($channels as $label => $channel) {
+            try {
+                Notification::sendNow($recipients, $notification, [$channel]);
+            } catch (\Throwable $e) {
+                Log::error("[New Leave Request] {$label} channel failed", [
+                    'leave_id' => $leave->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        Log::info('[New Leave Request] Notifications dispatched to approvers', [
+            'leave_id' => $leave->id,
+            'recipients' => $recipients->pluck('email')->all(),
+        ]);
+    }
+
+    /**
+     * Resolve who should be notified for the FIRST approval step of a new leave.
+     * - advance leave: step 1 = cover person (a single user)
+     * - post leave:    step 1 = manager(s) of the employee's sub-department/department
+     */
+    protected function resolveFirstStepApprovers(Leave $leave): Collection
+    {
+        $firstStepType = config("leave.approval_steps.{$leave->type}.1");
+
+        if ($firstStepType === LeaveApproval::TYPE_COVER_PERSON) {
+            return $leave->cover_person_id
+                ? User::where('id', $leave->cover_person_id)->get()
+                : collect([]);
+        }
+
+        if ($firstStepType === LeaveApproval::TYPE_MANAGER) {
+            return $this->managersForEmployee($leave->user);
+        }
+
+        if ($firstStepType === LeaveApproval::TYPE_ADMIN) {
+            return User::where('role', 'admin')->get();
+        }
+
+        return collect([]);
+    }
+
+    /**
+     * Find the manager(s) responsible for an employee, mirroring the visibility
+     * rules used in getManagerAdminApprovals(): a manager in the same department
+     * who either manages the employee's sub-department or manages the whole
+     * department (no explicit sub-department scoping).
+     */
+    protected function managersForEmployee(User $employee): Collection
+    {
+        if (!$employee->department_id) {
+            return collect([]);
+        }
+
+        return User::where('role', 'manager')
+            ->where('department_id', $employee->department_id)
+            ->where('id', '!=', $employee->id)
+            ->get()
+            ->filter(function (User $manager) use ($employee) {
+                $managedSubDeptIds = $manager->getManagedSubDepartmentIds();
+
+                // Manages the whole department (no sub-department scoping) OR
+                // explicitly manages the employee's sub-department.
+                return empty($managedSubDeptIds)
+                    || in_array($employee->sub_department_id, $managedSubDeptIds, true);
+            })
+            ->values();
     }
 
     /**

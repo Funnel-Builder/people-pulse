@@ -90,6 +90,39 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const isProcessing = ref(false);
+// Outcome of the latest clock action, surfaced inside the modal.
+const clockResult = ref<'success' | 'error' | null>(null);
+const clockErrorMessage = ref<string | null>(null);
+
+// Request the browser's current position. Resolves with coordinates or
+// rejects with a human-readable message when location is unavailable/denied.
+const getCurrentLocation = (): Promise<{ latitude: number; longitude: number }> => {
+    return new Promise((resolve, reject) => {
+        if (!('geolocation' in navigator)) {
+            reject('Your device or browser does not support location. Clock in/out requires location.');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                resolve({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                });
+            },
+            (error) => {
+                if (error.code === error.PERMISSION_DENIED) {
+                    reject('Location permission was denied. Please allow location access to clock in/out from the office.');
+                } else if (error.code === error.POSITION_UNAVAILABLE) {
+                    reject('Could not determine your location. Please check your device settings and try again.');
+                } else {
+                    reject('Getting your location timed out. Please try again.');
+                }
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    });
+};
 
 // Live clock
 const currentTime = ref(new Date());
@@ -140,25 +173,49 @@ const formatTime = (dateString: string | null) => {
     });
 };
 
-const clockIn = () => {
+const submitPunch = async (url: string) => {
+    clockResult.value = null;
+    clockErrorMessage.value = null;
+
+    let coords: { latitude: number; longitude: number };
+    try {
+        // Acquire location BEFORE flipping the loading flag, so a denied/failed
+        // location never triggers the modal's "Success!" animation.
+        coords = await getCurrentLocation();
+    } catch (message) {
+        // Location failed before we could submit — show it in the modal.
+        clockErrorMessage.value = message as string;
+        clockResult.value = 'error';
+        return;
+    }
+
     isProcessing.value = true;
-    router.post('/attendance/clock-in', {}, {
+    router.post(url, coords, {
         preserveScroll: true,
+        onSuccess: (page) => {
+            // The geofence rejection comes back as a flash error on an otherwise
+            // successful redirect, so treat a present flash.error as a failure.
+            const flash = page.props.flash as { error?: string } | undefined;
+            if (flash?.error) {
+                clockErrorMessage.value = flash.error;
+                clockResult.value = 'error';
+            } else {
+                clockResult.value = 'success';
+            }
+        },
+        onError: (errors) => {
+            clockErrorMessage.value = (Object.values(errors)[0] as string) || 'Something went wrong. Please try again.';
+            clockResult.value = 'error';
+        },
         onFinish: () => {
             isProcessing.value = false;
         },
     });
 };
 
-const clockOut = () => {
-    isProcessing.value = true;
-    router.post('/attendance/clock-out', {}, {
-        preserveScroll: true,
-        onFinish: () => {
-            isProcessing.value = false;
-        },
-    });
-};
+const clockIn = () => submitPunch('/attendance/clock-in');
+
+const clockOut = () => submitPunch('/attendance/clock-out');
 
 const buttonStatus = computed(() => {
     if (currentStatus.value === 'working') return 'working';
@@ -188,7 +245,8 @@ const showClockModal = ref(false);
 
 const handleClockAction = () => {
     if (buttonStatus.value === 'clocked_out') return;
-    console.log('Clock action triggered, showing modal');
+    clockResult.value = null;
+    clockErrorMessage.value = null;
     showClockModal.value = true;
 };
 
@@ -569,10 +627,6 @@ const currentMonthWorkHours = computed(() => {
             <Alert v-if="flash.success" class="border-green-500 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
                 <CheckCircle class="h-4 w-4" />
                 <AlertDescription>{{ flash.success }}</AlertDescription>
-            </Alert>
-            <Alert v-if="flash.error" variant="destructive">
-                <AlertTriangle class="h-4 w-4" />
-                <AlertDescription>{{ flash.error }}</AlertDescription>
             </Alert>
 
             <!-- Welcome & Clock Action -->
@@ -1011,10 +1065,12 @@ const currentMonthWorkHours = computed(() => {
         </div>
 
         <!-- Clock In Modal -->
-        <ClockInModal 
+        <ClockInModal
             v-model="showClockModal"
             :status="buttonStatus"
             :loading="isProcessing"
+            :result="clockResult"
+            :error-message="clockErrorMessage"
             :stats="stats"
             :worked-today="formattedWorkedTimeToday"
             @confirm="confirmClockAction"
