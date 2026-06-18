@@ -13,6 +13,7 @@ class SwitchDatabaseBySubdomain
     // Maps subdomain → connection name defined in config/database.php
     private const SUBDOMAIN_MAP = [
         'shonamoni' => 'shonamoni',
+        'dev' => 'dev',
     ];
 
     public function handle(Request $request, Closure $next): Response
