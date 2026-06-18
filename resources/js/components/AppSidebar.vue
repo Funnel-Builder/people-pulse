@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Clock, LayoutGrid, Users, Shield, UserCog, FileBarChart, Settings as SettingsIcon, CalendarDays, ClipboardList, CalendarCog, FolderOpen, BarChart3, Bell, Network, Award } from 'lucide-vue-next';
+import { Clock, LayoutGrid, Users, Shield, UserCog, FileBarChart, Settings as SettingsIcon, CalendarDays, ClipboardList, CalendarCog, FolderOpen, BarChart3, Bell, Network, Award, SlidersHorizontal, Inbox, UserCheck, ClipboardCheck } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
 
@@ -31,10 +31,6 @@ const mainNavItems = computed<NavItem[]>(() => {
             href: '/attendance',
             icon: Clock,
         },
-    ];
-
-    // Leaves Group (all users)
-    const leaveChildren: NavItem[] = [
         {
             title: 'My Leaves',
             href: '/leaves',
@@ -42,30 +38,38 @@ const mainNavItems = computed<NavItem[]>(() => {
         },
     ];
 
-    // Cover Requests - shown to all employees (they may be asked to cover)
-    leaveChildren.push({
-        title: 'Cover Requests',
-        href: '/leaves/requests',
-        icon: ClipboardList,
-        badge: page.props.auth?.pendingCoverRequests || 0,
-    });
+    // Requests Group (all users) — inboxes for requests that need your action
+    const requestChildren: NavItem[] = [
+        {
+            title: 'Late/Early Requests',
+            href: '/attendance/adjustments/approvals',
+            icon: SlidersHorizontal,
+            badge: page.props.auth?.pendingAttendanceAdjustments || 0,
+        },
+        {
+            title: 'Cover Requests',
+            href: '/leaves/requests',
+            icon: UserCheck,
+            badge: page.props.auth?.pendingCoverRequests || 0,
+        },
+    ];
 
     // Leave Approvals - only for managers and admins
     if (user.value?.role === 'manager' || user.value?.role === 'admin') {
-        leaveChildren.push({
+        requestChildren.push({
             title: 'Leave Approvals',
             href: '/leaves/approvals',
-            icon: ClipboardList,
+            icon: ClipboardCheck,
             badge: page.props.auth?.pendingLeaveApprovals || 0,
         });
     }
 
     items.push({
-        title: 'Leaves',
+        title: 'Requests',
         href: '#',
-        icon: CalendarDays,
+        icon: Inbox,
         isGroup: true,
-        children: leaveChildren,
+        children: requestChildren,
     });
 
     // Services Group (all users can request, managers/admins can approve)

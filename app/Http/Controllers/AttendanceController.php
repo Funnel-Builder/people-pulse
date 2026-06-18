@@ -10,6 +10,7 @@ use App\Models\Attendance;
 use App\Models\User;
 use App\Models\LeaveType;
 use App\Models\UserLeaveBalance;
+use App\Services\AttendanceAdjustmentService;
 use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +21,8 @@ use Inertia\Response;
 class AttendanceController extends Controller
 {
     public function __construct(
-        protected AttendanceService $attendanceService
+        protected AttendanceService $attendanceService,
+        protected AttendanceAdjustmentService $adjustmentService
     ) {
     }
 
@@ -149,6 +151,7 @@ class AttendanceController extends Controller
             ],
             'availableYears' => $availableYears,
             'userWeekendDays' => $user->weekend_days ?? ['saturday', 'sunday'],
+            'coverPersonOptions' => $this->adjustmentService->coverPersonOptions($user),
         ]);
     }
 

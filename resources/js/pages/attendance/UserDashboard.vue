@@ -8,8 +8,16 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import type { Attendance, BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
-import { CalendarDays, List, ChevronLeft, ChevronRight, MapPin, Clock, TrendingUp } from 'lucide-vue-next';
+import { CalendarDays, List, ChevronLeft, ChevronRight, MapPin, Clock, TrendingUp, SlidersHorizontal } from 'lucide-vue-next';
 import DataTable from '@/components/ui/DataTable.vue';
+import AdjustmentRequestModal from '@/components/attendance/AdjustmentRequestModal.vue';
+
+interface CoverPerson {
+    id: number;
+    name: string;
+    employee_id: string;
+    designation?: string;
+}
 
 interface Props {
     attendances: Attendance[];
@@ -19,6 +27,7 @@ interface Props {
     };
     availableYears: number[];
     userWeekendDays: string[];
+    coverPersonOptions: CoverPerson[];
 }
 
 const props = defineProps<Props>();
@@ -29,6 +38,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const viewMode = ref<'calendar' | 'table'>('calendar');
+
+const showAdjustmentModal = ref(false);
 
 const selectedMonth = ref(props.filters.month.toString());
 const selectedYear = ref(props.filters.year.toString());
@@ -529,8 +540,12 @@ const getLocation = (attendance: Attendance | null | undefined) => {
                                 </div>
                              </div>
 
-                             <Button class="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 font-semibold border-0 shadow-none">
-                                Request Manual Entry
+                             <Button
+                                class="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 font-semibold border-0 shadow-none gap-2"
+                                @click="showAdjustmentModal = true"
+                             >
+                                <SlidersHorizontal class="h-4 w-4" />
+                                Request Attendance Adjustment
                              </Button>
                         </CardContent>
                     </Card>
@@ -639,5 +654,11 @@ const getLocation = (attendance: Attendance | null | undefined) => {
                 </CardContent>
              </Card>
         </div>
+
+        <AdjustmentRequestModal
+            v-model:open="showAdjustmentModal"
+            :cover-person-options="coverPersonOptions"
+            :default-date="selectedDate"
+        />
     </AppLayout>
 </template>

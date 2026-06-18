@@ -6,6 +6,7 @@ export interface Auth {
     pendingCoverRequests?: number;
     pendingLeaveApprovals?: number;
     pendingCertificateApprovals?: number;
+    pendingAttendanceAdjustments?: number;
 }
 
 export interface BreadcrumbItem {

@@ -89,4 +89,27 @@ return [
     'office_longitude' => env('OFFICE_LONGITUDE') !== null ? (float) env('OFFICE_LONGITUDE') : null,
 
     'geofence_radius_meters' => (int) env('ATTENDANCE_GEOFENCE_RADIUS_METERS', 300),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Attendance Adjustment Requests
+    |--------------------------------------------------------------------------
+    |
+    | "Request Late Entry" / "Request Early Out" applications follow the same
+    | multi-step approval flow as advance leave:
+    |   Step 1 = Cover Person, Step 2 = Manager, Step 3 = Admin.
+    | On final approval the day's late/early flag is excused and an audit log
+    | entry is recorded. Attachments are optional supporting documents.
+    |
+    */
+    'adjustment_approval_steps' => [
+        1 => 'cover_person',
+        2 => 'manager',
+        3 => 'admin',
+    ],
+
+    'adjustment_attachment' => [
+        'mimes' => 'pdf,jpg,jpeg,png',
+        'max_kb' => 5120,
+    ],
 ];

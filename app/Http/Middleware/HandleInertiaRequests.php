@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
         $pendingCoverRequests = 0;
         $pendingLeaveApprovals = 0;
         $pendingCertificateApprovals = 0;
+        $pendingAttendanceAdjustments = 0;
         $notifications = [];
         $unreadNotificationCount = 0;
 
@@ -59,6 +60,10 @@ class HandleInertiaRequests extends Middleware
             // Get pending certificate approval count
             $certificateService = app(\App\Services\CertificateService::class);
             $pendingCertificateApprovals = $certificateService->getApprovalCount($user);
+
+            // Get pending attendance adjustment (late entry / early out) approvals
+            $adjustmentService = app(\App\Services\AttendanceAdjustmentService::class);
+            $pendingAttendanceAdjustments = $adjustmentService->getPendingApprovalCount($user);
 
             // Recent in-app notifications for the bell + native browser push fallback.
             $unreadNotificationCount = $user->unreadNotifications()->count();
@@ -83,6 +88,7 @@ class HandleInertiaRequests extends Middleware
                 'pendingCoverRequests' => $pendingCoverRequests,
                 'pendingLeaveApprovals' => $pendingLeaveApprovals,
                 'pendingCertificateApprovals' => $pendingCertificateApprovals,
+                'pendingAttendanceAdjustments' => $pendingAttendanceAdjustments,
             ],
             'notifications' => [
                 'items' => $notifications,

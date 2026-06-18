@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\Attendance;
+use App\Models\AttendanceAdjustmentRequest;
+use App\Policies\AttendanceAdjustmentRequestPolicy;
 use App\Policies\AttendancePolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -24,5 +26,6 @@ class AppServiceProvider extends ServiceProvider
     {
         // Register policies
         Gate::policy(Attendance::class, AttendancePolicy::class);
+        Gate::policy(AttendanceAdjustmentRequest::class, AttendanceAdjustmentRequestPolicy::class);
     }
 }

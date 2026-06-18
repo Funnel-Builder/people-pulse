@@ -3,13 +3,13 @@
 namespace App\Services;
 
 use App\Mail\LeaveApproved;
-use App\Mail\LeaveAuthorized;
 use App\Models\Leave;
 use App\Models\LeaveApproval;
 use App\Models\LeaveDate;
 use App\Models\LeaveType;
 use App\Models\User;
 use App\Models\UserLeaveBalance;
+use App\Notifications\LeaveRequestProcessed;
 use App\Notifications\NewLeaveRequest;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -122,15 +122,39 @@ class LeaveService
     /**
      * Notify the first-step approver(s) that a new leave request needs review.
      * Sends email + a database notification (consumed by the in-app/browser bell).
+     *
+     * - advance leave: step 1 = cover person
+     * - post leave:    step 1 = manager(s) of the employee's sub-department/department
      */
     protected function notifyNewLeaveRequest(Leave $leave): void
     {
-        $recipients = $this->resolveFirstStepApprovers($leave);
+        $this->notifyStepApprovers($leave, 1);
+    }
+
+    /**
+     * Notify the approver(s) responsible for the leave's CURRENT step.
+     * Called when a leave advances (cover person -> manager -> admin) so the
+     * next approver actually receives the bell, push and email — previously the
+     * request silently stalled because only the first step was ever notified.
+     */
+    protected function notifyCurrentStepApprovers(Leave $leave): void
+    {
+        $this->notifyStepApprovers($leave, $leave->current_approval_step);
+    }
+
+    /**
+     * Resolve the approver(s) for a given step and deliver the "needs review"
+     * notification across all channels.
+     */
+    protected function notifyStepApprovers(Leave $leave, int $step): void
+    {
+        $recipients = $this->resolveStepApprovers($leave, $step);
 
         if ($recipients->isEmpty()) {
-            Log::info('[New Leave Request] No first-step approver resolved; skipping notification', [
+            Log::info('[Leave Request] No approver resolved for step; skipping notification', [
                 'leave_id' => $leave->id,
                 'type' => $leave->type,
+                'step' => $step,
             ]);
             return;
         }
@@ -153,39 +177,77 @@ class LeaveService
             try {
                 Notification::sendNow($recipients, $notification, [$channel]);
             } catch (\Throwable $e) {
-                Log::error("[New Leave Request] {$label} channel failed", [
+                Log::error("[Leave Request] {$label} channel failed", [
                     'leave_id' => $leave->id,
+                    'step' => $step,
                     'error' => $e->getMessage(),
                 ]);
             }
         }
 
-        Log::info('[New Leave Request] Notifications dispatched to approvers', [
+        Log::info('[Leave Request] Notifications dispatched to approvers', [
             'leave_id' => $leave->id,
+            'step' => $step,
             'recipients' => $recipients->pluck('email')->all(),
         ]);
     }
 
     /**
-     * Resolve who should be notified for the FIRST approval step of a new leave.
-     * - advance leave: step 1 = cover person (a single user)
-     * - post leave:    step 1 = manager(s) of the employee's sub-department/department
+     * Notify the employee who submitted the leave of the final outcome.
+     * - approved: bell + push only (the rich LeaveApproved email is sent separately)
+     * - rejected: bell + push + email (no other email is sent on rejection)
      */
-    protected function resolveFirstStepApprovers(Leave $leave): Collection
+    protected function notifyLeaveRequester(Leave $leave, string $outcome, User $approver, ?string $comment = null, ?string $byRole = null): void
     {
-        $firstStepType = config("leave.approval_steps.{$leave->type}.1");
+        $leave->loadMissing(['user', 'leaveType', 'dates']);
+        $recipient = $leave->user;
 
-        if ($firstStepType === LeaveApproval::TYPE_COVER_PERSON) {
+        if (!$recipient) {
+            return;
+        }
+
+        $notification = new LeaveRequestProcessed($leave, $outcome, $approver, $comment, $byRole);
+
+        // Rejection sends email too. Final approval is covered by the rich
+        // LeaveApproved email, and intermediate (cover/manager) approvals stay
+        // bell + push only — so neither sends email from here.
+        $channels = $outcome === 'rejected'
+            ? ['database' => 'database', 'web push' => WebPushChannel::class, 'email' => 'mail']
+            : ['database' => 'database', 'web push' => WebPushChannel::class];
+
+        foreach ($channels as $label => $channel) {
+            try {
+                Notification::sendNow($recipient, $notification, [$channel]);
+            } catch (\Throwable $e) {
+                Log::error("[Leave Processed] requester {$label} channel failed", [
+                    'leave_id' => $leave->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Resolve who should be notified for a given approval step of a leave.
+     * - cover_person: the designated cover person
+     * - manager:      manager(s) of the employee's sub-department/department
+     * - admin:        all admins
+     */
+    protected function resolveStepApprovers(Leave $leave, int $step): Collection
+    {
+        $stepType = config("leave.approval_steps.{$leave->type}.{$step}");
+
+        if ($stepType === LeaveApproval::TYPE_COVER_PERSON) {
             return $leave->cover_person_id
                 ? User::where('id', $leave->cover_person_id)->get()
                 : collect([]);
         }
 
-        if ($firstStepType === LeaveApproval::TYPE_MANAGER) {
+        if ($stepType === LeaveApproval::TYPE_MANAGER) {
             return $this->managersForEmployee($leave->user);
         }
 
-        if ($firstStepType === LeaveApproval::TYPE_ADMIN) {
+        if ($stepType === LeaveApproval::TYPE_ADMIN) {
             return User::where('role', 'admin')->get();
         }
 
@@ -244,6 +306,9 @@ class LeaveService
             if ($action === 'reject') {
                 // Reject the entire leave
                 $leave->update(['status' => Leave::STATUS_REJECTED]);
+
+                // Let the employee know their request was rejected (bell + push + email).
+                $this->notifyLeaveRequester($leave, 'rejected', $approver, $comment);
             } else {
                 // Check if there are more steps
                 $totalSteps = $leave->getTotalSteps();
@@ -273,28 +338,23 @@ class LeaveService
                             'error' => $e->getMessage(),
                         ]);
                     }
+
+                    // Bell + push to the employee (the rich approval email above
+                    // already covers the email channel).
+                    $this->notifyLeaveRequester($leave, 'approved', $approver);
                 } else {
                     // Move to next step
                     $leave->update(['current_approval_step' => $leave->current_approval_step + 1]);
 
-                    // Send authorization notification if approved by manager (but not final step)
-                    if ($approver->isManager()) {
-                        try {
-                            $leave->load(['user', 'leaveType', 'dates']);
-                            Mail::to($leave->user->email)->send(new LeaveAuthorized($leave, $approver));
-                            Log::info('[Leave Authorized] Email sent to employee', [
-                                'leave_id' => $leave->id,
-                                'employee' => $leave->user->name,
-                                'email' => $leave->user->email,
-                                'authorizer' => $approver->name,
-                            ]);
-                        } catch (\Exception $e) {
-                            Log::error('[Leave Authorized] Failed to send email', [
-                                'leave_id' => $leave->id,
-                                'error' => $e->getMessage(),
-                            ]);
-                        }
-                    }
+                    // Notify the approver(s) for the NEW current step (bell + push
+                    // + email) so the request actually reaches the manager, then
+                    // the admin. Without this the chain stalled after step 1.
+                    $this->notifyCurrentStepApprovers($leave);
+
+                    // Let the requester know an intermediate approver (cover person
+                    // or manager) accepted — bell + push only. Email is reserved
+                    // for the final admin decision and rejections.
+                    $this->notifyLeaveRequester($leave, 'step_approved', $approver, null, $currentApproval->approver_type);
                 }
             }
 

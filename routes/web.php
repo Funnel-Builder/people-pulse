@@ -22,6 +22,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/clock-in', [AttendanceController::class, 'clockIn'])->name('clock-in');
         Route::post('/clock-out', [AttendanceController::class, 'clockOut'])->name('clock-out');
 
+        // Attendance adjustment requests (Late Entry / Early Out)
+        Route::prefix('adjustments')->name('adjustments.')->group(function () {
+            Route::post('/', [\App\Http\Controllers\AttendanceAdjustmentController::class, 'store'])->name('store');
+            Route::get('/approvals', [\App\Http\Controllers\AttendanceAdjustmentController::class, 'approvals'])->name('approvals');
+            Route::get('/{adjustment}/attachment', [\App\Http\Controllers\AttendanceAdjustmentController::class, 'attachment'])->name('attachment');
+            Route::post('/{adjustment}/cancel', [\App\Http\Controllers\AttendanceAdjustmentController::class, 'cancel'])->name('cancel');
+            Route::post('/{adjustment}/process', [\App\Http\Controllers\AttendanceAdjustmentApprovalController::class, 'process'])->name('process');
+        });
+
         // Individual attendance record
         Route::get('/{attendance}', [AttendanceController::class, 'show'])->name('show');
         Route::patch('/{attendance}/override', [AttendanceController::class, 'override'])->name('override');
