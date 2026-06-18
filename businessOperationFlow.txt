@@ -1,0 +1,78 @@
+**Overview**
+- **Purpose**: Concise, non-technical description of how People-Pulse operates day-to-day: who does what, how decisions move through the system, and what outputs (reports, certificates, exports) stakeholders receive.
+
+**Stakeholders**
+- **Employee**: Regular user of the system — applies for leave, views personal attendance and balances, requests certificates, views announcements, and updates personal profile.
+- **Manager**: Line manager with approval responsibilities for team members; sees team-level dashboards and reports; can authorize or escalate leave and view/manage team attendance.
+- **Admin / People & Operations**: HR/Operations administrators who manage employees, issue certificates, finalize approvals, run company-wide reports and overrides, and perform onboarding/offboarding.
+- **Cover Person**: An employee designated to cover responsibilities for another employee while they are on leave; approves cover requests and accepts coverage commitments.
+- **Reports / Finance Consumers**: People who receive exported reports (CSV/XLSX) such as monthly employee attendance summaries and other HR exports for payroll or compliance.
+
+**Key Business Domains**
+- **Employee Management (Onboarding / Offboarding)**: Admins create and update employee records, set role (user/manager/admin), assign departments and sub-departments, and schedule separations. Separation can be immediate or scheduled for a future date.
+- **Attendance**: Employees clock in and clock out daily. The system tracks punctuality, total hours, early exits, and weekend/holiday status. Managers and Admins can view dashboards and override attendance records when necessary. Admins and Managers can export attendance data for a range or for specific departments/employees.
+- **Leave Management**: Employees submit advance or post leave requests with one or more dates. Leave requests go through an approval chain (cover person → manager → admin) depending on leave type. Leave balances are tracked and deducted after final approval.
+- **Certificate Requests**: Employees request documents (employment certificate, visa recommendation, release letter, experience certificate). Requests are reviewed and issued by Admins; managers may authorize prior to issuance. Admins can request missing information from the employee and send issuance notifications.
+- **Announcements & Milestones**: Company announcements and employee milestones are published and surfaced on dashboards for relevant users.
+- **Reporting & Exports**: Managers and Admins generate reports and exports (attendance, monthly employee summaries, per-employee detail). Files are downloadable in CSV/XLSX for downstream use (payroll, compliance, leadership review).
+
+**High-Level Flows (by stakeholder)**
+
+**Employee Flow**
+- **Profile & Onboarding**: Admin creates employee record; employee details (NID, addresses, joining date, etc.) are stored and used for certificates and reporting.
+- **Daily Attendance**: Employee clocks in/out via the dashboard. Their personal dashboard shows today's attendance, leave balances, and recent announcements.
+- **Leave Application**: Employee opens Leave Application, selects leave type and dates, optionally designates a cover person (for advance leaves), and submits. They can cancel pending leave requests.
+- **Certificate Requests**: Employee submits a certificate request with purpose and required details; may be asked to fill missing profile fields before issuance.
+
+**Cover Person Flow**
+- **Cover Requests**: When designated as a cover person, the employee receives cover requests and can accept or decline. Accepted cover commitments are tracked as coverage days and appear in the cover person's request history.
+
+**Manager Flow**
+- **Approvals**: Managers review leave requests for their team (or managed sub-departments). Approvals can authorize a leave and move it to the next step or finalize it if they are the final approver. Managers receive aggregated dashboards, punctuality trends, and late-employee lists for their teams.
+- **Team Attendance**: Managers view Manager Dashboard and Manager Analytics to monitor team presence, late arrivals, average hours, and weekly/monthly trends. Managers can export team attendance and generate employee-level reports for their teams.
+
+**Admin / People & Operations Flow**
+- **Employee Administration**: Admins add/remove employees, edit profiles, set roles, assign manager responsibilities, and handle separations.
+- **Final Approvals & Issuance**: For leave types that require Admin sign-off, Admins perform the final approval step. Admins issue certificates (final step) and notify employees (email). Admins can also reject requests and request missing info.
+- **Overrides & Audit**: Admins can override attendance records when justified. Overrides create audit logs (who changed what and why) for compliance and reviews.
+- **Company-wide Reporting**: Admins access Admin Dashboards and Admin Analytics covering the whole organization, export company-level attendance and monthly employee reports, and download CSV/XLSX files for Finance or Leadership.
+
+**Approval Chain Summary**
+- **Advance Leave**: Typically requires approval from the Cover Person (step 1), then Manager (step 2), then Admin (step 3) depending on configuration.
+- **Post Leave**: Typically starts at Manager approval (or may be Admin for some types) — approval steps depend on leave type and configured approval chain.
+- **Decision Outcomes**: Approve → move to next step or finalize (deduct leave days and notify employee); Reject → return the leave as rejected and notify employee; Cancel → employee can cancel their own pending request.
+
+**Attendance Exceptions & Controls**
+- **Late / Early Exit**: System computes late minutes based on office start time and configured grace period; early exits are calculated against office end time.
+- **Missing Clock-In/Out**: If an employee forgets to clock, Managers/Admins can override records with reasons; changes are stored in audit logs for traceability.
+
+**Reporting & Exporting**
+- **Who can export**: Managers (team/sub-department scope) and Admins (company-wide) can export attendance and monthly employee reports in CSV or XLSX.
+- **Common exports**: Attendance export for date ranges, MonthlyEmployeeReport (summary), Per-employee attendance history.
+
+**Certificates & Supporting Documents**
+- **Request**: Employee requests a certificate and chooses purpose/urgency.
+- **Review**: Admin (or Manager where applicable) reviews request; missing employee profile data triggers an email asking for updates.
+- **Issuance**: Admin issues the certificate and notifies employee; records of issued certificates are kept for history and compliance.
+
+**Notifications & Communication**
+- **Email notices**: The system sends emails for key events — leave authorized/approved, certificate issuance, and missing information requests. Managers and Admins receive summaries and approval notifications where appropriate.
+- **In-app**: Dashboards and requests pages show pending items, history, and quick actions for each stakeholder.
+
+**Operational Notes & Rules (business policy)**
+- **Role Definitions**: Roles are `user` (employee), `manager`, and `admin`. Managers see and act on their managed sub-departments; Admins have global access.
+- **Manager Responsibilities**: Managers may be explicitly assigned sub-departments to manage; if not assigned, they manage the sub-department or department indicated on their profile.
+- **Leave Balances**: Leave balances are tracked per leave type and reduced only after final approval.
+- **Separation**: Separation can be immediate (employee set inactive) or scheduled; scheduled separations update `closing_date` and are effective on that date.
+
+**Outputs / Deliverables**
+- **Per-Employee**: Personal dashboard (attendance, leave balances), leave / certificate request history, and downloadable per-employee attendance detail.
+- **Manager**: Team dashboards, analytics (monthly/weekly trends), pending approvals list, and team-level exports.
+- **Admin**: Full employee management UI, final approvals, system-wide analytics, audit logs for overrides, certificate issuance, and company-wide exports used by Finance and Leadership.
+
+**Where to look in the code (developer pointers, optional)**
+- **Core modules**: `app/Services/LeaveService.php`, `app/Services/AttendanceService.php`, `app/Services/CertificateService.php` implement the business rules and flows.
+- **Controllers**: `app/Http/Controllers/LeaveController.php`, `LeaveApprovalController.php`, `AttendanceController.php`, `CertificateController.php`, and `EmployeeController.php` map user actions to services and pages.
+
+---
+This document describes the operational workflow from a non-technical perspective. If you want, I can (a) turn this into a one-page diagram, (b) add a short FAQ for Managers and Admins, or (c) extract the approval step configuration into a separate human-readable table.
