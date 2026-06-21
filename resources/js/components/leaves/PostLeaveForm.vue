@@ -56,11 +56,9 @@ const selectedLeaveTypeName = computed(() => {
     return leaveType?.name || '';
 });
 
-// Calculate maximum date (yesterday - today should be disabled)
+// Maximum selectable date is today — post leave covers today and past dates.
 const maxDate = computed(() => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    return yesterday.toISOString().split('T')[0];
+    return new Date().toISOString().split('T')[0];
 });
 
 const removeDate = (date: string) => {
