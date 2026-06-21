@@ -63,8 +63,15 @@ class AttendanceAdjustmentController extends Controller
         $pending = $this->service->getPendingApprovalsForUser($user)
             ->map(fn (AttendanceAdjustmentRequest $r) => $this->present($r));
 
+        $history = $this->service->getApprovalHistory($user);
+        $stats = $this->service->getApprovalStats($user, $history);
+
         return Inertia::render('attendance/Adjustments', [
             'pendingRequests' => $pending->values(),
+            'historyRequests' => $history
+                ->map(fn (AttendanceAdjustmentRequest $r) => $this->presentHistory($r))
+                ->values(),
+            'stats' => $stats,
         ]);
     }
 
@@ -117,5 +124,18 @@ class AttendanceAdjustmentController extends Controller
                 'name' => $request->coverPerson->name,
             ] : null,
         ];
+    }
+
+    /**
+     * Shape a request for the history view, annotated with the action this
+     * user took (status, date, and the role they acted as).
+     */
+    protected function presentHistory(AttendanceAdjustmentRequest $request): array
+    {
+        return array_merge($this->present($request), [
+            'action_status' => $request->action_status,
+            'action_date' => $request->action_date?->toIso8601String(),
+            'action_type' => $request->action_type,
+        ]);
     }
 }

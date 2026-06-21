@@ -529,4 +529,50 @@ class AttendanceAdjustmentService
             ->orderByDesc('created_at')
             ->get();
     }
+
+    /**
+     * History of adjustment requests this user has acted on (approved/rejected)
+     * at any step (cover person, manager or admin). Each request is annotated
+     * with the action this user took and when.
+     */
+    public function getApprovalHistory(User $user): Collection
+    {
+        return AttendanceAdjustmentRequest::with(['user', 'coverPerson', 'approvals', 'attendance'])
+            ->whereHas('approvals', function ($q) use ($user) {
+                $q->where('approver_id', $user->id)
+                    ->where('status', '!=', AttendanceAdjustmentApproval::STATUS_PENDING)
+                    ->whereNotNull('acted_at');
+            })
+            ->get()
+            ->map(function (AttendanceAdjustmentRequest $request) use ($user) {
+                // The action this user personally took on this request.
+                $myAction = $request->approvals
+                    ->where('approver_id', $user->id)
+                    ->whereNotNull('acted_at')
+                    ->sortByDesc('acted_at')
+                    ->first();
+
+                $request->action_date = $myAction?->acted_at;
+                $request->action_status = $myAction?->status;
+                $request->action_type = $myAction?->approver_type;
+
+                return $request;
+            })
+            ->sortByDesc('action_date')
+            ->values();
+    }
+
+    /**
+     * Stats for the adjustment history view (mirrors the cover-request stats).
+     */
+    public function getApprovalStats(User $user, ?Collection $history = null): array
+    {
+        $history = $history ?? $this->getApprovalHistory($user);
+
+        return [
+            'total_handled' => $history->count(),
+            'pending' => $this->getPendingApprovalCount($user),
+            'approved' => $history->where('action_status', AttendanceAdjustmentApproval::STATUS_APPROVED)->count(),
+        ];
+    }
 }
