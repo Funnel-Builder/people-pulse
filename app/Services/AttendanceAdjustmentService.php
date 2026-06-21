@@ -6,9 +6,11 @@ use App\Models\Attendance;
 use App\Models\AttendanceAdjustmentApproval;
 use App\Models\AttendanceAdjustmentRequest;
 use App\Models\AttendanceAuditLog;
+use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\AttendanceAdjustmentProcessed;
 use App\Notifications\NewAttendanceAdjustmentRequest;
+use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -137,28 +139,104 @@ class AttendanceAdjustmentService
     }
 
     /**
-     * Clear the late/early flag on the day's attendance and record an audit log.
+     * Apply the approved adjustment to the day's attendance record.
+     *
+     * late_entry  → create/set clock_in at requested_time (or clear the late flag if already clocked in)
+     * early_out   → create/set clock_out at requested_time (or clear early_exit_minutes if already clocked out)
      */
     protected function excuseAttendance(AttendanceAdjustmentRequest $request, User $approver): void
     {
         $attendance = $request->attendance
             ?? Attendance::forUser($request->user_id)->forDate($request->date)->first();
 
-        if (!$attendance) {
-            Log::info('[Attendance Adjustment] No attendance row to excuse', [
-                'adjustment_id' => $request->id,
-                'user_id' => $request->user_id,
-                'date' => $request->date,
-            ]);
-            return;
-        }
-
-        $changes = $request->isLateEntry()
-            ? ['is_late' => false, 'late_minutes' => 0]
-            : ['early_exit_minutes' => 0];
-
+        $appTimezone = config('app.timezone');
+        $requestedDateTime = Carbon::parse(
+            $request->date->format('Y-m-d') . ' ' . $request->requested_time,
+            $appTimezone
+        );
         $reason = "Adjustment #{$request->id} ({$request->typeLabel()}) approved";
 
+        if ($request->isLateEntry()) {
+            if (!$attendance || !$attendance->hasClockedIn()) {
+                // No attendance or clock_in missing — create the record with the approved time.
+                // is_late is false because the lateness is excused by this approval.
+                $breakMinutes = Setting::get('attendance.default_break_minutes', 60);
+
+                $attendance = Attendance::updateOrCreate(
+                    ['user_id' => $request->user_id, 'date' => $request->date],
+                    [
+                        'clock_in'              => $requestedDateTime,
+                        'is_late'               => false,
+                        'late_minutes'          => 0,
+                        'status'                => 'present',
+                        'break_minutes'         => $breakMinutes,
+                        'clock_in_ip'           => request()->ip(),
+                        'clock_in_user_agent'   => 'system:adjustment_approved',
+                    ]
+                );
+
+                $request->update(['attendance_id' => $attendance->id]);
+
+                AttendanceAuditLog::create([
+                    'attendance_id' => $attendance->id,
+                    'changed_by'    => $approver->id,
+                    'field_changed' => 'clock_in',
+                    'old_value'     => null,
+                    'new_value'     => $requestedDateTime->toDateTimeString(),
+                    'reason'        => $reason,
+                    'ip_address'    => request()->ip(),
+                ]);
+
+                return;
+            }
+
+            // Already clocked in — just excuse the late flag.
+            $changes = ['is_late' => false, 'late_minutes' => 0];
+
+        } else {
+            // early_out
+            if (!$attendance || !$attendance->hasClockedIn()) {
+                Log::info('[Attendance Adjustment] No clock-in found; cannot apply early-out adjustment', [
+                    'adjustment_id' => $request->id,
+                    'user_id'       => $request->user_id,
+                    'date'          => $request->date,
+                ]);
+                return;
+            }
+
+            if (!$attendance->hasClockedOut()) {
+                // Set clock_out at the approved time and recalculate hours.
+                $grossMinutes = (int) max(0, $attendance->clock_in->diffInMinutes($requestedDateTime, false));
+                $breakMinutes = $attendance->break_minutes ?? Setting::get('attendance.default_break_minutes', 60);
+                $netMinutes   = (int) max(0, $grossMinutes - $breakMinutes);
+
+                $attendance->update([
+                    'clock_out'           => $requestedDateTime,
+                    'gross_minutes'       => $grossMinutes,
+                    'net_minutes'         => $netMinutes,
+                    'early_exit_minutes'  => 0,
+                    'clock_out_ip'        => request()->ip(),
+                    'clock_out_user_agent' => 'system:adjustment_approved',
+                ]);
+
+                AttendanceAuditLog::create([
+                    'attendance_id' => $attendance->id,
+                    'changed_by'    => $approver->id,
+                    'field_changed' => 'clock_out',
+                    'old_value'     => null,
+                    'new_value'     => $requestedDateTime->toDateTimeString(),
+                    'reason'        => $reason,
+                    'ip_address'    => request()->ip(),
+                ]);
+
+                return;
+            }
+
+            // Already clocked out — just excuse the early_exit_minutes penalty.
+            $changes = ['early_exit_minutes' => 0];
+        }
+
+        // Apply flag-clearing changes with audit log.
         foreach ($changes as $field => $newValue) {
             $oldValue = $attendance->{$field};
             if ($oldValue == $newValue) {
@@ -167,17 +245,18 @@ class AttendanceAdjustmentService
 
             AttendanceAuditLog::create([
                 'attendance_id' => $attendance->id,
-                'changed_by' => $approver->id,
+                'changed_by'    => $approver->id,
                 'field_changed' => $field,
-                'old_value' => $oldValue,
-                'new_value' => $newValue,
-                'reason' => $reason,
-                'ip_address' => request()->ip(),
+                'old_value'     => $oldValue,
+                'new_value'     => $newValue,
+                'reason'        => $reason,
+                'ip_address'    => request()->ip(),
             ]);
         }
 
         $attendance->update($changes);
     }
+
 
     /**
      * Owner cancels a still-pending request.
