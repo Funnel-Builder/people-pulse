@@ -9,7 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { ClipboardList, Check, X, Paperclip, LogIn, LogOut, FileText, ChevronLeft, Search, BarChart3, CheckCircle2 } from 'lucide-vue-next';
+import AdjustmentRequestModal from '@/components/attendance/AdjustmentRequestModal.vue';
+import { ClipboardList, Check, X, Paperclip, LogIn, LogOut, FileText, ChevronLeft, Search, BarChart3, CheckCircle2, Plus } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import type { BreadcrumbItem } from '@/types';
 
@@ -48,16 +49,25 @@ interface Stats {
     approved: number;
 }
 
+interface CoverPerson {
+    id: number;
+    name: string;
+    employee_id: string;
+    designation?: string;
+}
+
 interface Props {
     pendingRequests: AdjustmentRequest[];
     historyRequests?: AdjustmentRequest[];
     stats?: Stats;
+    coverPersonOptions?: CoverPerson[];
 }
 
 const props = defineProps<Props>();
 
 const viewMode = ref<'pending' | 'history'>('pending');
 const searchQuery = ref('');
+const showRequestModal = ref(false);
 
 const toggleView = () => {
     viewMode.value = viewMode.value === 'pending' ? 'history' : 'pending';
@@ -153,7 +163,7 @@ const approveLabel = (request: AdjustmentRequest | null) => {
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-bold">
-                        {{ viewMode === 'history' ? 'Past Late/Early Requests' : 'Late/Early Requests' }}
+                        {{ viewMode === 'history' ? 'Past Late Entry / Early Out Requests' : 'Late Entry / Early Out Requests' }}
                     </h1>
                     <p class="text-muted-foreground">
                         {{ viewMode === 'history'
@@ -161,16 +171,22 @@ const approveLabel = (request: AdjustmentRequest | null) => {
                             : 'Review late entry & early out requests awaiting your action' }}
                     </p>
                 </div>
-                <Button variant="outline" @click="toggleView" class="gap-2">
-                    <template v-if="viewMode === 'pending'">
-                        <FileText class="h-4 w-4" />
-                        View History
-                    </template>
-                    <template v-else>
-                        <ChevronLeft class="h-4 w-4" />
-                        Back to Pending
-                    </template>
-                </Button>
+                <div class="flex items-center gap-2">
+                    <Button @click="showRequestModal = true" class="gap-2">
+                        <Plus class="h-4 w-4" />
+                        Apply For Late Entry or Early Out
+                    </Button>
+                    <Button variant="outline" @click="toggleView" class="gap-2">
+                        <template v-if="viewMode === 'pending'">
+                            <FileText class="h-4 w-4" />
+                            View History
+                        </template>
+                        <template v-else>
+                            <ChevronLeft class="h-4 w-4" />
+                            Back to Pending
+                        </template>
+                    </Button>
+                </div>
             </div>
 
             <!-- Stats Cards (History Mode) -->
@@ -331,7 +347,7 @@ const approveLabel = (request: AdjustmentRequest | null) => {
                     </div>
                     <div v-else class="py-12 text-center text-muted-foreground">
                         <ClipboardList class="mx-auto mb-4 h-12 w-12 opacity-50" />
-                        <p>No pending adjustment requests</p>
+                        <p>No pending Late Entry / Early Out requests</p>
                     </div>
                 </CardContent>
             </Card>
@@ -374,5 +390,10 @@ const approveLabel = (request: AdjustmentRequest | null) => {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        <AdjustmentRequestModal
+            v-model:open="showRequestModal"
+            :cover-person-options="coverPersonOptions ?? []"
+        />
     </AppLayout>
 </template>

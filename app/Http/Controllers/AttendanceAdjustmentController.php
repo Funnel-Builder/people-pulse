@@ -72,6 +72,7 @@ class AttendanceAdjustmentController extends Controller
                 ->map(fn (AttendanceAdjustmentRequest $r) => $this->presentHistory($r))
                 ->values(),
             'stats' => $stats,
+            'coverPersonOptions' => $this->service->coverPersonOptions($user)->values(),
         ]);
     }
 
