@@ -13,12 +13,22 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->string('employee_id')->unique();
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->string('department');
+            $table->string('sub_department')->nullable();
+            $table->string('designation');
+            $table->enum('role', ['admin', 'manager', 'user'])->default('user');
+            $table->json('weekend_days')->nullable();
             $table->rememberToken();
             $table->timestamps();
+
+            $table->index('department');
+            $table->index('sub_department');
+            $table->index('role');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

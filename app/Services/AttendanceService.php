@@ -1,0 +1,567 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Attendance;
+use App\Models\AttendanceAuditLog;
+use App\Models\Setting;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+
+class AttendanceService
+{
+    /**
+     * Clock in a user
+     */
+    public function clockIn(User $user, ?string $ipAddress = null, ?string $userAgent = null, ?float $latitude = null, ?float $longitude = null): Attendance
+    {
+        $this->assertWithinOfficeZone($latitude, $longitude);
+
+        $today = Carbon::today();
+        $now = Carbon::now();
+
+        // Determine if late
+        $officeStartTime = $this->getOfficeStartTime($today);
+        $graceMinutes = Setting::get('attendance.late_grace_minutes', 15);
+        $lateThreshold = $officeStartTime->copy()->addMinutes($graceMinutes);
+
+        $isLate = $now->greaterThan($lateThreshold);
+
+        // Calculate late minutes from the END of grace period (not from office start)
+        $lateMinutes = 0;
+        if ($isLate) {
+            $lateMinutes = (int) max(0, $lateThreshold->diffInMinutes($now, false));
+        }
+
+        // Check if already clocked in today
+        $existing = Attendance::forUser($user->id)->forDate($today)->first();
+
+        if ($existing && $existing->hasClockedIn()) {
+            throw new \Exception('You have already clocked in today.');
+        }
+
+        // Determine status
+        $status = 'present';
+        if ($user->isWeekend($today->format('l'))) {
+            $status = 'weekend';
+        }
+
+        // Create or update attendance record
+        $attendance = Attendance::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'date' => $today,
+            ],
+            [
+                'clock_in' => $now,
+                'is_late' => $isLate,
+                'late_minutes' => $lateMinutes,
+                'status' => $status,
+                'clock_in_ip' => $ipAddress,
+                'clock_in_user_agent' => $userAgent,
+                'break_minutes' => Setting::get('attendance.default_break_minutes', 60),
+            ]
+        );
+
+        return $attendance->fresh();
+    }
+
+    /**
+     * Clock out a user
+     */
+    public function clockOut(User $user, ?string $ipAddress = null, ?string $userAgent = null, ?float $latitude = null, ?float $longitude = null): Attendance
+    {
+        $this->assertWithinOfficeZone($latitude, $longitude);
+
+        $today = Carbon::today();
+        $now = Carbon::now();
+
+        $attendance = Attendance::forUser($user->id)->forDate($today)->first();
+
+        if (!$attendance || !$attendance->hasClockedIn()) {
+            throw new \Exception('You must clock in before clocking out.');
+        }
+
+        if ($attendance->hasClockedOut()) {
+            throw new \Exception('You have already clocked out today.');
+        }
+
+        // Calculate hours - ensure we get positive integer values
+        $clockIn = $attendance->clock_in;
+
+        // Use absolute difference and ensure we're comparing in the same timezone
+        // Carbon diffInMinutes can return negative if clock_in is after now
+        $grossMinutes = (int) max(0, $clockIn->diffInMinutes($now, false));
+        $netMinutes = (int) max(0, $grossMinutes - $attendance->break_minutes);
+
+        // Calculate early exit minutes
+        $officeEndTime = $this->getOfficeEndTime($today);
+        $earlyExitMinutes = 0;
+        if ($now->lessThan($officeEndTime)) {
+            $earlyExitMinutes = (int) abs($officeEndTime->diffInMinutes($now, false));
+        }
+
+        $attendance->update([
+            'clock_out' => $now,
+            'gross_minutes' => $grossMinutes,
+            'net_minutes' => $netMinutes,
+            'early_exit_minutes' => $earlyExitMinutes,
+            'clock_out_ip' => $ipAddress,
+            'clock_out_user_agent' => $userAgent,
+        ]);
+
+        return $attendance->fresh();
+    }
+
+    /**
+     * Admin override attendance record
+     */
+    public function override(
+        Attendance $attendance,
+        User $admin,
+        array $data,
+        string $reason,
+        ?string $ipAddress = null
+    ): Attendance {
+        return DB::transaction(function () use ($attendance, $admin, $data, $reason, $ipAddress) {
+            // Log all changes
+            foreach ($data as $field => $newValue) {
+                $oldValue = $attendance->{$field};
+
+                if ($oldValue != $newValue) {
+                    AttendanceAuditLog::create([
+                        'attendance_id' => $attendance->id,
+                        'changed_by' => $admin->id,
+                        'field_changed' => $field,
+                        'old_value' => $oldValue instanceof Carbon ? $oldValue->toDateTimeString() : $oldValue,
+                        'new_value' => $newValue,
+                        'reason' => $reason,
+                        'ip_address' => $ipAddress,
+                    ]);
+                }
+            }
+
+            // If clock_in or clock_out changed, recalculate hours
+            if (isset($data['clock_in']) || isset($data['clock_out'])) {
+                // Parse times with explicit app timezone to ensure consistency
+                $appTimezone = config('app.timezone');
+
+                $clockIn = isset($data['clock_in']) && $data['clock_in']
+                    ? Carbon::parse($data['clock_in'], $appTimezone)
+                    : $attendance->clock_in;
+                $clockOut = isset($data['clock_out']) && $data['clock_out']
+                    ? Carbon::parse($data['clock_out'], $appTimezone)
+                    : $attendance->clock_out;
+
+                // Update data with properly parsed Carbon instances
+                if (isset($data['clock_in']) && $data['clock_in']) {
+                    $data['clock_in'] = Carbon::parse($data['clock_in'], $appTimezone);
+                }
+                if (isset($data['clock_out']) && $data['clock_out']) {
+                    $data['clock_out'] = Carbon::parse($data['clock_out'], $appTimezone);
+                }
+
+                if ($clockIn && $clockOut) {
+                    $grossMinutes = (int) max(0, $clockIn->diffInMinutes($clockOut, false));
+                    $breakMinutes = $data['break_minutes'] ?? $attendance->break_minutes;
+                    $data['gross_minutes'] = $grossMinutes;
+                    $data['net_minutes'] = (int) max(0, $grossMinutes - $breakMinutes);
+                }
+
+                // Recalculate is_late if clock_in changed and is_late is not provided
+                if (isset($data['clock_in']) && $data['clock_in'] && !array_key_exists('is_late', $data)) {
+                    $officeStartTime = $this->getOfficeStartTime(Carbon::parse($attendance->date));
+                    $graceMinutes = Setting::get('attendance.late_grace_minutes', 15);
+                    $lateThreshold = $officeStartTime->copy()->addMinutes($graceMinutes);
+                    $data['is_late'] = $clockIn->greaterThan($lateThreshold);
+                }
+
+                // If clock_in is being added and status is 'absent', change to 'present'
+                if (isset($data['clock_in']) && $data['clock_in'] && $attendance->status === 'absent') {
+                    $data['status'] = 'present';
+                }
+            }
+
+            $attendance->update($data);
+
+            return $attendance->fresh();
+        });
+    }
+
+    /**
+     * Get today's attendance for a user
+     */
+    public function getTodayAttendance(User $user): ?Attendance
+    {
+        return Attendance::forUser($user->id)->forDate(Carbon::today())->first();
+    }
+
+    /**
+     * Get attendance records for a user within date range
+     */
+    public function getUserAttendance(User $user, ?string $startDate = null, ?string $endDate = null)
+    {
+        $query = Attendance::forUser($user->id)->with('user');
+
+        if ($startDate && $endDate) {
+            $query->betweenDates($startDate, $endDate);
+        }
+
+        return $query->orderBy('date', 'desc')->get();
+    }
+
+    /**
+     * Get attendance records visible to a manager
+     */
+    public function getManagerVisibleAttendance(User $manager, ?string $startDate = null, ?string $endDate = null, ?int $subDepartmentId = null)
+    {
+        // Get sub-department IDs that this manager manages
+        $managedSubDepartmentIds = $manager->managedSubDepartments()->pluck('sub_departments.id')->toArray();
+
+        $query = Attendance::with(['user.department', 'user.subDepartment'])
+            ->whereHas('user', function ($q) use ($managedSubDepartmentIds, $subDepartmentId) {
+                if ($subDepartmentId) {
+                    // Filter by specific sub-department (if manager has access to it)
+                    if (in_array($subDepartmentId, $managedSubDepartmentIds)) {
+                        $q->where('sub_department_id', $subDepartmentId);
+                    } else {
+                        // If manager doesn't have access, show nothing
+                        $q->whereRaw('1 = 0');
+                    }
+                } else {
+                    // Show all users in manager's assigned sub-departments
+                    $q->whereIn('sub_department_id', $managedSubDepartmentIds);
+                }
+            });
+
+        if ($startDate && $endDate) {
+            $query->betweenDates($startDate, $endDate);
+        }
+
+        return $query->orderBy('date', 'desc')->get();
+    }
+
+    /**
+     * Get all attendance records (admin)
+     */
+    public function getAllAttendance(?string $startDate = null, ?string $endDate = null, ?string $departmentId = null, ?string $subDepartmentId = null, ?string $employeeId = null)
+    {
+        $query = Attendance::with(['user.department', 'user.subDepartment']);
+
+        if ($startDate && $endDate) {
+            $query->betweenDates($startDate, $endDate);
+        }
+
+        if ($employeeId && $employeeId !== 'all_employees') {
+            $query->where('user_id', $employeeId);
+        }
+
+        if ($subDepartmentId && $subDepartmentId !== 'all_sub_departments') {
+            $query->inSubDepartment((int) $subDepartmentId);
+        }
+
+        if ($departmentId && $departmentId !== 'all_departments') {
+            // Only filter by department if sub-department isn't already narrowing it down (though both apply is fine)
+            $query->inDepartment((int) $departmentId);
+        }
+
+        return $query->orderBy('date', 'desc')->get();
+    }
+
+    /**
+     * Ensure the punch is happening from within the office geofence.
+     *
+     * Throws a human-readable exception if the location is missing or outside
+     * the configured radius. Coordinates are only used for this check — they
+     * are not persisted.
+     */
+    protected function assertWithinOfficeZone(?float $latitude, ?float $longitude): void
+    {
+        if (!config('attendance.geofence_enabled')) {
+            return;
+        }
+
+        $officeLat = config('attendance.office_latitude');
+        $officeLng = config('attendance.office_longitude');
+
+        // If the office coordinates are not configured, skip enforcement rather
+        // than locking everyone out of clocking in.
+        if ($officeLat === null || $officeLng === null) {
+            return;
+        }
+
+        if ($latitude === null || $longitude === null) {
+            throw new \Exception('Location access is required to clock in or out. Please enable location and try again.');
+        }
+
+        $radius = (int) config('attendance.geofence_radius_meters', 300);
+        $distance = $this->distanceInMeters($latitude, $longitude, (float) $officeLat, (float) $officeLng);
+
+        if ($distance > $radius) {
+            throw new \Exception('You must be within the office premises to clock in or out. You appear to be about ' . number_format($distance) . 'm away.');
+        }
+    }
+
+    /**
+     * Great-circle distance between two coordinates, in meters (Haversine).
+     */
+    protected function distanceInMeters(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earthRadius = 6_371_000; // meters
+
+        $latDelta = deg2rad($lat2 - $lat1);
+        $lngDelta = deg2rad($lng2 - $lng1);
+
+        $a = sin($latDelta / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($lngDelta / 2) ** 2;
+
+        return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
+    }
+
+    /**
+     * Get office start time for a given date
+     */
+    protected function getOfficeStartTime(Carbon $date): Carbon
+    {
+        $startTime = Setting::get('attendance.office_start_time', '09:30');
+        [$hours, $minutes] = explode(':', $startTime);
+
+        return $date->copy()->setTime((int) $hours, (int) $minutes);
+    }
+
+    /**
+     * Get office end time for a given date
+     */
+    protected function getOfficeEndTime(Carbon $date): Carbon
+    {
+        $endTime = Setting::get('attendance.office_end_time', '17:30');
+        [$hours, $minutes] = explode(':', $endTime);
+
+        return $date->copy()->setTime((int) $hours, (int) $minutes);
+    }
+
+    /**
+     * Get attendance statistics for dashboard
+     */
+    public function getAttendanceStats(User $user, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $query = Attendance::forUser($user->id);
+
+        if ($startDate && $endDate) {
+            $query->betweenDates($startDate, $endDate);
+        }
+
+        $attendances = $query->get();
+
+        // Calculate total net minutes (already excludes break time)
+        $totalNetMinutes = (int) $attendances->sum('net_minutes');
+        $count = $attendances->count();
+
+        return [
+            'total_days' => $count,
+            'late_days' => $attendances->where('is_late', true)->count(),
+            // Return integer hours for display
+            'total_net_hours' => (int) floor($totalNetMinutes / 60),
+            'average_net_hours' => $count > 0
+                ? (int) floor(($totalNetMinutes / $count) / 60)
+                : 0,
+        ];
+    }
+
+    /**
+     * Get department attendance summary (for manager/admin)
+     */
+    public function getDepartmentSummary(int $departmentId, ?string $date = null): array
+    {
+        $targetDate = $date ? Carbon::parse($date) : Carbon::today();
+
+        $users = User::inDepartment($departmentId)->get();
+        $attendances = Attendance::inDepartment($departmentId)
+            ->forDate($targetDate)
+            ->with('user')
+            ->get()
+            ->keyBy('user_id');
+
+        return $this->calculateSummary($users, $attendances, $targetDate);
+    }
+
+    /**
+     * Get attendance summary for employees in specific sub-departments.
+     * Used for manager dashboard to aggregate across all managed departments.
+     */
+    public function getManagedEmployeesSummary(array $subDepartmentIds, ?string $date = null): array
+    {
+        if (empty($subDepartmentIds)) {
+            return [
+                'total_employees' => 0,
+                'present' => 0,
+                'absent' => 0,
+                'late' => 0,
+                'all_list' => [],
+                'present_list' => [],
+                'absent_list' => [],
+                'late_list' => [],
+            ];
+        }
+
+        $targetDate = $date ? Carbon::parse($date) : Carbon::today();
+
+        $users = User::whereIn('sub_department_id', $subDepartmentIds)
+            ->where(function ($query) {
+                $query->where('is_active', true)
+                    ->orWhereNull('is_active'); // Treat null as active for backward compatibility
+            })
+            ->get();
+        $attendances = Attendance::whereHas('user', function ($q) use ($subDepartmentIds) {
+            $q->whereIn('sub_department_id', $subDepartmentIds);
+        })
+            ->forDate($targetDate)
+            ->with('user')
+            ->get()
+            ->keyBy('user_id');
+
+        return $this->calculateSummary($users, $attendances, $targetDate);
+    }
+
+
+    /**
+     * Get global attendance summary (for company-wide dashboard)
+     */
+    public function getGlobalAttendanceSummary(?string $date = null): array
+    {
+        $targetDate = $date ? Carbon::parse($date) : Carbon::today();
+
+        // Exclude admins from the general "Employee" stats if desired, or include all.
+        // Usually dashboards show "Employees". Assuming role!=admin or just all users.
+        // Let's include all non-admin users as "employees".
+        $users = User::where('role', '!=', 'admin')
+            ->where(function ($query) {
+                $query->where('is_active', true)
+                    ->orWhereNull('is_active'); // Treat null as active for backward compatibility
+            })
+            ->get();
+
+        $attendances = Attendance::whereIn('user_id', $users->pluck('id'))
+            ->forDate($targetDate)
+            ->with('user')
+            ->get()
+            ->keyBy('user_id');
+
+        return $this->calculateSummary($users, $attendances, $targetDate);
+    }
+
+    /**
+     * Helper to calculate summary stats
+     */
+    protected function calculateSummary($users, $attendances, Carbon $targetDate): array
+    {
+        $summary = [
+            'total_employees' => $users->count(),
+            'present' => 0,
+            'absent' => 0,
+            'late' => 0,
+            'all_list' => $users->values()->all(),
+            'present_list' => [],
+            'absent_list' => [],
+            'late_list' => [],
+        ];
+
+        foreach ($users as $user) {
+            $attendance = $attendances->get($user->id);
+
+            if ($attendance && $attendance->hasClockedIn()) {
+                $summary['present']++;
+                // Add to present list
+                $summary['present_list'][] = $user;
+
+                if ($attendance->is_late) {
+                    $summary['late']++;
+                    $summary['late_list'][] = $user;
+                }
+            } else {
+                // Check if it's not a weekend for this user
+                if (!$user->isWeekend($targetDate->format('l'))) {
+                    $summary['absent']++;
+                    $summary['absent_list'][] = $user;
+                }
+            }
+        }
+
+        return $summary;
+    }
+
+    /**
+     * Calculate lifetime punctuality
+     */
+    public function calculatePunctuality(User $user): array
+    {
+        // Get total present days (clocked in)
+        $totalPresent = Attendance::forUser($user->id)
+            ->whereNotNull('clock_in')
+            ->count();
+
+        if ($totalPresent === 0) {
+            return [
+                'percentage' => 100, // Default to 100% if no history? Or 0? 100 seems more encouraging or N/A
+                'total_present' => 0,
+                'total_late' => 0
+            ];
+        }
+
+        $totalLate = Attendance::forUser($user->id)
+            ->where('is_late', true)
+            ->count();
+
+        // Formula: (Total Present - Late) / Total Present * 100
+        $onTime = $totalPresent - $totalLate;
+        $percentage = ($onTime / $totalPresent) * 100;
+
+        return [
+            'percentage' => round($percentage, 1),
+            'total_present' => $totalPresent,
+            'total_late' => $totalLate
+        ];
+    }
+
+    /**
+     * Get monthly punctuality trends for the last X months
+     */
+    public function getMonthlyPunctualityTrends(User $user, int $months = 6): array
+    {
+        $trends = [];
+        $now = Carbon::now();
+
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $date = $now->copy()->subMonths($i);
+            $monthStart = $date->copy()->startOfMonth();
+            $monthEnd = $date->copy()->endOfMonth();
+
+            $totalPresent = Attendance::forUser($user->id)
+                ->whereBetween('date', [$monthStart, $monthEnd])
+                ->whereNotNull('clock_in')
+                ->count();
+
+            $totalLate = Attendance::forUser($user->id)
+                ->whereBetween('date', [$monthStart, $monthEnd])
+                ->where('is_late', true)
+                ->count();
+
+            $percentage = 0;
+            if ($totalPresent > 0) {
+                $onTime = $totalPresent - $totalLate;
+                $percentage = ($onTime / $totalPresent) * 100;
+            }
+
+            $trends[] = [
+                'month' => $date->format('M'),
+                'full_date' => $date->format('Y-m'),
+                'percentage' => round($percentage, 1),
+                'total_present' => $totalPresent,
+                'total_late' => $totalLate
+            ];
+        }
+
+        return $trends;
+    }
+}
