@@ -130,12 +130,12 @@ const hasBadgedChild = (item: NavItem): boolean => {
                                             :is-active="urlIsActive(subItem.href, page.url)"
                                             class="pl-8"
                                         >
-                                            <Link :href="subItem.href" class="flex items-center gap-2">
-                                                <component :is="subItem.icon" v-if="subItem.icon" class="h-3.5 w-3.5 !text-gray-500" />
-                                                <span class="text-sm flex-1">{{ subItem.title }}</span>
-                                                <span 
+                                            <Link :href="subItem.href" class="flex min-w-0 items-center gap-2">
+                                                <component :is="subItem.icon" v-if="subItem.icon" class="h-3.5 w-3.5 shrink-0 !text-gray-500" />
+                                                <span class="text-sm flex-1 truncate">{{ subItem.title }}</span>
+                                                <span
                                                     v-if="subItem.badge && subItem.badge > 0"
-                                                    class="h-2 w-2 rounded-full bg-amber-500"
+                                                    class="h-2 w-2 shrink-0 rounded-full bg-amber-500"
                                                 ></span>
                                             </Link>
                                         </SidebarMenuSubButton>

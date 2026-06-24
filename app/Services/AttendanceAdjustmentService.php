@@ -475,7 +475,7 @@ class AttendanceAdjustmentService
      */
     public function getPendingApprovalsForUser(User $user): Collection
     {
-        $base = fn () => AttendanceAdjustmentRequest::with(['user', 'coverPerson', 'approvals', 'attendance'])
+        $base = fn () => AttendanceAdjustmentRequest::with(['user', 'coverPerson', 'approvals.approver', 'attendance'])
             ->where('status', AttendanceAdjustmentRequest::STATUS_PENDING);
 
         // Step 1: cover-person requests assigned to this user.
@@ -537,7 +537,7 @@ class AttendanceAdjustmentService
      */
     public function getApprovalHistory(User $user): Collection
     {
-        return AttendanceAdjustmentRequest::with(['user', 'coverPerson', 'approvals', 'attendance'])
+        return AttendanceAdjustmentRequest::with(['user', 'coverPerson', 'approvals.approver', 'attendance'])
             ->whereHas('approvals', function ($q) use ($user) {
                 $q->where('approver_id', $user->id)
                     ->where('status', '!=', AttendanceAdjustmentApproval::STATUS_PENDING)

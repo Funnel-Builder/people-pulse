@@ -66,11 +66,17 @@ class AttendanceAdjustmentController extends Controller
         $history = $this->service->getApprovalHistory($user);
         $stats = $this->service->getApprovalStats($user, $history);
 
+        // The approver's own submitted late/early requests (for "View Own History").
+        $ownRequests = $this->service->getUserRequests($user)
+            ->load(['user', 'approvals.approver'])
+            ->map(fn (AttendanceAdjustmentRequest $r) => $this->present($r));
+
         return Inertia::render('attendance/Adjustments', [
             'pendingRequests' => $pending->values(),
             'historyRequests' => $history
                 ->map(fn (AttendanceAdjustmentRequest $r) => $this->presentHistory($r))
                 ->values(),
+            'ownRequests' => $ownRequests->values(),
             'stats' => $stats,
             'coverPersonOptions' => $this->service->coverPersonOptions($user)->values(),
         ]);
@@ -124,7 +130,38 @@ class AttendanceAdjustmentController extends Controller
                 'id' => $request->coverPerson->id,
                 'name' => $request->coverPerson->name,
             ] : null,
+            'approvals' => $request->approvals
+                ->sortBy('step')
+                ->map(fn ($approval) => [
+                    'id' => $approval->id,
+                    'step' => $approval->step,
+                    'approver_type' => $approval->approver_type,
+                    'approver_type_label' => $this->approverTypeLabel($approval->approver_type),
+                    // Falls back to the assigned cover person so their name shows
+                    // even before they have acted on the request.
+                    'approver_name' => $approval->approver?->name
+                        ?? ($approval->approver_type === 'cover_person'
+                            ? $request->coverPerson?->name
+                            : null),
+                    'status' => $approval->status,
+                    'comment' => $approval->comment,
+                    'acted_at' => $approval->acted_at?->toIso8601String(),
+                ])
+                ->values(),
         ];
+    }
+
+    /**
+     * Human-readable label for an approver type in the approval chain.
+     */
+    protected function approverTypeLabel(?string $type): string
+    {
+        return match ($type) {
+            'cover_person' => 'Cover Person',
+            'manager' => 'Manager',
+            'admin' => 'Admin',
+            default => ucfirst(str_replace('_', ' ', (string) $type)),
+        };
     }
 
     /**
