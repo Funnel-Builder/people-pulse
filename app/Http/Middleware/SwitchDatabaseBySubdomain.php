@@ -10,7 +10,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SwitchDatabaseBySubdomain
 {
-    // Maps subdomain → connection name defined in config/database.php
     private const SUBDOMAIN_MAP = [
         'shonamoni' => 'shonamoni',
         'dev' => 'dev',
@@ -22,12 +21,12 @@ class SwitchDatabaseBySubdomain
 
         if ($subdomain && isset(self::SUBDOMAIN_MAP[$subdomain])) {
             $connection = self::SUBDOMAIN_MAP[$subdomain];
+
+            // 1. Switch Database connections dynamically
             Config::set('database.default', $connection);
             DB::setDefaultConnection($connection);
 
-            // Sessions and cache must always use the main DB — never the tenant DB.
-            // Without this, StartSession can't find/write the sessions table and
-            // every request looks unauthenticated, causing an infinite redirect loop.
+            // 2. Keep core systemic functions running on main server cluster
             Config::set('session.connection', env('SESSION_CONNECTION', 'mysql'));
         }
 
@@ -38,7 +37,6 @@ class SwitchDatabaseBySubdomain
     {
         $appHost = parse_url(config('app.url'), PHP_URL_HOST) ?? '';
 
-        // Strip port if present
         $host = strtolower(explode(':', $host)[0]);
         $appHost = strtolower(explode(':', $appHost)[0]);
 
@@ -46,7 +44,6 @@ class SwitchDatabaseBySubdomain
             return substr($host, 0, strlen($host) - strlen('.'.$appHost));
         }
 
-        // Fallback: first segment when host has 3+ parts (e.g. shonamoni.example.com)
         $parts = explode('.', $host);
         if (count($parts) >= 3) {
             return $parts[0];
