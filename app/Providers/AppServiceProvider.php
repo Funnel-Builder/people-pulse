@@ -2,12 +2,13 @@
 
 namespace App\Providers;
 
-use App\Models\Attendance;
-use App\Models\AttendanceAdjustmentRequest;
 use App\Policies\AttendanceAdjustmentRequestPolicy;
-use App\Policies\AttendancePolicy;
-use Illuminate\Support\Facades\Gate;
+use App\Models\AttendanceAdjustmentRequest;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Config; 
+use Illuminate\Support\Facades\Gate;
+use App\Policies\AttendancePolicy;
+use App\Models\Attendance;
 
 class AppServiceProvider extends ServiceProvider
 {
